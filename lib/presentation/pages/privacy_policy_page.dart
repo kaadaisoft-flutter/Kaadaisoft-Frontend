@@ -42,11 +42,11 @@ class PrivacyPolicyPage extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 40),
-                  const Text(
+                  Text(
                     'Privacy Policy',
                     style: TextStyle(
                       color: Colors.white,
-                      fontSize: 48,
+                      fontSize: MediaQuery.of(context).size.width < 600 ? 32 : 48,
                       fontWeight: FontWeight.w800,
                       letterSpacing: -1,
                     ),
@@ -89,7 +89,7 @@ class PrivacyPolicyPage extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'LAST UPDATED: APRIL 30, 2026',
+                      'LAST UPDATED: MAY 07, 2026',
                       style: TextStyle(
                         color: Color(0xFFE65100),
                         fontWeight: FontWeight.w600,
@@ -130,7 +130,7 @@ class PrivacyPolicyPage extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(height: 16),
-                          _buildBulletItem('Personal Identity', 'Full name, Aadhar number, and photographs.'),
+                          _buildBulletItem('Personal Identity', 'Full name and photographs.'),
                           _buildBulletItem('Contact Details', 'Mobile number and physical address.'),
                           _buildBulletItem('Community Data', 'Family membership details and role assignments.'),
                         ],
@@ -200,12 +200,14 @@ class PrivacyPolicyPage extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 12),
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF0F172A),
+          Expanded(
+            child: Text(
+              title,
+              style: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF0F172A),
+              ),
             ),
           ),
         ],

@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:file_picker/file_picker.dart' as fp_pkg;
 import 'package:cross_file/cross_file.dart';
+import 'package:dropdown_search/dropdown_search.dart';
 import '../widgets/loading_spinner.dart';
 import '../widgets/custom_dialog.dart';
 import '../../utils/api_config.dart';
@@ -14,7 +15,8 @@ class UpdateDetailsContent extends StatefulWidget {
   final int userRole;
   final Map<String, dynamic> userData;
   final VoidCallback onBack;
-  const UpdateDetailsContent({super.key, required this.userId, required this.userRole, required this.userData, required this.onBack});
+  final String? title;
+  const UpdateDetailsContent({super.key, required this.userId, required this.userRole, required this.userData, required this.onBack, this.title});
 
   @override
   State<UpdateDetailsContent> createState() => _UpdateDetailsContentState();
@@ -25,30 +27,32 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
   bool _isSaving = false;
 
   // Controllers
-  late TextEditingController _nameCtrl;
-  late TextEditingController _phoneCtrl;
-  late TextEditingController _whatsappCtrl;
-  late TextEditingController _emailCtrl;
-  late TextEditingController _dobCtrl;
-  late TextEditingController _valuvuCtrl;
-  late TextEditingController _thottamCtrl;
-  late TextEditingController _streetCtrl;
-  late TextEditingController _doorNoCtrl;
-  late TextEditingController _pincodeCtrl;
-  late TextEditingController _professionCtrl;
-  late TextEditingController _businessCtrl;
-  late TextEditingController _aadharCtrl;
+  TextEditingController _nameCtrl = TextEditingController();
+  TextEditingController _phoneCtrl = TextEditingController();
+  TextEditingController _whatsappCtrl = TextEditingController();
+  TextEditingController _emailCtrl = TextEditingController();
+  TextEditingController _dobCtrl = TextEditingController();
+  TextEditingController _valuvuCtrl = TextEditingController();
+  TextEditingController _thottamCtrl = TextEditingController();
+  TextEditingController _streetCtrl = TextEditingController();
+  TextEditingController _doorNoCtrl = TextEditingController();
+  TextEditingController _pincodeCtrl = TextEditingController();
+  TextEditingController _professionCtrl = TextEditingController();
+
   
   // Current Address Controllers
-  late TextEditingController _curStreetCtrl;
-  late TextEditingController _curDoorNoCtrl;
-  late TextEditingController _curPincodeCtrl;
-  late TextEditingController _curTalukCtrl;
-  late TextEditingController _curPanchayatCtrl;
-  late TextEditingController _curVillageCtrl;
-  late TextEditingController _nriZipCtrl;
-  late TextEditingController _nriFullAddressCtrl;
-  late TextEditingController _businessWebsiteCtrl;
+  TextEditingController _curStreetCtrl = TextEditingController();
+  TextEditingController _curDoorNoCtrl = TextEditingController();
+  TextEditingController _curPincodeCtrl = TextEditingController();
+  TextEditingController _curTalukCtrl = TextEditingController();
+  TextEditingController _curPanchayatCtrl = TextEditingController();
+  TextEditingController _curVillageCtrl = TextEditingController();
+  TextEditingController _nriZipCtrl = TextEditingController();
+  TextEditingController _nriFullAddressCtrl = TextEditingController();
+  TextEditingController _nriCountryCtrl = TextEditingController();
+  TextEditingController _nriStateCtrl = TextEditingController();
+  TextEditingController _nriCityCtrl = TextEditingController();
+
 
   String? _relationship;
   String? _gender;
@@ -60,12 +64,7 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
   String? _taluk;
   String? _panchayat;
   String? _village;
-
-  List<String> _districts = [];
-  List<String> _taluks = [];
-  List<String> _panchayats = [];
-  List<String> _villages = [];
-
+  
   // Current Address State
   String? _curAddressType; // TamilNadu, OtherState, NRI
   String? _curState;
@@ -74,10 +73,24 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
   String? _nriState;
   String? _nriCity;
 
+  // Address Data
+  List<String> _districts = [];
+  List<String> _taluks = [];
+  List<String> _panchayats = [];
+  List<String> _villages = [];
+  
+  List<String> _currDistricts = [];
+  List<String> _currTaluks = [];
+  List<String> _currPanchayats = [];
+  List<String> _currVillages = [];
+  
+  List<dynamic> _allCountriesData = [];
+  List<String> _countryNames = [];
+  List<String> _stateNames = [];
+  List<String> _cityNames = [];
+
   // Documents
   dynamic _memberImage;
-  dynamic _aadharFront;
-  dynamic _aadharBack;
   dynamic _communityCert;
   
   bool _isConfirmed = false;
@@ -97,6 +110,7 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
   @override
   void initState() {
     super.initState();
+    _loadGeoData();
     final d = widget.userData;
     _nameCtrl = TextEditingController(text: d['Name'] ?? '');
     _phoneCtrl = TextEditingController(text: d['Phonenumber']?.toString() ?? '');
@@ -105,29 +119,33 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
     _dobCtrl = TextEditingController(text: d['Dob'] ?? '');
     _valuvuCtrl = TextEditingController(text: d['Valuvu'] ?? '');
     _thottamCtrl = TextEditingController(text: d['Thottam'] ?? '');
-    _streetCtrl = TextEditingController(text: d['Street'] ?? '');
-    _doorNoCtrl = TextEditingController(text: d['Doornumber'] ?? '');
+    final street = d['Street'] ?? '';
+    final doorNo = d['Doornumber'] ?? '';
+    _streetCtrl = TextEditingController(text: doorNo.isNotEmpty ? "$doorNo, $street" : street);
     _pincodeCtrl = TextEditingController(text: d['Pincode']?.toString() ?? '');
     _professionCtrl = TextEditingController(text: d['Profession'] ?? '');
-    _businessCtrl = TextEditingController(text: d['Business'] ?? '');
-    _aadharCtrl = TextEditingController(text: d['Aadhar']?.toString() ?? '');
+
 
     // Current Address
-    _curStreetCtrl = TextEditingController(text: d['Curstreet'] ?? '');
-    _curDoorNoCtrl = TextEditingController(text: d['Curdoorno'] ?? '');
+    final curStreet = d['Curstreet'] ?? '';
+    final curDoorNo = d['Curdoorno'] ?? '';
+    _curStreetCtrl = TextEditingController(text: curDoorNo.isNotEmpty ? "$curDoorNo, $curStreet" : curStreet);
     _curPincodeCtrl = TextEditingController(text: d['Curpincode']?.toString() ?? '');
     _curTalukCtrl = TextEditingController(text: d['Curtaluk'] ?? '');
     _curPanchayatCtrl = TextEditingController(text: d['Curpanchayat'] ?? '');
     _curVillageCtrl = TextEditingController(text: d['Curvillage'] ?? '');
     _nriZipCtrl = TextEditingController(text: d['Curnrizip']?.toString() ?? '');
     _nriFullAddressCtrl = TextEditingController(text: d['Curnrifulladdress'] ?? '');
-    _businessWebsiteCtrl = TextEditingController(text: d['BusinessWebsite'] ?? '');
+    _nriCountryCtrl = TextEditingController(text: d['Curnricountry'] ?? '');
+    _nriStateCtrl = TextEditingController(text: d['Curnristate'] ?? '');
+    _nriCityCtrl = TextEditingController(text: d['Curnricity'] ?? '');
+
 
     _relationship = d['MemberRole'];
     _gender = d['Gender'];
     _bloodGroup = d['Bloodgroup'];
     _married = d['Married'];
-    _aliveStatus = (d['is_dead'] == 0 || d['is_dead'] == '0') ? 'Alive' : 'Dead';
+    _aliveStatus = (d['is_dead'] == 0 || d['is_dead'] == '0' || d['is_dead'] == null) ? 'Alive' : 'Dead';
     _kulam = d['Kulam'] ?? 'Poondurai Kaadai';
     _district = d['District'];
     _taluk = d['Taluk'];
@@ -144,6 +162,70 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
     _nriCity = d['Curnricity'];
 
     _fetchDistricts();
+    if (_curAddressType == 'TamilNadu') {
+       _fetchCurrDistricts();
+       if (d['Curdistrict'] != null) {
+          _fetchCurrTaluks(d['Curdistrict']);
+          if (d['Curtaluk'] != null) {
+             _fetchCurrPanchayats(d['Curtaluk']);
+             if (d['Curpanchayat'] != null) {
+                _fetchCurrVillages(d['Curpanchayat']);
+             }
+          }
+       }
+    }
+    if (_curAddressType == 'OtherState' || _curAddressType == 'NRI') {
+       // Wait for geo data to load before updating states/cities?
+       // Actually _loadGeoData is async. 
+    }
+  }
+
+  Future<void> _loadGeoData() async {
+    try {
+      final String response = await rootBundle.loadString('assets/countries_states_cities.json');
+      final data = json.decode(response);
+      setState(() {
+        _allCountriesData = data;
+        _countryNames = _allCountriesData.map((c) => c['name'].toString()).toList();
+        
+        // If NRI or Other State, populate states/cities
+        if (_curAddressType == 'OtherState' && _curState != null) {
+           _updateStates('India', resetSelection: false);
+           if (_curDistrict != null) _updateCities('India', _curState!, resetSelection: false);
+        } else if (_curAddressType == 'NRI' && _nriCountry != null) {
+           _updateStates(_nriCountry!, resetSelection: false);
+           if (_nriState != null) _updateCities(_nriCountry!, _nriState!, resetSelection: false);
+        }
+      });
+    } catch (_) {}
+  }
+
+  void _updateStates(String countryName, {bool resetSelection = true}) {
+    final country = _allCountriesData.firstWhere((c) => c['name'] == countryName, orElse: () => null);
+    setState(() {
+      _stateNames = country != null ? (country['states'] as List).map((s) => s['name'].toString()).toList() : [];
+      if (resetSelection) {
+        _curState = null;
+        _nriState = null;
+        _cityNames = [];
+        _curDistrict = null;
+        _nriCity = null;
+      }
+    });
+  }
+
+  void _updateCities(String countryName, String stateName, {bool resetSelection = true}) {
+    final country = _allCountriesData.firstWhere((c) => c['name'] == countryName, orElse: () => null);
+    if (country != null) {
+      final state = (country['states'] as List).firstWhere((s) => s['name'] == stateName, orElse: () => null);
+      setState(() {
+        _cityNames = state != null ? (state['cities'] as List).map((c) => c['name'].toString()).toList() : [];
+        if (resetSelection) {
+          _curDistrict = null;
+          _nriCity = null;
+        }
+      });
+    }
   }
 
   @override
@@ -151,10 +233,10 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
     final ctrls = [
       _nameCtrl, _phoneCtrl, _whatsappCtrl, _emailCtrl, _dobCtrl, 
       _valuvuCtrl, _thottamCtrl, _streetCtrl, 
-      _doorNoCtrl, _pincodeCtrl, _professionCtrl, _businessCtrl, 
-      _aadharCtrl, _curStreetCtrl, _curDoorNoCtrl, _curPincodeCtrl, 
+      _doorNoCtrl, _pincodeCtrl, _professionCtrl, 
+      _curStreetCtrl, _curDoorNoCtrl, _curPincodeCtrl, 
       _curTalukCtrl, _curPanchayatCtrl, _curVillageCtrl, _nriZipCtrl, 
-      _nriFullAddressCtrl, _businessWebsiteCtrl
+      _nriFullAddressCtrl, _nriCountryCtrl, _nriStateCtrl, _nriCityCtrl
     ];
     for (final c in ctrls) { c.dispose(); }
     super.dispose();
@@ -203,6 +285,46 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
     } catch (_) {}
   }
 
+  Future<void> _fetchCurrDistricts() async {
+    try {
+      final res = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/districts'));
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        setState(() => _currDistricts = List<String>.from(data['data']));
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _fetchCurrTaluks(String district) async {
+    try {
+      final res = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/taluks/$district'));
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        setState(() => _currTaluks = List<String>.from(data['data']));
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _fetchCurrPanchayats(String taluk) async {
+    try {
+      final res = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/panchayats/$taluk'));
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        setState(() => _currPanchayats = List<String>.from(data['data']));
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _fetchCurrVillages(String panchayat) async {
+    try {
+      final res = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/villages/$panchayat'));
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        setState(() => _currVillages = List<String>.from(data['data']));
+      }
+    } catch (_) {}
+  }
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isSaving = true);
@@ -225,13 +347,13 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
       request.fields['valuvu'] = _valuvuCtrl.text.trim();
       request.fields['thottam'] = _thottamCtrl.text.trim();
       request.fields['kulam'] = _kulam ?? '';
-      request.fields['aadhar'] = _aadharCtrl.text.trim();
       
       // Career
       request.fields['education'] = _education ?? '';
       request.fields['profession'] = _profession ?? '';
-      request.fields['business'] = _businessCtrl.text.trim();
-      request.fields['business_website'] = _businessWebsiteCtrl.text.trim();
+      request.fields['business'] = '';
+      request.fields['business_website'] = '';
+
       
       // Native Address
       request.fields['district'] = _district ?? '';
@@ -239,7 +361,7 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
       request.fields['panchayat'] = _panchayat ?? '';
       request.fields['village'] = _village ?? '';
       request.fields['street'] = _streetCtrl.text.trim();
-      request.fields['door_no'] = _doorNoCtrl.text.trim();
+      request.fields['door_no'] = '';
       request.fields['pincode'] = _pincodeCtrl.text.trim();
       
       // Current Address
@@ -250,11 +372,11 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
       request.fields['cur_panchayat'] = _curPanchayatCtrl.text.trim();
       request.fields['cur_village'] = _curVillageCtrl.text.trim();
       request.fields['cur_street'] = _curStreetCtrl.text.trim();
-      request.fields['cur_door_no'] = _curDoorNoCtrl.text.trim();
+      request.fields['cur_door_no'] = '';
       request.fields['cur_pincode'] = _curPincodeCtrl.text.trim();
-      request.fields['nri_country'] = _nriCountry ?? '';
-      request.fields['nri_state'] = _nriState ?? '';
-      request.fields['nri_city'] = _nriCity ?? '';
+      request.fields['nri_country'] = _nriCountryCtrl.text.trim();
+      request.fields['nri_state'] = _nriStateCtrl.text.trim();
+      request.fields['nri_city'] = _nriCityCtrl.text.trim();
       request.fields['nri_zip'] = _nriZipCtrl.text.trim();
       request.fields['nri_full_address'] = _nriFullAddressCtrl.text.trim();
 
@@ -270,8 +392,7 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
       }
 
       await addFile('member_image', _memberImage);
-      await addFile('aadhar_front', _aadharFront);
-      await addFile('aadhar_back', _aadharBack);
+      await addFile('member_image', _memberImage);
       await addFile('community_cert', _communityCert);
 
       final streamedResponse = await request.send();
@@ -335,7 +456,7 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
                     children: [
                       const Icon(Icons.account_circle, color: _darkBrown, size: 28),
                       const SizedBox(width: 12),
-                      const Text('Update My Details: ', style: TextStyle(color: _darkBrown, fontWeight: FontWeight.bold, fontSize: 18)),
+                      Text(widget.title ?? 'Update My Details: ', style: const TextStyle(color: _darkBrown, fontWeight: FontWeight.bold, fontSize: 18)),
                       Text(widget.userData['Familymembershipid'] ?? '', style: const TextStyle(color: _gold, fontWeight: FontWeight.bold, fontSize: 18)),
                     ],
                   ),
@@ -395,19 +516,22 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
                   ),
                   const SizedBox(height: 32),
 
-                  SizedBox(
-                    width: double.infinity,
-                    height: 50,
-                    child: ElevatedButton(
-                      onPressed: _isSaving || !_isConfirmed ? null : _submit,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _darkBrown,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  Center(
+                    child: SizedBox(
+                      width: 250,
+                      height: 50,
+                      child: ElevatedButton(
+                        onPressed: _isSaving || !_isConfirmed ? null : _submit,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _darkBrown,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          elevation: 2,
+                        ),
+                        child: _isSaving 
+                          ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) 
+                          : const Text('UPDATE DETAILS', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
                       ),
-                      child: _isSaving 
-                        ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) 
-                        : const Text('UPDATE DETAILS', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                     ),
                   ),
                 ],
@@ -427,7 +551,7 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
         const SizedBox(width: 12),
         Icon(icon, size: 20, color: _darkBrown),
         const SizedBox(width: 8),
-        Text(title, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: _darkBrown)),
+        Expanded(child: Text(title, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: _darkBrown))),
       ]),
     );
   }
@@ -442,23 +566,19 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
           _dropField('Relationship', _relationships, _relationship, (v) => setState(() => _relationship = v)),
           _textField('Name *', _nameCtrl, required: true),
           _textField('Phone Number *', _phoneCtrl, inputType: TextInputType.phone, required: true,
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(10)],
-            suffix: const Icon(Icons.check_circle, color: Color(0xFF10B981), size: 20)),
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(10)]),
         ]),
         const SizedBox(height: 24),
-        // Row 2: Aadhar, DOB, Gender
+        // Row 2: DOB, Gender, Blood Group
         _row(isMobile, [
-          _textField('Aadhar Number *', _aadharCtrl, inputType: TextInputType.number, 
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(12)]),
           _dateField('Date Of Birth', _dobCtrl),
           _radioField('Gender', ['Male', 'Female', 'Other'], _gender, (v) => setState(() => _gender = v)),
+          _dropField('Blood Group', _bloodGroups, _bloodGroup, (v) => setState(() => _bloodGroup = v)),
         ]),
         const SizedBox(height: 24),
         // Row 3: Blood Group, Email, Whatsapp
         _row(isMobile, [
-          _dropField('Blood Group', _bloodGroups, _bloodGroup, (v) => setState(() => _bloodGroup = v)),
-          _textField('Email', _emailCtrl, inputType: TextInputType.emailAddress,
-            suffix: const Icon(Icons.check_circle, color: Color(0xFF10B981), size: 20)),
+          _textField('Email', _emailCtrl, inputType: TextInputType.emailAddress),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -493,19 +613,20 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
               ]),
             ],
           ),
+          _radioField('Married', ['Yes', 'No'], _married, (v) => setState(() => _married = v)),
         ]),
         const SizedBox(height: 24),
         // Row 4: Married, Alive, Valuvu
         _row(isMobile, [
-          _radioField('Married', ['Yes', 'No'], _married, (v) => setState(() => _married = v)),
           _radioField('Alive Status', ['Alive', 'Dead'], _aliveStatus ?? 'Alive', (v) => setState(() => _aliveStatus = v)),
           _textField('Valuvu', _valuvuCtrl),
+          _textField('Thottam', _thottamCtrl),
         ]),
         const SizedBox(height: 24),
         // Row 5: Thottam, Kulam, Exist Family ID
         _row(isMobile, [
-          _textField('Thottam', _thottamCtrl),
           _dropField('Kulam', _kulams, _kulam, (v) => setState(() => _kulam = v)),
+          if (!isMobile) const Expanded(child: SizedBox()),
           if (!isMobile) const Expanded(child: SizedBox()),
         ]),
       ]),
@@ -521,11 +642,7 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
           _dropField('Education', _educations, _education, (v) => setState(() => _education = v)),
           _dropField('Profession', _professions, _profession, (v) => setState(() => _profession = v)),
         ]),
-        const SizedBox(height: 24),
-        _row(isMobile, [
-          _textField('Business Name', _businessCtrl),
-          _textField('Business Website', _businessWebsiteCtrl),
-        ]),
+
       ]),
     );
   }
@@ -535,26 +652,133 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.grey.shade200)),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        _radioField('Current Address Type', ['Tamil Nadu', 'Other State', 'NRI'], _curAddressType == 'TamilNadu' ? 'Tamil Nadu' : (_curAddressType == 'OtherState' ? 'Other State' : (_curAddressType == 'NRI' ? 'NRI' : null)), (v) {
-          setState(() {
-            if (v == 'Tamil Nadu') _curAddressType = 'TamilNadu';
-            else if (v == 'Other State') _curAddressType = 'OtherState';
-            else if (v == 'NRI') _curAddressType = 'NRI';
-          });
-        }),
+        isMobile 
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _radioField('Current Address Type', ['Tamil Nadu', 'Other State', 'NRI'], _curAddressType == 'TamilNadu' ? 'Tamil Nadu' : (_curAddressType == 'OtherState' ? 'Other State' : (_curAddressType == 'NRI' ? 'NRI' : null)), (v) {
+                  setState(() {
+                    if (v == 'Tamil Nadu') {
+                       _curAddressType = 'TamilNadu';
+                       _fetchCurrDistricts();
+                    } else if (v == 'Other State') {
+                       _curAddressType = 'OtherState';
+                       _updateStates('India');
+                    } else if (v == 'NRI') {
+                       _curAddressType = 'NRI';
+                    }
+                    _curDistrict = null;
+                    _curTalukCtrl.clear();
+                    _curPanchayatCtrl.clear();
+                    _curVillageCtrl.clear();
+                    _curState = null;
+                    _nriCountry = null;
+                    _nriState = null;
+                    _nriCity = null;
+                  });
+                }),
+                if (_curAddressType == 'TamilNadu') ...[
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    height: 40,
+                    child: OutlinedButton.icon(
+                      onPressed: () async {
+                        setState(() {
+                          _curDistrict = _district;
+                          _curTalukCtrl.text = _taluk ?? '';
+                          _curPanchayatCtrl.text = _panchayat ?? '';
+                          _curVillageCtrl.text = _village ?? '';
+                          _curStreetCtrl.text = _streetCtrl.text;
+                          _curPincodeCtrl.text = _pincodeCtrl.text;
+                        });
+                        if (_district != null) {
+                          await _fetchCurrTaluks(_district!);
+                          if (_taluk != null) {
+                            await _fetchCurrPanchayats(_taluk!);
+                            if (_panchayat != null) await _fetchCurrVillages(_panchayat!);
+                          }
+                        }
+                      },
+                      icon: const Icon(Icons.copy, size: 16, color: _darkBrown),
+                      label: const Text('Same as Native', style: TextStyle(color: _darkBrown, fontSize: 12, fontWeight: FontWeight.bold)),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Colors.grey),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            )
+          : Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _radioField('Current Address Type', ['Tamil Nadu', 'Other State', 'NRI'], _curAddressType == 'TamilNadu' ? 'Tamil Nadu' : (_curAddressType == 'OtherState' ? 'Other State' : (_curAddressType == 'NRI' ? 'NRI' : null)), (v) {
+                  setState(() {
+                    if (v == 'Tamil Nadu') {
+                       _curAddressType = 'TamilNadu';
+                       _fetchCurrDistricts();
+                    } else if (v == 'Other State') {
+                       _curAddressType = 'OtherState';
+                       _updateStates('India');
+                    } else if (v == 'NRI') {
+                       _curAddressType = 'NRI';
+                    }
+                    _curDistrict = null;
+                    _curTalukCtrl.clear();
+                    _curPanchayatCtrl.clear();
+                    _curVillageCtrl.clear();
+                    _curState = null;
+                    _nriCountry = null;
+                    _nriState = null;
+                    _nriCity = null;
+                  });
+                }),
+                if (_curAddressType == 'TamilNadu')
+                  SizedBox(
+                    height: 40,
+                    child: OutlinedButton.icon(
+                      onPressed: () async {
+                        setState(() {
+                          _curDistrict = _district;
+                          _curTalukCtrl.text = _taluk ?? '';
+                          _curPanchayatCtrl.text = _panchayat ?? '';
+                          _curVillageCtrl.text = _village ?? '';
+                          _curStreetCtrl.text = _streetCtrl.text;
+                          _curPincodeCtrl.text = _pincodeCtrl.text;
+                        });
+                        if (_district != null) {
+                          await _fetchCurrTaluks(_district!);
+                          if (_taluk != null) {
+                            await _fetchCurrPanchayats(_taluk!);
+                            if (_panchayat != null) await _fetchCurrVillages(_panchayat!);
+                          }
+                        }
+                      },
+                      icon: const Icon(Icons.copy, size: 16, color: _darkBrown),
+                      label: const Text('Same as Native', style: TextStyle(color: _darkBrown, fontSize: 12, fontWeight: FontWeight.bold)),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Colors.grey),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
         const SizedBox(height: 24),
         
         if (_curAddressType == 'TamilNadu') ...[
            _row(isMobile, [
-            _textField('District', _curDistrict != null ? TextEditingController(text: _curDistrict) : TextEditingController(), required: true),
-            _textField('Taluk', _curTalukCtrl, required: true),
-            _textField('Panchayat', _curPanchayatCtrl, required: true),
+            _dropField('District', _currDistricts, _curDistrict, (v) { setState(() { _curDistrict = v; _curTalukCtrl.clear(); _curPanchayatCtrl.clear(); _curVillageCtrl.clear(); _currTaluks = []; _currPanchayats = []; _currVillages = []; }); if (v != null) _fetchCurrTaluks(v); }),
+            _dropField('Taluk', _currTaluks, _curTalukCtrl.text, (v) { setState(() { _curTalukCtrl.text = v ?? ''; _curPanchayatCtrl.clear(); _curVillageCtrl.clear(); _currPanchayats = []; _currVillages = []; }); if (v != null) _fetchCurrPanchayats(v); }),
+            _dropField('Panchayat', _currPanchayats, _curPanchayatCtrl.text, (v) { setState(() { _curPanchayatCtrl.text = v ?? ''; _curVillageCtrl.clear(); _currVillages = []; }); if (v != null) _fetchCurrVillages(v); }),
           ]),
           const SizedBox(height: 24),
           _row(isMobile, [
-            _textField('Village', _curVillageCtrl, required: true),
-            _textField('Street', _curStreetCtrl, required: true),
-            _textField('Door No', _curDoorNoCtrl, required: true),
+            _dropField('Village', _currVillages, _curVillageCtrl.text, (v) => setState(() => _curVillageCtrl.text = v ?? '')),
+            _textField('Door No & Street Name', _curStreetCtrl, required: true),
           ]),
           const SizedBox(height: 24),
            _row(isMobile, [
@@ -563,20 +787,38 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
             const Expanded(child: SizedBox()),
             const Expanded(child: SizedBox()),
           ]),
-        ] else if (_curAddressType == 'OtherState' || _curAddressType == 'NRI') ...[
+        ] else if (_curAddressType == 'OtherState') ...[
           _row(isMobile, [
-            _textField('Country', TextEditingController(text: _nriCountry), required: true),
-            _textField('State', TextEditingController(text: _nriState), required: true),
-            _textField('City', TextEditingController(text: _nriCity), required: true),
+            _dropField('State', _stateNames, _curState, (v) {
+              setState(() => _curState = v);
+              if (v != null) _updateCities('India', v);
+            }),
+            _dropField('City', _cityNames, _curDistrict, (v) => setState(() => _curDistrict = v)),
+            _textField('Zip / Postal Code', _curPincodeCtrl, required: true),
+          ]),
+          const SizedBox(height: 24),
+          _textField('Door No & Street Name', _curStreetCtrl, required: true),
+          const SizedBox(height: 24),
+          _textField('Full Address', _nriFullAddressCtrl, required: true, maxLines: 3),
+        ] else if (_curAddressType == 'NRI') ...[
+          _row(isMobile, [
+            _dropField('Country', _countryNames, _nriCountry, (v) {
+              setState(() => _nriCountry = v);
+              if (v != null) _updateStates(v);
+            }),
+            _dropField('State', _stateNames, _nriState, (v) {
+              setState(() => _nriState = v);
+              if (v != null && _nriCountry != null) _updateCities(_nriCountry!, v);
+            }),
+            _dropField('City', _cityNames, _nriCity, (v) => setState(() => _nriCity = v)),
           ]),
           const SizedBox(height: 24),
           _row(isMobile, [
             _textField('Zip / Postal Code', _nriZipCtrl, required: true),
-            _textField('Street', _curStreetCtrl, required: true),
-            _textField('Door No', _curDoorNoCtrl, required: true),
+            _textField('Door No & Street Name', _curStreetCtrl, required: true),
           ]),
           const SizedBox(height: 24),
-          _textField('Full Address', _nriFullAddressCtrl, required: true),
+          _textField('Full Address', _nriFullAddressCtrl, required: true, maxLines: 3),
         ],
       ]),
     );
@@ -589,11 +831,6 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
       child: Column(children: [
         _row(isMobile, [
           _fileUploadField('Passport Photo', _memberImage, (file) => setState(() => _memberImage = file)),
-          _fileUploadField('Aadhar Front', _aadharFront, (file) => setState(() => _aadharFront = file)),
-        ]),
-        const SizedBox(height: 24),
-        _row(isMobile, [
-          _fileUploadField('Aadhar Back', _aadharBack, (file) => setState(() => _aadharBack = file)),
           _fileUploadField('Community Certificate', _communityCert, (file) => setState(() => _communityCert = file)),
         ]),
       ]),
@@ -676,8 +913,7 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
         const SizedBox(height: 24),
         _row(isMobile, [
           _dropField('Village', _villages, _village, (v) => setState(() => _village = v)),
-          _textField('Street', _streetCtrl),
-          _textField('Door No', _doorNoCtrl),
+          _textField('Door No & Street Name', _streetCtrl),
         ]),
         const SizedBox(height: 24),
         _row(isMobile, [
@@ -709,7 +945,7 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
     );
   }
 
-  Widget _textField(String label, TextEditingController ctrl, {TextInputType? inputType, bool required = false, List<TextInputFormatter>? inputFormatters, Widget? suffix}) {
+  Widget _textField(String label, TextEditingController ctrl, {TextInputType? inputType, bool required = false, List<TextInputFormatter>? inputFormatters, Widget? suffix, int maxLines = 1}) {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: _darkBrown)),
       const SizedBox(height: 8),
@@ -717,6 +953,7 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
         controller: ctrl,
         keyboardType: inputType,
         inputFormatters: inputFormatters,
+        maxLines: maxLines,
         decoration: InputDecoration(
           contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade300)),
@@ -732,23 +969,32 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
   }
 
   Widget _dropField(String label, List<String> items, String? value, ValueChanged<String?> onChanged) {
-    final safeValue = items.contains(value) ? value : null;
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: _darkBrown)),
       const SizedBox(height: 8),
-      DropdownButtonFormField<String>(
-        value: safeValue,
-        isExpanded: true,
-        decoration: InputDecoration(
-          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade300)),
-          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade300)),
-          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: _darkBrown)),
-          filled: true, fillColor: Colors.white, isDense: true,
+      DropdownSearch<String>(
+        items: (filter, loadProps) => items,
+        selectedItem: items.contains(value) ? value : null,
+        onSelected: onChanged,
+        decoratorProps: DropDownDecoratorProps(
+          decoration: InputDecoration(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFFE0E0E0))),
+            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFFE0E0E0))),
+            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: _darkBrown)),
+            filled: true, fillColor: Colors.white,
+          ),
         ),
-        hint: Text('Select $label', style: const TextStyle(fontSize: 13)),
-        items: items.map((e) => DropdownMenuItem(value: e, child: Text(e, style: const TextStyle(fontSize: 13), overflow: TextOverflow.ellipsis))).toList(),
-        onChanged: onChanged,
+        popupProps: const PopupProps.menu(
+          showSearchBox: true,
+          searchFieldProps: TextFieldProps(
+            decoration: InputDecoration(
+              hintText: 'Search...',
+              prefixIcon: Icon(Icons.search),
+              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            ),
+          ),
+        ),
       ),
     ]);
   }
@@ -769,7 +1015,7 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
           suffixIcon: const Icon(Icons.calendar_today_outlined, size: 18, color: _darkBrown),
         ),
         onTap: () async {
-          final picked = await showDatePicker(context: context, initialDate: DateTime.tryParse(ctrl.text) ?? DateTime(1990), firstDate: DateTime(1900), lastDate: DateTime.now());
+          final picked = await showDatePicker(context: context, initialDate: DateTime.tryParse(ctrl.text) ?? DateTime.now(), firstDate: DateTime(1900), lastDate: DateTime.now());
           if (picked != null) ctrl.text = '${picked.year}-${picked.month.toString().padLeft(2,'0')}-${picked.day.toString().padLeft(2,'0')}';
         },
       ),

@@ -2,7 +2,9 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../widgets/loading_spinner.dart';
+import '../widgets/custom_dialog.dart';
 import '../../utils/api_config.dart';
+import 'update_details_content.dart';
 
 class PaymentsContent extends StatefulWidget {
   final int? userId;
@@ -55,7 +57,7 @@ class _PaymentsContentState extends State<PaymentsContent> {
   final double colFamilyId = 120;
   final double colName = 180;
   final double colRole = 120;
-  final double colAadhar = 150;
+  // Aadhar removed
   final double colMobile = 120;
   final double colDistrict = 110;
   final double colTaluk = 110;
@@ -218,8 +220,11 @@ class _PaymentsContentState extends State<PaymentsContent> {
 
   Future<void> _applyFilters() async {
     if (_selectedEventId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select an event to filter by payment status')),
+      showStatusDialog(
+        context,
+        title: 'Selection Required',
+        message: 'Please select an event to filter by payment status',
+        type: DialogType.warning,
       );
       return;
     }
@@ -284,7 +289,7 @@ class _PaymentsContentState extends State<PaymentsContent> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildTopBar(isMobile),
-          if (_isFilterVisible) _buildFilterSection(),
+          if (_isFilterVisible) _buildFilterSection(isMobile),
           const SizedBox(height: 8),
           _buildTableSection(),
           _buildPagination(isMobile),
@@ -698,7 +703,7 @@ class _PaymentsContentState extends State<PaymentsContent> {
     );
   }
 
-  Widget _buildFilterSection() {
+  Widget _buildFilterSection(bool isMobile) {
     return Card(
       margin: const EdgeInsets.only(top: 20),
       elevation: 2,
@@ -707,108 +712,81 @@ class _PaymentsContentState extends State<PaymentsContent> {
         padding: const EdgeInsets.all(20.0),
         child: Column(
           children: [
-            Row(
+            Wrap(
+              spacing: 16,
+              runSpacing: 16,
               children: [
-                Expanded(child: _buildDropdown('District', _districts, _selectedDistrict, (val) {
+                _buildFilterField('District', _buildDropdown('District', _districts, _selectedDistrict, (val) {
                   setState(() => _selectedDistrict = val);
                   _fetchTaluks(val!);
-                }, icon: Icons.map, isStringList: true)),
-                const SizedBox(width: 16),
-                Expanded(child: _buildDropdown('Taluk', _taluks, _selectedTaluk, (val) {
+                }, icon: Icons.map, isStringList: true), isMobile),
+                _buildFilterField('Taluk', _buildDropdown('Taluk', _taluks, _selectedTaluk, (val) {
                   setState(() => _selectedTaluk = val);
                   _fetchPanchayats(val!);
-                }, icon: Icons.location_city, isStringList: true)),
-                const SizedBox(width: 16),
-                Expanded(child: _buildDropdown('Panchayat', _panchayats, _selectedPanchayat, (val) {
+                }, icon: Icons.location_city, isStringList: true), isMobile),
+                _buildFilterField('Panchayat', _buildDropdown('Panchayat', _panchayats, _selectedPanchayat, (val) {
                   setState(() => _selectedPanchayat = val);
                   _fetchVillages(val!);
-                }, icon: Icons.business, isStringList: true)),
-                const SizedBox(width: 16),
-                Expanded(child: _buildDropdown('Village', _villages, _selectedVillage, (val) {
+                }, icon: Icons.business, isStringList: true), isMobile),
+                _buildFilterField('Village', _buildDropdown('Village', _villages, _selectedVillage, (val) {
                   setState(() => _selectedVillage = val);
-                }, icon: Icons.home, isStringList: true)),
+                }, icon: Icons.home, isStringList: true), isMobile),
               ],
             ),
-            const SizedBox(height: 16),
-            Row(
+            const SizedBox(height: 20),
+            Wrap(
+              spacing: 16,
+              runSpacing: 16,
+              crossAxisAlignment: WrapCrossAlignment.end,
               children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                _buildFilterField('Event Year', DropdownButtonFormField<int>(
+                  value: _selectedYear,
+                  decoration: InputDecoration(
+                    prefixIcon: const Icon(Icons.calendar_today, size: 20, color: Colors.orange),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    isDense: true,
+                  ),
+                  items: _years.map((y) => DropdownMenuItem(value: y, child: Text(y.toString()))).toList(),
+                  onChanged: (val) {
+                    setState(() => _selectedYear = val);
+                    _fetchEvents(val!);
+                  },
+                ), isMobile),
+                _buildFilterField('Event', DropdownButtonFormField<int>(
+                  value: _selectedEventId,
+                  decoration: InputDecoration(
+                    prefixIcon: const Icon(Icons.event_available, size: 20, color: Colors.orange),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    isDense: true,
+                  ),
+                  items: _events.map((e) => DropdownMenuItem<int>(value: e['Id'], child: Text(e['EventName']))).toList(),
+                  onChanged: (val) => setState(() => _selectedEventId = val),
+                ), isMobile),
+                _buildFilterField('Status', Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey.shade400),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Text('Event Year', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey)),
-                      const SizedBox(height: 4),
-                      DropdownButtonFormField<int>(
-                        value: _selectedYear,
-                        decoration: InputDecoration(
-                          prefixIcon: const Icon(Icons.calendar_today, size: 20, color: Colors.orange),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                          isDense: true,
-                        ),
-                        items: _years.map((y) => DropdownMenuItem(value: y, child: Text(y.toString()))).toList(),
-                        onChanged: (val) {
-                          setState(() => _selectedYear = val);
-                          _fetchEvents(val!);
-                        },
-                      ),
+                      _buildStatusRadio('Paid'),
+                      _buildStatusRadio('Pending', label: 'Unpaid'),
                     ],
                   ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('Event', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey)),
-                      const SizedBox(height: 4),
-                      DropdownButtonFormField<int>(
-                        value: _selectedEventId,
-                        decoration: InputDecoration(
-                          prefixIcon: const Icon(Icons.event_available, size: 20, color: Colors.orange),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                          isDense: true,
-                        ),
-                        items: _events.map((e) => DropdownMenuItem<int>(value: e['Id'], child: Text(e['EventName']))).toList(),
-                        onChanged: (val) => setState(() => _selectedEventId = val),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('Status', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey)),
-                      const SizedBox(height: 4),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey.shade400),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceAround,
-                          children: [
-                            _buildStatusRadio('Paid'),
-                            _buildStatusRadio('Pending', label: 'Unpaid'),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Padding(
-                  padding: const EdgeInsets.only(top: 18.0),
+                ), isMobile),
+                SizedBox(
+                  height: 44,
+                  width: isMobile ? double.infinity : null,
                   child: ElevatedButton(
                     onPressed: _applyFilters,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blue,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 18),
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                     ),
                     child: const Text('Apply Filter'),
@@ -818,6 +796,20 @@ class _PaymentsContentState extends State<PaymentsContent> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildFilterField(String label, Widget child, bool isMobile) {
+    return SizedBox(
+      width: isMobile ? double.infinity : 220,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black54)),
+          const SizedBox(height: 6),
+          child,
+        ],
       ),
     );
   }
@@ -868,7 +860,7 @@ class _PaymentsContentState extends State<PaymentsContent> {
     if (_errorMessage.isNotEmpty) return Center(child: Text(_errorMessage, style: const TextStyle(color: Colors.red)));
 
     // Total table width (sum of columns + padding)
-    final double totalTableWidth = colSno + colFamilyId + colName + colRole + colAadhar + colMobile + colDistrict + colTaluk + colPanchayat + colVillage + colActions + 40;
+    final double totalTableWidth = colSno + colFamilyId + colName + colRole + colMobile + colDistrict + colTaluk + colPanchayat + colVillage + colActions + 40;
 
     return Container(
       decoration: BoxDecoration(
@@ -898,7 +890,6 @@ class _PaymentsContentState extends State<PaymentsContent> {
                       _buildCell('FAMILY ID', colFamilyId, isHeader: true),
                       _buildCell('NAME', colName, isHeader: true),
                       _buildCell('ROLE', colRole, isHeader: true, isCentered: true),
-                      _buildCell('AADHAR', colAadhar, isHeader: true),
                       _buildCell('MOBILE', colMobile, isHeader: true),
                       _buildCell('DISTRICT', colDistrict, isHeader: true),
                       _buildCell('TALUK', colTaluk, isHeader: true),
@@ -935,40 +926,104 @@ class _PaymentsContentState extends State<PaymentsContent> {
     final sno = (_currentPage - 1) * _itemsPerPage + index + 1;
     final role = member['Role'] == 2 ? 'Coordinator' : 'Member';
 
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 20),
+    return Material(
       color: index % 2 == 0 ? Colors.white : const Color(0xFFF8FAFC),
-      child: Row(
-        children: [
-          _buildCell(sno.toString(), colSno),
-          _buildCell(member['Familymembershipid'] ?? '-', colFamilyId, isBlue: true),
-          _buildCell(member['Name'] ?? 'N/A', colName),
-          _buildCell('', colRole, isCentered: true, child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade100, 
-              borderRadius: BorderRadius.circular(4), 
-              border: Border.all(color: Colors.black12)
-            ),
-            child: Text(role, style: const TextStyle(fontSize: 10), textAlign: TextAlign.center),
-          )),
-          _buildCell(member['Aadharnumber'] ?? '-', colAadhar),
-          _buildCell(member['Phonenumber']?.toString() ?? '-', colMobile),
-          _buildCell(member['District'] ?? '-', colDistrict),
-          _buildCell(member['Taluk'] ?? '-', colTaluk),
-          _buildCell(member['Panchayat'] ?? '-', colPanchayat),
-          _buildCell(member['Village'] ?? '-', colVillage),
-          _buildCell('', colActions, isActions: true, child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+      child: InkWell(
+        onTap: () => _showEditMemberDialog(member['Id'].toString()),
+        hoverColor: Colors.blue.shade50.withOpacity(0.5),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 20),
+          child: Row(
             children: [
-              _buildActionButton('Pay Now', Colors.green, () {}),
-              const SizedBox(width: 8),
-              _buildActionButton('View Receipts', Colors.blue, () {}),
+              _buildCell(sno.toString(), colSno),
+              _buildCell(member['Familymembershipid'] ?? '-', colFamilyId, isBlue: true),
+              _buildCell(member['Name'] ?? 'N/A', colName),
+              _buildCell('', colRole, isCentered: true, child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100, 
+                  borderRadius: BorderRadius.circular(4), 
+                  border: Border.all(color: Colors.black12)
+                ),
+                child: Text(role, style: const TextStyle(fontSize: 10), textAlign: TextAlign.center),
+              )),
+              _buildCell(member['Phonenumber']?.toString() ?? '-', colMobile),
+              _buildCell(member['District'] ?? '-', colDistrict),
+              _buildCell(member['Taluk'] ?? '-', colTaluk),
+              _buildCell(member['Panchayat'] ?? '-', colPanchayat),
+              _buildCell(member['Village'] ?? '-', colVillage),
+              _buildCell('', colActions, isActions: true, child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _buildActionButton('Pay Now', Colors.green, () {}),
+                  const SizedBox(width: 8),
+                  _buildActionButton('View Receipts', Colors.blue, () {}),
+                ],
+              )),
             ],
-          )),
-        ],
+          ),
+        ),
       ),
     );
+  }
+
+  void _showEditMemberDialog(String memberId) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      final response = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/user-details/$memberId'));
+      if (mounted) Navigator.pop(context);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body)['data'];
+        if (!mounted) return;
+        
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => Dialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+            child: Container(
+              width: 1000,
+              constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.9),
+              child: UpdateDetailsContent(
+                userId: memberId,
+                userRole: 1, // Admin/Manager
+                userData: data,
+                onBack: () {
+                  Navigator.pop(context);
+                  _fetchMembers();
+                },
+              ),
+            ),
+          ),
+        );
+      } else {
+        if (mounted) {
+          showStatusDialog(
+            context,
+            title: 'Error',
+            message: 'Failed to fetch member details',
+            type: DialogType.error,
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) Navigator.pop(context);
+      if (mounted) {
+        showStatusDialog(
+          context,
+          title: 'Connection Error',
+          message: 'Unable to load member details.',
+          type: DialogType.error,
+        );
+      }
+    }
   }
 
   Widget _buildCell(String text, double width, {bool isHeader = false, bool isBlue = false, bool isActions = false, bool isCentered = true, Widget? child}) {

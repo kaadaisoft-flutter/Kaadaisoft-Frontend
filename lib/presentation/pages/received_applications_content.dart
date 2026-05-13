@@ -2,11 +2,22 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../widgets/loading_spinner.dart';
+import '../widgets/custom_dialog.dart';
 import '../../utils/api_config.dart';
 
 class ReceivedApplicationsContent extends StatefulWidget {
-  final VoidCallback? onBackToDashboard;
-  const ReceivedApplicationsContent({super.key, this.onBackToDashboard});
+  final dynamic userId;
+  final int role;
+  final VoidCallback onBackToDashboard;
+  final VoidCallback? onStatsUpdated;
+
+  const ReceivedApplicationsContent({
+    super.key, 
+    required this.userId,
+    required this.role,
+    required this.onBackToDashboard,
+    this.onStatsUpdated,
+  });
 
   @override
   State<ReceivedApplicationsContent> createState() => _ReceivedApplicationsContentState();
@@ -16,6 +27,7 @@ class _ReceivedApplicationsContentState extends State<ReceivedApplicationsConten
   List<dynamic> _applications = [];
   bool _isLoading = true;
   final ScrollController _scrollController = ScrollController();
+  List<String> _assignedVillages = [];
 
   @override
   void initState() {
@@ -31,13 +43,45 @@ class _ReceivedApplicationsContentState extends State<ReceivedApplicationsConten
 
   Future<void> _fetchApplications() async {
     try {
-      // Endpoint for received applications (placeholder for now)
-      final response = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/received-applications'));
+      // 1. Fetch assigned villages if coordinator
+      if (widget.role == 2 && widget.userId != null) {
+        final profileRes = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/member-coordinator/${widget.userId}'));
+        if (profileRes.statusCode == 200) {
+          final profileData = jsonDecode(profileRes.body);
+          final familyId = profileData['member']?['Familymembershipid'];
+          
+          if (familyId != null) {
+            final villagesRes = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/coordinator-villages/$familyId'));
+            if (villagesRes.statusCode == 200) {
+              final villagesData = jsonDecode(villagesRes.body)['data'] as List;
+              _assignedVillages = villagesData.map((v) => v['village_name'].toString().trim().toLowerCase()).toList();
+            }
+          }
+        }
+      }
+
+      // 2. Fetch applications
+      String url = '${ApiConfig.baseUrl}/api/received-applications';
+      if (widget.userId != null) {
+        url += '?user_id=${widget.userId}&role=${widget.role ?? 3}';
+      }
+      final response = await http.get(Uri.parse(url));
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
+        List<dynamic> allApps = data['data'] ?? [];
+        
+        // 3. Apply local filtering for coordinator
+        if (widget.role == 2 && _assignedVillages.isNotEmpty) {
+          allApps = allApps.where((app) {
+            final appVillage = (app['Village']?.toString() ?? '').trim().toLowerCase();
+            // Change to exact match as requested
+            return _assignedVillages.contains(appVillage);
+          }).toList();
+        }
+
         if (mounted) {
           setState(() {
-            _applications = data['data'] ?? [];
+            _applications = allApps;
             _isLoading = false;
           });
         }
@@ -84,7 +128,7 @@ class _ReceivedApplicationsContentState extends State<ReceivedApplicationsConten
                       ),
                     ),
                     Text(
-                      ' / Member Update Requests',
+                      ' / Received Applications',
                       style: TextStyle(
                         fontSize: isMobile ? 18 : 22,
                         fontWeight: FontWeight.bold,
@@ -119,7 +163,7 @@ class _ReceivedApplicationsContentState extends State<ReceivedApplicationsConten
                         controller: _scrollController,
                         scrollDirection: Axis.horizontal,
                         child: SizedBox(
-                          width: 1100,
+                          width: 952,
                           child: Column(
                             children: [
                               // Table Header
@@ -141,7 +185,7 @@ class _ReceivedApplicationsContentState extends State<ReceivedApplicationsConten
                                     SizedBox(width: 110, child: Text('TALUK', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13))),
                                     SizedBox(width: 130, child: Text('PANCHAYAT', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13))),
                                     SizedBox(width: 110, child: Text('VILLAGE', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13))),
-                                    SizedBox(width: 150, child: Text('REQUEST TYPE', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13))),
+                                    SizedBox(width: 150, child: Text('ACTIONS', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13))),
                                   ],
                                 ),
                               ),
@@ -151,7 +195,7 @@ class _ReceivedApplicationsContentState extends State<ReceivedApplicationsConten
                                       padding: EdgeInsets.all(48),
                                       child: Center(
                                         child: Text(
-                                          'No pending update requests.',
+                                          'No pending applications found.',
                                           style: TextStyle(color: Colors.black45, fontSize: 15),
                                         ),
                                       ),
@@ -197,24 +241,356 @@ class _ReceivedApplicationsContentState extends State<ReceivedApplicationsConten
   }
 
   Widget _buildTableRow(int sno, dynamic app) {
-    return Container(
-      decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: Colors.black12)),
+    return InkWell(
+      onTap: () => _showApplicationDetails(app),
+      child: Container(
+        decoration: const BoxDecoration(
+          border: Border(bottom: BorderSide(color: Colors.black12)),
+        ),
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+        child: Row(
+          children: [
+            SizedBox(width: 50, child: Text(sno.toString(), style: const TextStyle(color: Colors.black87))),
+            SizedBox(width: 140, child: Text(app['Name']?.toString() ?? '', style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.w500, overflow: TextOverflow.ellipsis))),
+            SizedBox(width: 120, child: Text(app['Phonenumber']?.toString() ?? '', style: const TextStyle(color: Colors.black54))),
+            SizedBox(width: 110, child: _buildBadge(app['District']?.toString() ?? '', Colors.grey.shade200, textColor: Colors.black87)),
+            SizedBox(width: 110, child: Text(app['Taluk']?.toString() ?? '', style: const TextStyle(color: Colors.black54, overflow: TextOverflow.ellipsis))),
+            SizedBox(width: 130, child: Text(app['Panchayat']?.toString() ?? '', style: const TextStyle(color: Colors.black54, overflow: TextOverflow.ellipsis))),
+            SizedBox(width: 110, child: Text(app['Village']?.toString() ?? '', style: const TextStyle(color: Colors.black54, overflow: TextOverflow.ellipsis))),
+            SizedBox(width: 150, child: Row(
+              children: [
+                GestureDetector(
+                  onTap: () => _confirmStatusUpdate(app['Id'], 'Verified'),
+                  child: _buildBadge('Approve', Colors.green)
+                ),
+                const SizedBox(width: 8),
+                GestureDetector(
+                  onTap: () => _confirmStatusUpdate(app['Id'], 'Rejected'),
+                  child: _buildBadge('Reject', Colors.red)
+                ),
+              ],
+            )),
+          ],
+        ),
       ),
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-      child: Row(
-        children: [
-          SizedBox(width: 50, child: Text(sno.toString(), style: const TextStyle(color: Colors.black87))),
-          SizedBox(width: 140, child: Text(app['Name']?.toString() ?? '', style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.w500, overflow: TextOverflow.ellipsis))),
-          SizedBox(width: 120, child: Text(app['Phonenumber']?.toString() ?? '', style: const TextStyle(color: Colors.black54))),
-          SizedBox(width: 140, child: Text(app['Aadhar']?.toString() ?? '', style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.w500))),
-          SizedBox(width: 100, child: _buildBadge(app['State']?.toString() ?? 'Tamil Nadu', Colors.cyan)),
-          SizedBox(width: 110, child: _buildBadge(app['District']?.toString() ?? '', Colors.grey.shade200, textColor: Colors.black87)),
-          SizedBox(width: 110, child: Text(app['Taluk']?.toString() ?? '', style: const TextStyle(color: Colors.black54, overflow: TextOverflow.ellipsis))),
-          SizedBox(width: 140, child: Text(app['Panchayat']?.toString() ?? '', style: const TextStyle(color: Colors.black54, overflow: TextOverflow.ellipsis))),
-          SizedBox(width: 110, child: Text(app['Village']?.toString() ?? '', style: const TextStyle(color: Colors.black54, overflow: TextOverflow.ellipsis))),
+    );
+  }
+  Future<void> _confirmStatusUpdate(dynamic memberId, String status) async {
+    final bool isApprove = status == 'Verified';
+    
+    if (!isApprove) {
+      // Show Rejection Reason Dialog
+      String? selectedReason;
+      String customReason = "";
+      final List<String> reasons = [
+        'Documents are not clear / blurry',
+        'Photograph is not clear or incorrect',
+        'Duplicate application or existing member',
+        'Incomplete Address (Street / Door No missing)',
+        'Native address not matching with documents',
+        'Community details incomplete',
+        'Not eligible (Out of association area)',
+        'Other (Enter manually)'
+      ];
+
+      final String? result = await showDialog<String>(
+        context: context,
+        builder: (context) => StatefulBuilder(
+          builder: (context, setDialogState) => AlertDialog(
+            title: const Text('Reject Application'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('Please select a reason for rejection:'),
+                const SizedBox(height: 16),
+                DropdownButtonFormField<String>(
+                  value: selectedReason,
+                  isExpanded: true,
+                  hint: const Text('-- Choose a reason --'),
+                  items: reasons.map((r) => DropdownMenuItem(value: r, child: Text(r, style: const TextStyle(fontSize: 13)))).toList(),
+                  onChanged: (val) => setDialogState(() => selectedReason = val),
+                ),
+                if (selectedReason == 'Other (Enter manually)') ...[
+                  const SizedBox(height: 16),
+                  TextField(
+                    onChanged: (val) => customReason = val,
+                    decoration: const InputDecoration(
+                      hintText: 'Enter reason manually...',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel', style: TextStyle(color: Colors.black54)),
+              ),
+              ElevatedButton(
+                onPressed: selectedReason != null ? () {
+                  final String finalReason = selectedReason == 'Other (Enter manually)' ? customReason : selectedReason!;
+                  Navigator.pop(context, finalReason);
+                } : null,
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+                child: const Text('Confirm Reject'),
+              ),
+            ],
+          ),
+        ),
+      );
+
+      if (result != null && result.isNotEmpty) {
+        _updateStatus(memberId, status, rejectReason: result);
+      }
+      return;
+    }
+
+    final bool? confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Approve Application'),
+        content: const Text('Are you sure you want to approve this member?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel', style: TextStyle(color: Colors.black54)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: const Text('Approve'),
+          ),
         ],
       ),
+    );
+
+    if (confirmed == true) {
+      _updateStatus(memberId, status);
+    }
+  }
+
+  Future<void> _updateStatus(dynamic memberId, String status, {String? rejectReason}) async {
+    try {
+      final response = await http.post(
+        Uri.parse(ApiConfig.updateApplicationStatus),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'member_id': memberId,
+          'status': status,
+          'reject_reason': rejectReason ?? '',
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final resData = jsonDecode(response.body);
+        _fetchApplications();
+        if (widget.onStatsUpdated != null) {
+          widget.onStatsUpdated!();
+        }
+        if (mounted) {
+          String successMsg = 'Application $status successfully';
+          if (status == 'Verified' && resData['new_fmid'] != null) {
+            successMsg = 'Member Approved Successfully!\n\nName: ${resData['member_name']}\nMember ID: ${resData['new_fmid']}';
+          }
+          
+          showStatusDialog(
+            context,
+            title: 'Success',
+            message: successMsg,
+            type: DialogType.success,
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('Error updating status: $e');
+    }
+  }
+
+  void _showApplicationDetails(dynamic app) {
+    bool isCertified = false;
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return Dialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            child: Container(
+              width: 700,
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Received application:', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                      IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close)),
+                    ],
+                  ),
+                  const Divider(),
+                  const SizedBox(height: 16),
+                  Flexible(
+                    child: SingleChildScrollView(
+                      child: Column(
+                        children: [
+                          _buildDetailRow('Name:', app['Name']?.toString() ?? ''),
+                          _buildDetailRow('Mobile No:', app['Phonenumber']?.toString() ?? ''),
+                          _buildAddressDetail(app),
+                          _buildDetailRow('Family Membership Id:', app['Familymembershipid']?.toString() ?? '-'),
+                          const SizedBox(height: 16),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const SizedBox(width: 150, child: Text('Photo:', style: TextStyle(fontWeight: FontWeight.bold))),
+                              Container(
+                                width: 100,
+                                height: 120,
+                                decoration: BoxDecoration(
+                                  border: Border.all(color: Colors.grey.shade300),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: app['Memberimage'] != null && app['Memberimage'].toString().isNotEmpty
+                                    ? Image.network(
+                                        '${ApiConfig.baseUrl}/assets/uploads/${app['Memberimage']}',
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (context, error, stackTrace) => const Icon(Icons.person, size: 50, color: Colors.grey),
+                                      )
+                                    : const Icon(Icons.person, size: 50, color: Colors.grey),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const SizedBox(width: 150, child: Text('Documents:', style: TextStyle(fontWeight: FontWeight.bold))),
+                              Wrap(
+                                spacing: 12,
+                                children: [
+                                  if (app['Communitycertificate'] != null && app['Communitycertificate'].toString().isNotEmpty)
+                                    _buildDocIcon(Icons.badge_outlined, 'Certificate'),
+                                  // Add more icons if needed
+                                ],
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    children: [
+                      Checkbox(
+                        value: isCertified,
+                        onChanged: (v) => setDialogState(() => isCertified = v ?? false),
+                      ),
+                      const Expanded(
+                        child: Text('I hereby certify that the above registration details are accurate.'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      ElevatedButton(
+                        onPressed: isCertified ? () async {
+                          await _confirmStatusUpdate(app['Id'], 'Verified');
+                          if (mounted) Navigator.pop(context);
+                        } : null,
+                        style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
+                        child: const Text('Approve'),
+                      ),
+                      const SizedBox(width: 12),
+                      ElevatedButton(
+                        onPressed: () async {
+                          await _confirmStatusUpdate(app['Id'], 'Rejected');
+                          if (mounted) Navigator.pop(context);
+                        },
+                        style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+                        child: const Text('Reject'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      decoration: BoxDecoration(border: Border(bottom: BorderSide(color: Colors.grey.shade100))),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(width: 150, child: Text(label, style: const TextStyle(fontWeight: FontWeight.bold))),
+          Expanded(child: Text(value)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAddressDetail(dynamic app) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      decoration: BoxDecoration(border: Border(bottom: BorderSide(color: Colors.grey.shade100))),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(width: 150, child: Text('Address:', style: TextStyle(fontWeight: FontWeight.bold))),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildSubRow('D/No', app['Doornumber']?.toString() ?? '-'),
+                _buildSubRow('Street', app['Street']?.toString() ?? '-'),
+                _buildSubRow('Village', app['Village']?.toString() ?? '-'),
+                _buildSubRow('Panchayat', app['Panchayat']?.toString() ?? '-'),
+                _buildSubRow('Taluk', app['Taluk']?.toString() ?? '-'),
+                _buildSubRow('District', app['District']?.toString() ?? '-'),
+                _buildSubRow('State', app['State']?.toString() ?? '-'),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSubRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        children: [
+          SizedBox(width: 100, child: Text(label)),
+          const Text(' -   '),
+          Expanded(child: Text(value, style: const TextStyle(fontWeight: FontWeight.w500))),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDocIcon(IconData icon, String label) {
+    return Container(
+      width: 44,
+      height: 44,
+      decoration: BoxDecoration(
+        color: Colors.blue.shade50,
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.blue.shade200),
+      ),
+      child: Icon(icon, color: Colors.blue, size: 24),
     );
   }
 

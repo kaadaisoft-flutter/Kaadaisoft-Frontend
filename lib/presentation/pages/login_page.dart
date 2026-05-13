@@ -26,10 +26,10 @@ class _LoginPageState extends State<LoginPage> {
   bool _isLoading = false;
 
   Future<void> _handleLogin() async {
-    final mobileAadhar = _mobileController.text.trim();
+    final mobile = _mobileController.text.trim();
     final password = _passwordController.text.trim();
 
-    if (mobileAadhar.isEmpty || password.isEmpty) {
+    if (mobile.isEmpty || password.isEmpty) {
       showStatusDialog(
         context,
         title: 'Fields Required',
@@ -39,11 +39,11 @@ class _LoginPageState extends State<LoginPage> {
       return;
     }
 
-    if (mobileAadhar.length != 10 && mobileAadhar.length != 12) {
+    if (mobile.length != 10) {
       showStatusDialog(
         context,
         title: 'Invalid Number',
-        message: 'Please enter a 10-digit Mobile or 12-digit Aadhar number.',
+        message: 'Please enter a 10-digit Mobile number.',
         type: DialogType.warning,
       );
       return;
@@ -58,7 +58,7 @@ class _LoginPageState extends State<LoginPage> {
         Uri.parse(ApiConfig.login),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          'mobile_or_aadhar': mobileAadhar,
+          'mobile': mobile,
           'password': password,
         }),
       );
@@ -187,13 +187,13 @@ class _LoginPageState extends State<LoginPage> {
                               ),
                             ),
                             SizedBox(height: isMobile ? 20 : 24),
-                            // Mobile/Aadhar Field
+                            // Mobile Number Field
                             _buildTextField(
                               controller: _mobileController,
-                              hint: 'Mobile / Aadhar Number',
-                              suffixIcon: Icons.person,
+                              hint: 'Mobile Number',
+                              suffixIcon: Icons.phone_android,
                               isMobile: isMobile,
-                              maxLength: 12,
+                              maxLength: 10,
                               keyboardType: TextInputType.number,
                             ),
                             SizedBox(height: isMobile ? 12 : 16),

@@ -4,8 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:excel/excel.dart' hide Border;
 import '../widgets/loading_spinner.dart';
+import '../widgets/custom_dialog.dart';
 import '../../utils/api_config.dart';
 import '../../utils/download_helper.dart' as dl;
+import 'update_details_content.dart';
 
 class ReportsContent extends StatefulWidget {
   final int? userId;
@@ -42,7 +44,7 @@ class _ReportsContentState extends State<ReportsContent> {
   final double colName = 180;
   final double colRole = 100;
   final double colPhone = 130;
-  final double colAadhar = 160;
+  // Aadhar removed
   final double colDistrict = 130;
   final double colTaluk = 130;
   final double colPanchayat = 130;
@@ -120,8 +122,11 @@ class _ReportsContentState extends State<ReportsContent> {
 
   Future<void> _applyFilters({bool resetPage = true}) async {
     if (_selectedEventId == null && _selectedStatus != 'All') {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select an event to filter by payment status')),
+      showStatusDialog(
+        context,
+        title: 'Selection Required',
+        message: 'Please select an event to filter by payment status',
+        type: DialogType.warning,
       );
       return;
     }
@@ -259,8 +264,11 @@ class _ReportsContentState extends State<ReportsContent> {
       }
 
       if (allData.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No data to download')),
+        showStatusDialog(
+          context,
+          title: 'No Data',
+          message: 'No data to download',
+          type: DialogType.warning,
         );
         setState(() => _isLoading = false);
         return;
@@ -340,8 +348,11 @@ class _ReportsContentState extends State<ReportsContent> {
       }
 
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Download failed: $e')),
+      showStatusDialog(
+        context,
+        title: 'Download Error',
+        message: 'Download failed: $e',
+        type: DialogType.error,
       );
     } finally {
       setState(() => _isLoading = false);
@@ -428,8 +439,9 @@ class _ReportsContentState extends State<ReportsContent> {
   }
 
   Widget _buildFilterDropdown(String label, IconData icon, Color iconColor, List<dynamic> items, dynamic value, Function(dynamic) onChanged, {bool isEvent = false}) {
-    return SizedBox(
-      width: 250,
+    return Container(
+      width: 280,
+      constraints: const BoxConstraints(maxWidth: 300),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -437,7 +449,7 @@ class _ReportsContentState extends State<ReportsContent> {
             children: [
               Icon(icon, size: 16, color: iconColor),
               const SizedBox(width: 8),
-              Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black54)),
+              Text(label, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.black54)),
             ],
           ),
           const SizedBox(height: 8),
@@ -446,14 +458,14 @@ class _ReportsContentState extends State<ReportsContent> {
             isExpanded: true,
             decoration: InputDecoration(
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               isDense: true,
               hintText: isEvent ? 'Choose Event' : 'Choose Year',
             ),
             items: items.map((item) {
               return DropdownMenuItem<int>(
                 value: isEvent ? item['Id'] : item,
-                child: Text(isEvent ? item['EventName'] : item.toString(), overflow: TextOverflow.ellipsis),
+                child: Text(isEvent ? item['EventName'] : item.toString(), overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13)),
               );
             }).toList(),
             onChanged: onChanged,
@@ -481,8 +493,9 @@ class _ReportsContentState extends State<ReportsContent> {
             border: Border.all(color: Colors.grey.shade300),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 4,
             children: [
               _buildRadioOption('Paid Users', 'Paid'),
               _buildRadioOption('Unpaid Users', 'Pending'),
@@ -512,23 +525,29 @@ class _ReportsContentState extends State<ReportsContent> {
   }
 
   Widget _buildSummarySection(bool isMobile) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Wrap(
+      spacing: 16,
+      runSpacing: 12,
+      alignment: WrapAlignment.spaceBetween,
+      crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         Text(
           'Total Members: $_totalItems',
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black54),
+          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Colors.black54),
         ),
-        ElevatedButton.icon(
-          onPressed: _downloadReport,
-          icon: const Icon(Icons.download),
-          label: const Text('Download'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFFFFC107),
-            foregroundColor: Colors.black87,
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-            elevation: 0,
+        SizedBox(
+          width: isMobile ? double.infinity : null,
+          child: ElevatedButton.icon(
+            onPressed: _downloadReport,
+            icon: const Icon(Icons.download, size: 18),
+            label: const Text('Download Excel'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFFFC107),
+              foregroundColor: Colors.black87,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+              elevation: 1,
+            ),
           ),
         ),
       ],
@@ -541,7 +560,7 @@ class _ReportsContentState extends State<ReportsContent> {
 
     final bool showEventCols = _selectedEventId != null;
     // Total table width (sum of columns + spacing)
-    final double totalTableWidth = colSno + colFamilyId + colName + colRole + colPhone + colAadhar + colDistrict + colTaluk + colPanchayat + colVillage + (showEventCols ? colEventMoney + colPaidCash + colPending + colStatus + colLastPaid : 0) + 60;
+    final double totalTableWidth = colSno + colFamilyId + colName + colRole + colPhone + colDistrict + colTaluk + colPanchayat + colVillage + (showEventCols ? colEventMoney + colPaidCash + colPending + colStatus + colLastPaid : 0) + 60;
 
     return Container(
       decoration: BoxDecoration(
@@ -571,7 +590,6 @@ class _ReportsContentState extends State<ReportsContent> {
                       _buildCell('USER NAME', colName, isHeader: true, hasDivider: true),
                       _buildCell('ROLE', colRole, isHeader: true, hasDivider: true),
                       _buildCell('PHONE NO', colPhone, isHeader: true, hasDivider: true),
-                      _buildCell('AADHAR NUMBER', colAadhar, isHeader: true, hasDivider: true),
                       _buildCell('DISTRICT', colDistrict, isHeader: true, hasDivider: true),
                       _buildCell('TALUK', colTaluk, isHeader: true, hasDivider: true),
                       _buildCell('PANCHAYAT', colPanchayat, isHeader: true, hasDivider: true),
@@ -606,6 +624,65 @@ class _ReportsContentState extends State<ReportsContent> {
         ),
       ),
     );
+  }
+
+  void _showEditMemberDialog(String memberId) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      final response = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/user-details/$memberId'));
+      if (mounted) Navigator.pop(context);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body)['data'];
+        if (!mounted) return;
+        
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => Dialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+            child: Container(
+              width: 1000,
+              constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.9),
+              child: UpdateDetailsContent(
+                userId: memberId,
+                userRole: 1, // Admin/Manager
+                userData: data,
+                onBack: () {
+                  Navigator.pop(context);
+                  _applyFilters(resetPage: false);
+                },
+              ),
+            ),
+          ),
+        );
+      } else {
+        if (mounted) {
+          showStatusDialog(
+            context,
+            title: 'Error',
+            message: 'Failed to fetch member details',
+            type: DialogType.error,
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) Navigator.pop(context);
+      if (mounted) {
+        showStatusDialog(
+          context,
+          title: 'Connection Error',
+          message: 'Unable to load member details.',
+          type: DialogType.error,
+        );
+      }
+    }
   }
 
   Widget _buildCell(String text, double width, {bool isHeader = false, bool isBlue = false, bool isBold = false, bool isPill = false, bool hasDivider = true}) {
@@ -691,33 +768,34 @@ class _ReportsContentState extends State<ReportsContent> {
     final lastPaidRaw = member['paymentdate']?.toString().split(' ').first ?? member['Updated_at']?.toString().split(' ').first ?? member['updated_at']?.toString().split(' ').first ?? member['created_at']?.toString().split(' ').first ?? '-';
     final lastPaid = _formatDate(lastPaidRaw);
 
-    return Container(
-      height: 46, // Reduced height for 10-item visibility
-      decoration: BoxDecoration(
-        color: index % 2 == 0 ? Colors.white : const Color(0xFFF8FAFC),
-        border: const Border(bottom: BorderSide(color: Colors.black12, width: 0.5)),
-      ),
-      child: Row(
-        children: [
-          _buildCell(sno.toString(), colSno, hasDivider: true),
-          _buildCell(member['Familymembershipid'] ?? '-', colFamilyId, isBlue: true, hasDivider: true),
-          _buildCell(member['Name'] ?? 'N/A', colName, isBold: true, hasDivider: true),
-          _buildCell(member['Role']?.toString() ?? '-', colRole, isPill: true, hasDivider: true),
-          _buildCell(member['Phonenumber']?.toString() ?? '-', colPhone, hasDivider: true),
-          _buildCell(member['Aadharnumber'] ?? '-', colAadhar, hasDivider: true),
-          _buildCell(member['District'] ?? '-', colDistrict, hasDivider: true),
-          _buildCell(member['Taluk'] ?? '-', colTaluk, hasDivider: true),
-          _buildCell(member['Panchayat'] ?? '-', colPanchayat, hasDivider: true),
-          _buildCell(member['Village'] ?? '-', colVillage, hasDivider: _selectedEventId != null),
-          if (_selectedEventId != null) ...[
-            _buildCell(eventMoney.toStringAsFixed(1), colEventMoney, hasDivider: true),
-            _buildCell(paidCash.toStringAsFixed(1), colPaidCash, hasDivider: true),
-            _buildCell(pendingCash.toStringAsFixed(1), colPending, isBold: true, isBlue: pendingCash > 0, hasDivider: true),
-            _buildCell(status, colStatus, isPill: true, hasDivider: true),
-            _buildCell(lastPaid, colLastPaid, hasDivider: false),
-          ],
-        ],
-      ),
+    return Material(
+      color: index % 2 == 0 ? Colors.white : const Color(0xFFF8FAFC),
+      child: Container(
+        height: 46, // Reduced height for 10-item visibility
+        decoration: const BoxDecoration(
+          border: Border(bottom: BorderSide(color: Colors.black12, width: 0.5)),
+        ),
+        child: Row(
+            children: [
+              _buildCell(sno.toString(), colSno, hasDivider: true),
+              _buildCell(member['Familymembershipid'] ?? '-', colFamilyId, isBlue: true, hasDivider: true),
+              _buildCell(member['Name'] ?? 'N/A', colName, isBold: true, hasDivider: true),
+              _buildCell(member['Role']?.toString() ?? '-', colRole, isPill: true, hasDivider: true),
+              _buildCell(member['Phonenumber']?.toString() ?? '-', colPhone, hasDivider: true),
+              _buildCell(member['District'] ?? '-', colDistrict, hasDivider: true),
+              _buildCell(member['Taluk'] ?? '-', colTaluk, hasDivider: true),
+              _buildCell(member['Panchayat'] ?? '-', colPanchayat, hasDivider: true),
+              _buildCell(member['Village'] ?? '-', colVillage, hasDivider: _selectedEventId != null),
+              if (_selectedEventId != null) ...[
+                _buildCell(eventMoney.toStringAsFixed(1), colEventMoney, hasDivider: true),
+                _buildCell(paidCash.toStringAsFixed(1), colPaidCash, hasDivider: true),
+                _buildCell(pendingCash.toStringAsFixed(1), colPending, isBold: true, isBlue: pendingCash > 0, hasDivider: true),
+                _buildCell(status, colStatus, isPill: true, hasDivider: true),
+                _buildCell(lastPaid, colLastPaid, hasDivider: false),
+              ],
+            ],
+          ),
+        ),
     );
   }
 

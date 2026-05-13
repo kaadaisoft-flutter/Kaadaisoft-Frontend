@@ -79,7 +79,13 @@ class _EventsContentState extends State<EventsContent> {
           title: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Update Event Details', style: TextStyle(fontWeight: FontWeight.bold)),
+              const Expanded(
+                child: Text(
+                  'Update Event Details', 
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
               IconButton(
                 icon: const Icon(Icons.close),
                 onPressed: () => Navigator.pop(context),
@@ -367,14 +373,14 @@ class _EventsContentState extends State<EventsContent> {
   }
 
 
-  Widget _buildDatePicker(BuildContext context, DateTime selectedDate, Function(DateTime) onDateSelected) {
+  Widget _buildDatePicker(BuildContext context, DateTime? selectedDate, Function(DateTime) onDateSelected) {
 
     return InkWell(
       onTap: () async {
         final date = await showDatePicker(
           context: context,
-          initialDate: selectedDate,
-          firstDate: DateTime(2000),
+          initialDate: selectedDate ?? DateTime.now(),
+          firstDate: DateTime.now(),
           lastDate: DateTime(2100),
         );
         if (date != null) onDateSelected(date);
@@ -389,9 +395,236 @@ class _EventsContentState extends State<EventsContent> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text('${selectedDate.day.toString().padLeft(2, '0')}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.year}'),
+            Text(selectedDate != null 
+              ? '${selectedDate.day.toString().padLeft(2, '0')}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.year}'
+              : 'dd-mm-yyyy',
+              style: TextStyle(color: selectedDate != null ? Colors.black87 : Colors.black45),
+            ),
             const Icon(Icons.calendar_month, size: 18, color: Colors.black54),
           ],
+        ),
+      ),
+    );
+  }
+
+  void _showAddEventDialog() {
+    final nameController = TextEditingController();
+    final taxController = TextEditingController(text: '0.00');
+    DateTime? fromDate;
+    DateTime? toDate;
+    PlatformFile? selectedBanner;
+    bool isSaving = false;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Expanded(
+                child: Text(
+                  'Add New Event', 
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ],
+          ),
+          content: Container(
+            width: 500,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('EVENT NAME', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black54)),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: nameController,
+                    decoration: InputDecoration(
+                      hintText: 'e.g. Event_2026',
+                      filled: true,
+                      fillColor: Colors.grey[50],
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey[200]!)),
+                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey[200]!)),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  const Row(
+                    children: [
+                      Icon(Icons.info_outline, size: 14, color: Colors.blue),
+                      SizedBox(width: 4),
+                      Text('Note: Year should be at the end of the event name (e.g. Event_2026).', style: TextStyle(fontSize: 11, color: Colors.blue)),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  
+                  const Text('EVENT BANNER', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black54)),
+                  const SizedBox(height: 8),
+                  InkWell(
+                    onTap: () async {
+                      try {
+                        FilePickerResult? result = await FilePicker.pickFiles(
+                          type: FileType.image,
+                          withData: true,
+                        );
+                        if (result != null) {
+                          setDialogState(() => selectedBanner = result.files.first);
+                        }
+                      } catch (e) {
+                        debugPrint('File picker error: $e');
+                      }
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        border: Border.all(color: Colors.grey[300]!),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: Colors.grey[100],
+                              border: Border.all(color: Colors.grey[300]!),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: const Text('Choose File', style: TextStyle(fontSize: 13, color: Colors.black87)),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              selectedBanner?.name ?? 'No file chosen',
+                              style: TextStyle(fontSize: 13, color: selectedBanner == null ? Colors.black45 : Colors.black87),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  const Row(
+                    children: [
+                      Icon(Icons.info_outline, size: 14, color: Colors.blue),
+                      SizedBox(width: 4),
+                      Text('Note: Max file size 2MB (JPG, PNG).', style: TextStyle(fontSize: 11, color: Colors.blue)),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+
+                  const Text('DURATION', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black54)),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('From', style: TextStyle(fontSize: 11, color: Colors.black45)),
+                            const SizedBox(height: 4),
+                            _buildDatePicker(context, fromDate, (date) => setDialogState(() => fromDate = date)),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('To', style: TextStyle(fontSize: 11, color: Colors.black45)),
+                            const SizedBox(height: 4),
+                            _buildDatePicker(context, toDate, (date) => setDialogState(() => toDate = date)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+
+                  const Text('TAX AMOUNT (₹)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black54)),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: taxController,
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(
+                      filled: true,
+                      fillColor: Colors.grey[50],
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey[200]!)),
+                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey[200]!)),
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      onPressed: isSaving ? null : () async {
+                        if (nameController.text.isEmpty) {
+                          showStatusDialog(context, title: 'Error', message: 'Please enter an event name', type: DialogType.error);
+                          return;
+                        }
+                        if (fromDate == null || toDate == null) {
+                          showStatusDialog(context, title: 'Error', message: 'Please select event duration', type: DialogType.error);
+                          return;
+                        }
+
+                        setDialogState(() => isSaving = true);
+                        try {
+                          var request = http.MultipartRequest('POST', Uri.parse('${ApiConfig.baseUrl}/api/add-event'));
+                          request.fields['EventName'] = nameController.text;
+                          request.fields['From_date'] = fromDate!.toIso8601String().split('T')[0];
+                          request.fields['To_date'] = toDate!.toIso8601String().split('T')[0];
+                          request.fields['TaxAmount'] = taxController.text;
+
+                          if (selectedBanner != null && selectedBanner!.bytes != null) {
+                            request.files.add(http.MultipartFile.fromBytes(
+                              'image', 
+                              selectedBanner!.bytes!,
+                              filename: selectedBanner!.name
+                            ));
+                          }
+
+                          var streamedResponse = await request.send();
+                          var response = await http.Response.fromStream(streamedResponse);
+
+                          if (response.statusCode == 200) {
+                            Navigator.pop(context);
+                            _fetchEvents();
+                            showStatusDialog(context, title: 'Success', message: 'Event created successfully', type: DialogType.success);
+                          } else {
+                            final error = jsonDecode(response.body)['message'] ?? 'Failed to create event';
+                            showStatusDialog(context, title: 'Error', message: error, type: DialogType.error);
+                          }
+                        } catch (e) {
+                          showStatusDialog(context, title: 'Error', message: 'Connection error', type: DialogType.error);
+                        } finally {
+                          setDialogState(() => isSaving = false);
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF3B82F6),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                      child: isSaving 
+                        ? const SizedBox(width: 20, height: 20, child: LoadingSpinner())
+                        : const Text('Create Event', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ),
       ),
     );
@@ -423,7 +656,7 @@ class _EventsContentState extends State<EventsContent> {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton.icon(
-                        onPressed: () {},
+                        onPressed: _showAddEventDialog,
                         icon: const Icon(Icons.add, size: 18),
                         label: const Text('Add New Event'),
                         style: ElevatedButton.styleFrom(
@@ -443,7 +676,7 @@ class _EventsContentState extends State<EventsContent> {
                   const Text('Events Management', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF172030))),
                   if (widget.role == 1)
                     ElevatedButton.icon(
-                      onPressed: () {},
+                      onPressed: _showAddEventDialog,
                       icon: const Icon(Icons.add, size: 18),
                       label: const Text('Add New Event'),
                       style: ElevatedButton.styleFrom(
@@ -592,7 +825,7 @@ class _EventsContentState extends State<EventsContent> {
                                               children: [
                                                 _buildIconButton(Icons.edit_outlined, Colors.blue, () => _showUpdateEventDialog(event)),
                                                 const SizedBox(width: 8),
-                                                _buildIconButton(Icons.delete_outline, Colors.red, () {}),
+                                                _buildIconButton(Icons.delete_outline, Colors.red, () => _showDeleteConfirmationDialog(event)),
                                               ],
                                             )),
                                         ],
@@ -632,6 +865,84 @@ class _EventsContentState extends State<EventsContent> {
         ),
       );
     });
+  }
+
+  void _showDeleteConfirmationDialog(dynamic event) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.red.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.delete_outline, color: Color(0xFFD81B60), size: 40),
+            ),
+            const SizedBox(height: 24),
+            const Text(
+              'Move to Trash?',
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF172030)),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Are you sure you want to move\n${event['EventName']} to the trash?',
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 14, color: Colors.black54, height: 1.5),
+            ),
+            const SizedBox(height: 32),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFF1F5F9),
+                  foregroundColor: const Color(0xFF64748B),
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                child: const Text('Cancel', style: TextStyle(fontWeight: FontWeight.bold)),
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton(
+                onPressed: () async {
+                  try {
+                    final response = await http.post(Uri.parse('${ApiConfig.baseUrl}/api/delete-event/${event['Id']}'));
+                    if (response.statusCode == 200) {
+                      Navigator.pop(context);
+                      _fetchEvents();
+                    } else {
+                      Navigator.pop(context);
+                      showStatusDialog(context, title: 'Error', message: 'Failed to delete event', type: DialogType.error);
+                    }
+                  } catch (e) {
+                    Navigator.pop(context);
+                    showStatusDialog(context, title: 'Error', message: 'Connection error', type: DialogType.error);
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFD81B60),
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                child: const Text('Confirm Delete', style: TextStyle(fontWeight: FontWeight.bold)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   String _formatDate(dynamic dateStr) {

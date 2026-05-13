@@ -42,11 +42,11 @@ class TermsAndConditionsPage extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 40),
-                  const Text(
+                  Text(
                     'Terms and Conditions',
                     style: TextStyle(
                       color: Colors.white,
-                      fontSize: 48,
+                      fontSize: MediaQuery.of(context).size.width < 600 ? 32 : 48,
                       fontWeight: FontWeight.w800,
                       letterSpacing: -1,
                     ),
@@ -84,12 +84,12 @@ class TermsAndConditionsPage extends StatelessWidget {
                   ],
                   border: Border.all(color: const Color(0xFFE2E8F0).withOpacity(0.8)),
                 ),
-                padding: const EdgeInsets.all(50),
+                padding: EdgeInsets.all(MediaQuery.of(context).size.width < 600 ? 24 : 50),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'LAST UPDATED: APRIL 30, 2026',
+                      'LAST UPDATED: MAY 07, 2026',
                       style: TextStyle(
                         color: Color(0xFFE65100),
                         fontWeight: FontWeight.w600,
@@ -125,10 +125,10 @@ class TermsAndConditionsPage extends StatelessWidget {
                     const SizedBox(height: 40),
                     
                     _buildSectionTitle('1. Agreement to Terms'),
-                    _buildSectionText('By accessing or using our website, you agree to be bound by these Terms and Conditions and our Privacy Policy. If you do not agree with any part of these terms, you must not use our services. This agreement constitutes a legally binding contract between you and Kaadaisoft.'),
+                    _buildSectionText('By accessing or using our website, you agree to be bound by these Terms and Conditions and our Privacy Policy. If you do not agree with any part of these terms, you must not use our services. This agreement constitutes a legally binding contract between you and Poondurai Kaadai Kulam.'),
                     
                     _buildSectionTitle('2. User Registration'),
-                    _buildSectionText('To access certain features of the website, you are required to register for an account. You agree to provide accurate, current, and complete information during the registration process (Aadhar, Mobile Number, Address, etc.) and to update such information to keep it accurate, current, and complete.'),
+                    _buildSectionText('To access certain features of the website, you are required to register for an account. You agree to provide accurate, current, and complete information during the registration process (Mobile Number, Address, etc.) and to update such information to keep it accurate, current, and complete.'),
                     
                     _buildSectionTitle('3. Responsibility for Account'),
                     _buildSectionText('You are solely responsible for maintaining the confidentiality of your account password and for all activities that occur under your account. You agree to notify us immediately of any unauthorized use of your account or any other breach of security.'),
@@ -178,22 +178,26 @@ class TermsAndConditionsPage extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(top: 40, bottom: 20),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
             width: 4,
             height: 24,
+            margin: const EdgeInsets.only(top: 4),
             decoration: BoxDecoration(
               color: const Color(0xFFE65100),
               borderRadius: BorderRadius.circular(4),
             ),
           ),
           const SizedBox(width: 12),
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF0F172A),
+          Expanded(
+            child: Text(
+              title,
+              style: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF0F172A),
+              ),
             ),
           ),
         ],

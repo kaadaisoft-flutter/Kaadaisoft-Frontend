@@ -6,7 +6,8 @@ import '../../utils/api_config.dart';
 
 class UpdateRequestsContent extends StatefulWidget {
   final VoidCallback? onBackToDashboard;
-  const UpdateRequestsContent({super.key, this.onBackToDashboard});
+  final Function(int)? onCountUpdated;
+  const UpdateRequestsContent({super.key, this.onBackToDashboard, this.onCountUpdated});
 
   @override
   State<UpdateRequestsContent> createState() => _UpdateRequestsContentState();
@@ -42,6 +43,9 @@ class _UpdateRequestsContentState extends State<UpdateRequestsContent> {
             _requests = result['data'];
             _isLoading = false;
           });
+          if (widget.onCountUpdated != null) {
+            widget.onCountUpdated!(_requests.length);
+          }
         }
       }
     } catch (e) {

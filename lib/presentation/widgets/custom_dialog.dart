@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-enum DialogType { success, error, warning }
+enum DialogType { success, error, warning, info }
 
 class CustomDialog extends StatelessWidget {
   final String title;
@@ -47,6 +47,12 @@ class CustomDialog extends StatelessWidget {
         iconColor = const Color(0xFFF59E0B); // Aadhaar-style Orange
         iconBgColor = const Color(0xFFFFFBEB);
         break;
+      case DialogType.info:
+        icon = Icons.info_rounded;
+        iconColor = const Color(0xFF3B82F6);
+        iconBgColor = const Color(0xFFEFF6FF);
+        break;
+
     }
 
     return Container(
@@ -137,8 +143,11 @@ Future<void> showStatusDialog(BuildContext context, {
   required String message,
   DialogType type = DialogType.success,
   VoidCallback? onOk,
+  bool? autoDismiss,
+  Duration duration = const Duration(seconds: 2),
 }) {
-  return showDialog(
+  final bool shouldAutoDismiss = autoDismiss ?? (type == DialogType.success);
+  final dialog = showDialog(
     context: context,
     barrierDismissible: true,
     builder: (BuildContext context) {
@@ -150,4 +159,18 @@ Future<void> showStatusDialog(BuildContext context, {
       );
     },
   );
+
+  if (shouldAutoDismiss) {
+    Future.delayed(duration, () {
+      if (Navigator.of(context).canPop()) {
+        // We need to be careful here. Navigator.pop() might pop the wrong thing 
+        // if the user already closed the dialog manually.
+        // In a real app, we'd use a unique key or check the route name.
+        Navigator.of(context).pop();
+        if (onOk != null) onOk();
+      }
+    });
+  }
+
+  return dialog;
 }

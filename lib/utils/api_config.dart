@@ -4,12 +4,8 @@ class ApiConfig {
   // Use 127.0.0.1 for Web and Desktop
   // Use 10.0.2.2 for Android Emulator to access host localhost
   static String get baseUrl {
-    if (kIsWeb) {
-      return 'http://localhost:8000';
-    }
-    // For mobile emulators (Android), we need to use 10.0.2.2
-    // If you are using a physical device, replace this with your computer's IP address
-    return 'http://127.0.0.1:8000'; 
+    // Using provided laptop IP for mobile/wireless debugging access
+    return 'http://192.168.68.114:8000';
   }
 
   // Common endpoints
@@ -21,8 +17,10 @@ class ApiConfig {
   static String get pendingPayments => '$baseUrl/api/pending-payments';
   static String get eventYears => '$baseUrl/api/events/years';
   static String get eventsByYear => '$baseUrl/api/events/by-year';
+  static String get updateApplicationStatus => '$baseUrl/api/update-application-status';
   static String get memberCoordinator => '$baseUrl/api/member-coordinator';
   static String get paymentMembers => '$baseUrl/api/payments/members';
   static String get filterPayments => '$baseUrl/api/payments/filter';
   static String get updateMember => '$baseUrl/api/update-member';
+  static String get bulkUploadMembers => '$baseUrl/api/bulk-upload-members';
 }

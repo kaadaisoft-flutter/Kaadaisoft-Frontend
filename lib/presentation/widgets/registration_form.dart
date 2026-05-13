@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart' show rootBundle, FilteringTextInputFormatter;
 import 'package:http/http.dart' as http;
+import 'package:kaadaisoft/presentation/pages/terms_and_conditions_page.dart';
+import 'package:kaadaisoft/presentation/pages/privacy_policy_page.dart';
 import 'dart:convert';
 import 'package:file_picker/file_picker.dart' as fp_pkg;
 import 'package:cross_file/cross_file.dart';
 import 'package:dropdown_search/dropdown_search.dart';
 import 'custom_dialog.dart';
 import '../../utils/api_config.dart';
+import '../../services/geo_data_service.dart';
 
 class RegistrationForm extends StatefulWidget {
   const RegistrationForm({super.key});
@@ -31,7 +34,6 @@ class _RegistrationFormState extends State<RegistrationForm> {
   final Map<String, FocusNode> _focusNodes = {
     'Name': FocusNode(),
     'Phone Number': FocusNode(),
-    'Aadhar Number': FocusNode(),
     'Date Of Birth': FocusNode(),
     'Blood Group': FocusNode(),
     'Email': FocusNode(),
@@ -68,7 +70,6 @@ class _RegistrationFormState extends State<RegistrationForm> {
 
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
-  final _aadharController = TextEditingController();
   final _emailController = TextEditingController();
   final _whatsappController = TextEditingController();
   final _dobController = TextEditingController();
@@ -124,8 +125,6 @@ class _RegistrationFormState extends State<RegistrationForm> {
 
   // File Uploads
   XFile? _memberImage;
-  XFile? _aadharFront;
-  XFile? _aadharBack;
   XFile? _communityCert;
 
   // Real Database Data for Hierarchical Dropdowns
@@ -140,13 +139,13 @@ class _RegistrationFormState extends State<RegistrationForm> {
   List<String> _currVillages = [];
   
   // JSON Data for Other State & NRI
-  List<dynamic> _allCountriesData = [];
   List<String> _countryNames = [];
   List<String> _stateNames = [];
   List<String> _cityNames = [];
+
+  final GeoDataService _geoService = GeoDataService();
   
   final GlobalKey<FormFieldState> _phoneFieldKey = GlobalKey<FormFieldState>();
-  final GlobalKey<FormFieldState> _aadharFieldKey = GlobalKey<FormFieldState>();
 
   bool _isLoadingGeoData = false;
   
@@ -155,7 +154,6 @@ class _RegistrationFormState extends State<RegistrationForm> {
   bool _isLoadingPanchayats = false;
   bool _isLoadingVillages = false;
   bool _phoneExists = false;
-  bool _aadharExists = false;
   bool _showMandatoryErrors = false;
 
 
@@ -173,22 +171,14 @@ class _RegistrationFormState extends State<RegistrationForm> {
         if (_phoneExists) setState(() => _phoneExists = false);
       }
     });
-
-    _aadharController.addListener(() {
-      if (_aadharController.text.length == 12) {
-        _checkExistence(aadhar: _aadharController.text);
-      } else {
-        if (_aadharExists) setState(() => _aadharExists = false);
-      }
-    });
   }
 
-  Future<void> _checkExistence({String? phone, String? aadhar}) async {
+  Future<void> _checkExistence({String? phone}) async {
     try {
       final response = await http.post(
         Uri.parse(ApiConfig.checkExistence),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'phone': phone, 'aadhar': aadhar}),
+        body: jsonEncode({'phone': phone}),
       );
 
       if (response.statusCode == 200) {
@@ -197,11 +187,7 @@ class _RegistrationFormState extends State<RegistrationForm> {
         setState(() {
           if (phone != null) {
             _phoneExists = data['phone_exists'] ?? false;
-            if (_phoneExists) _phoneFieldKey.currentState?.validate();
-          }
-          if (aadhar != null) {
-            _aadharExists = data['aadhar_exists'] ?? false;
-            if (_aadharExists) _aadharFieldKey.currentState?.validate();
+            _phoneFieldKey.currentState?.validate();
           }
         });
       } else {
@@ -214,29 +200,21 @@ class _RegistrationFormState extends State<RegistrationForm> {
 
   Future<void> _loadGeoData() async {
     setState(() => _isLoadingGeoData = true);
-    try {
-      final String response = await rootBundle.loadString('assets/countries_states_cities.json');
-      final data = json.decode(response);
-      setState(() {
-        _allCountriesData = data;
-        _countryNames = _allCountriesData.map((c) => c['name'].toString()).toList();
-        _isLoadingGeoData = false;
-        
-        // If 'Other State' was already selected before JSON finished loading
-        if (_selectedCurrentAddressType == 'Other State') {
-          _updateStates('India');
-        }
-      });
-    } catch (e) {
-      debugPrint('Error loading geo data: $e');
-      setState(() => _isLoadingGeoData = false);
+    if (!_geoService.isLoaded) {
+      await _geoService.loadData();
     }
+    setState(() {
+      _countryNames = _geoService.countryNames;
+      _isLoadingGeoData = false;
+      if (_selectedCurrentAddressType == 'Other State') {
+        _updateStates('India');
+      }
+    });
   }
 
   void _updateStates(String countryName) {
-    final country = _allCountriesData.firstWhere((c) => c['name'] == countryName, orElse: () => null);
     setState(() {
-      _stateNames = country != null ? (country['states'] as List).map((s) => s['name'].toString()).toList() : [];
+      _stateNames = _geoService.getStates(countryName);
       _selectedCurrState = null;
       _cityNames = [];
       _selectedCurrCity = null;
@@ -244,14 +222,10 @@ class _RegistrationFormState extends State<RegistrationForm> {
   }
 
   void _updateCities(String countryName, String stateName) {
-    final country = _allCountriesData.firstWhere((c) => c['name'] == countryName, orElse: () => null);
-    if (country != null) {
-      final state = (country['states'] as List).firstWhere((s) => s['name'] == stateName, orElse: () => null);
-      setState(() {
-        _cityNames = state != null ? (state['cities'] as List).map((c) => c['name'].toString()).toList() : [];
-        _selectedCurrCity = null;
-      });
-    }
+    setState(() {
+      _cityNames = _geoService.getCities(countryName, stateName);
+      _selectedCurrCity = null;
+    });
   }
 
   Future<void> _fetchDistricts() async {
@@ -409,7 +383,6 @@ class _RegistrationFormState extends State<RegistrationForm> {
       _currVillages = List.from(_villages);
 
       _currStreetController.text = _streetController.text;
-      _currDoorNoController.text = _doorNoController.text;
       _currPinCodeController.text = _pinCodeController.text;
     });
     
@@ -432,31 +405,24 @@ class _RegistrationFormState extends State<RegistrationForm> {
     String? missingDoc;
     
     if (_memberImage == null) { documentsValid = false; missingDoc = 'Passport size photo'; }
-    else if (_aadharFront == null) { documentsValid = false; missingDoc = 'Aadhar Front image'; }
-    else if (_aadharBack == null) { documentsValid = false; missingDoc = 'Aadhar Back image'; }
-    else if (_communityCert == null) { documentsValid = false; missingDoc = 'Community Certificate'; }
 
     if (!isFormValid) {
       String? firstErrorField;
       if (_nameController.text.isEmpty) firstErrorField = 'Name';
       else if (_phoneController.text.length != 10) firstErrorField = 'Phone Number';
-      else if (_aadharController.text.length != 12) firstErrorField = 'Aadhar Number';
       else if (_dobController.text.isEmpty) firstErrorField = 'Date Of Birth';
       else if (_selectedGender == null) firstErrorField = 'Gender';
       else if (_selectedBloodGroup == null) firstErrorField = 'Blood Group';
-      else if (_emailController.text.isEmpty || !RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(_emailController.text)) firstErrorField = 'Email';
+      else if (_emailController.text.isNotEmpty && !RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(_emailController.text)) firstErrorField = 'Email';
       else if (_whatsappController.text.length != 10) firstErrorField = 'WhatsApp Number';
       else if (_selectedMarried == null) firstErrorField = 'Married';
-      else if (_valuvuController.text.isEmpty) firstErrorField = 'Valuvu';
-      else if (_thottamController.text.isEmpty) firstErrorField = 'Thottam';
-      else if (_selectedEducation == null || (_selectedEducation == 'Others' && _educationController.text.isEmpty)) firstErrorField = 'Education';
-      else if (_selectedProfession == null || (_selectedProfession == 'Others' && _professionController.text.isEmpty)) firstErrorField = 'Profession';
+      else if (_selectedEducation == 'Others' && _educationController.text.isEmpty) firstErrorField = 'Education';
+      else if (_selectedProfession == 'Others' && _professionController.text.isEmpty) firstErrorField = 'Profession';
       else if (_selectedDistrict == null) firstErrorField = 'District';
       else if (_selectedTaluk == null) firstErrorField = 'Taluk';
       else if (_selectedPanchayat == null) firstErrorField = 'Panchayat';
       else if (_selectedVillage == null) firstErrorField = 'Village Name';
       else if (_streetController.text.isEmpty) firstErrorField = 'Street Name';
-      else if (_doorNoController.text.isEmpty) firstErrorField = 'Door Number';
       else if (_pinCodeController.text.length != 6) firstErrorField = 'Pin Code';
       
       // Current Address Validation
@@ -469,7 +435,6 @@ class _RegistrationFormState extends State<RegistrationForm> {
           else if (_selectedCurrPanchayat == null) firstErrorField = 'Curr Panchayat';
           else if (_selectedCurrVillage == null) firstErrorField = 'Curr Village';
           else if (_currStreetController.text.isEmpty) firstErrorField = 'Curr Street';
-          else if (_currDoorNoController.text.isEmpty) firstErrorField = 'Curr Door';
           else if (_currPinCodeController.text.length != 6) firstErrorField = 'Curr Pin';
         } else if (_selectedCurrentAddressType == 'Other State') {
           if (_selectedCurrState == null) firstErrorField = 'Curr State';
@@ -547,7 +512,6 @@ class _RegistrationFormState extends State<RegistrationForm> {
       // Add text fields
       request.fields['name'] = _nameController.text;
       request.fields['phone'] = _phoneController.text;
-      request.fields['aadhar'] = _aadharController.text;
       request.fields['dob'] = _dobController.text.contains('-') ? _dobController.text.split('-').reversed.join('-') : _dobController.text;
       request.fields['gender'] = _selectedGender ?? '';
       request.fields['blood_group'] = _selectedBloodGroup ?? '';
@@ -565,7 +529,7 @@ class _RegistrationFormState extends State<RegistrationForm> {
       request.fields['panchayat'] = _selectedPanchayat == 'Others' ? _manualPanchayatController.text : (_selectedPanchayat ?? '');
       request.fields['village'] = _selectedVillage == 'Others' ? _manualVillageController.text : (_selectedVillage ?? '');
       request.fields['street'] = _streetController.text;
-      request.fields['door_no'] = _doorNoController.text;
+      request.fields['door_no'] = '';
       request.fields['pincode'] = _pinCodeController.text;
       request.fields['cur_address_type'] = _selectedCurrentAddressType ?? '';
       request.fields['cur_state'] = _selectedCurrentAddressType == 'Tamil Nadu' ? 'Tamil Nadu' : (_selectedCurrState ?? '');
@@ -574,7 +538,7 @@ class _RegistrationFormState extends State<RegistrationForm> {
       request.fields['cur_panchayat'] = _selectedCurrPanchayat == 'Others' ? _manualCurrPanchayatController.text : (_selectedCurrPanchayat ?? '');
       request.fields['cur_village'] = _selectedCurrVillage == 'Others' ? _manualCurrVillageController.text : (_selectedCurrVillage ?? '');
       request.fields['cur_street'] = _currStreetController.text;
-      request.fields['cur_door_no'] = _currDoorNoController.text;
+      request.fields['cur_door_no'] = '';
       request.fields['cur_pincode'] = _currPinCodeController.text;
       request.fields['nri_country'] = _selectedCountry ?? '';
       request.fields['nri_state'] = _selectedCurrState ?? '';
@@ -592,28 +556,6 @@ class _RegistrationFormState extends State<RegistrationForm> {
           ));
         } else {
           request.files.add(await http.MultipartFile.fromPath('member_image', _memberImage!.path));
-        }
-      }
-      if (_aadharFront != null) {
-        if (kIsWeb) {
-          request.files.add(http.MultipartFile.fromBytes(
-            'aadhar_front',
-            await _aadharFront!.readAsBytes(),
-            filename: _aadharFront!.name,
-          ));
-        } else {
-          request.files.add(await http.MultipartFile.fromPath('aadhar_front', _aadharFront!.path));
-        }
-      }
-      if (_aadharBack != null) {
-        if (kIsWeb) {
-          request.files.add(http.MultipartFile.fromBytes(
-            'aadhar_back',
-            await _aadharBack!.readAsBytes(),
-            filename: _aadharBack!.name,
-          ));
-        } else {
-          request.files.add(await http.MultipartFile.fromPath('aadhar_back', _aadharBack!.path));
         }
       }
       if (_communityCert != null) {
@@ -644,13 +586,26 @@ class _RegistrationFormState extends State<RegistrationForm> {
           });
         }
       } else {
-        if (mounted) {
-          showStatusDialog(
-            context,
-            title: 'Error',
-            message: 'Failed to submit application. Please try again later.',
-            type: DialogType.error,
-          );
+        String errorMsg = 'Failed to submit application. Please try again later.';
+        try {
+          final errorData = jsonDecode(response.body);
+          errorMsg = errorData['detail'] ?? errorMsg;
+        } catch (e) {}
+        
+        if (errorMsg.contains('Phone number')) {
+          setState(() {
+            _phoneExists = true;
+          });
+          _phoneFieldKey.currentState?.validate();
+        } else {
+          if (mounted) {
+            showStatusDialog(
+              context,
+              title: 'Error',
+              message: errorMsg,
+              type: DialogType.error,
+            );
+          }
         }
       }
     } catch (e) {
@@ -673,21 +628,23 @@ class _RegistrationFormState extends State<RegistrationForm> {
     return Dialog(
       backgroundColor: Colors.transparent,
       insetPadding: EdgeInsets.symmetric(
-        horizontal: isMobile ? 10 : size.width * 0.1,
-        vertical: 20,
+        horizontal: isMobile ? 8 : size.width * 0.1,
+        vertical: isMobile ? 10 : 20,
       ),
-      child: Container(
-        decoration: BoxDecoration(
-          color: const Color(0xFFF8F9FA),
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 32,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 1100),
+        child: Container(
+          decoration: BoxDecoration(
+            color: const Color(0xFFF8F9FA),
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 32,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -702,7 +659,7 @@ class _RegistrationFormState extends State<RegistrationForm> {
                 children: [
                   const Expanded(
                     child: Text(
-                      'Kaadaikulam.org / Registration Form',
+                      'Poondurai Kaadaikulam.org / Registration Form',
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.w700,
@@ -740,29 +697,29 @@ class _RegistrationFormState extends State<RegistrationForm> {
                       
                       _buildResponsiveRow(isMobile, [
                         _buildInputField('Name *', _nameController, isMobile, focusNode: _focusNodes['Name']),
-                        _buildInputField('Phone Number *', _phoneController, isMobile, keyboardType: TextInputType.phone, maxLength: 10, focusNode: _focusNodes['Phone Number'], key: _phoneFieldKey),
-                        _buildInputField('Aadhar Number *', _aadharController, isMobile, keyboardType: TextInputType.number, maxLength: 12, focusNode: _focusNodes['Aadhar Number'], key: _aadharFieldKey),
+                        _buildInputField('Phone Number *', _phoneController, isMobile, keyboardType: TextInputType.phone, maxLength: 10, focusNode: _focusNodes['Phone Number'], fieldKey: _phoneFieldKey, autovalidateMode: AutovalidateMode.onUserInteraction),
+                        _buildDatePickerField('Date Of Birth *', _dobController, isMobile, focusNode: _focusNodes['Date Of Birth']),
                       ]),
                       
                       _buildResponsiveRow(isMobile, [
-                        _buildDatePickerField('Date Of Birth *', _dobController, isMobile, focusNode: _focusNodes['Date Of Birth']),
                         _buildGenderSelector(isMobile, focusNode: _focusNodes['Gender']),
                         _buildDropdownField('Blood Group *', ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'], isMobile, value: _selectedBloodGroup, onChanged: (v) => setState(() => _selectedBloodGroup = v), focusNode: _focusNodes['Blood Group']),
+                        _buildEmailField(isMobile, focusNode: _focusNodes['Email']),
                       ]),
                       
                       _buildResponsiveRow(isMobile, [
-                        _buildEmailField(isMobile, focusNode: _focusNodes['Email']),
                         _buildWhatsAppField(isMobile, focusNode: _focusNodes['WhatsApp Number']),
                         _buildRadioField('Married *', ['Yes', 'No'], isMobile, 
                           value: _selectedMarried, 
                           focusNode: _focusNodes['Married'],
                           onChanged: (v) => setState(() => _selectedMarried = v)),
+                        _buildInputField('Valuvu', _valuvuController, isMobile, focusNode: _focusNodes['Valuvu']),
                       ]),
                       
                       _buildResponsiveRow(isMobile, [
-                        _buildInputField('Valuvu *', _valuvuController, isMobile, focusNode: _focusNodes['Valuvu']),
-                        _buildInputField('Thottam *', _thottamController, isMobile, focusNode: _focusNodes['Thottam']),
+                        _buildInputField('Thottam', _thottamController, isMobile, focusNode: _focusNodes['Thottam']),
                         _buildInputField('Kulam *', TextEditingController(text: 'Poondurai Kaadai'), isMobile, readOnly: true),
+                        if (!isMobile) const Spacer(),
                       ]),
 
                       const SizedBox(height: 32),
@@ -773,18 +730,18 @@ class _RegistrationFormState extends State<RegistrationForm> {
                       _buildResponsiveRow(isMobile, [
                         Column(
                           children: [
-                            _buildDropdownField('Education *', [
+                            _buildDropdownField('Education', [
                               'SSLC', 'HSC', 'Diploma', 'ITI', 'B.A', 'B.Sc', 'B.Com', 'BBA', 'BCA', 'B.E', 'B.Tech',
                               'MBBS', 'BDS', 'B.Pharm', 'B.Ed', 'LLB', 'B.Arch', 'M.A', 'M.Sc', 'M.Com', 'MBA', 'MCA',
                               'M.E', 'M.Tech', 'MD', 'MS', 'MDS', 'M.Pharm', 'M.Ed', 'LLM', 'M.Phil', 'Ph.D', 'Others'
                             ], isMobile, value: _selectedEducation, onChanged: (v) => setState(() => _selectedEducation = v), focusNode: _focusNodes['Education']),
                             if (_selectedEducation == 'Others')
-                              _buildInputField('Enter Education *', _educationController, isMobile),
+                              _buildInputField('Enter Education', _educationController, isMobile),
                           ],
                         ),
                         Column(
                           children: [
-                            _buildDropdownField('Profession *', [
+                            _buildDropdownField('Profession', [
                               'Doctor', 'Lawyer', 'Police', 'Teacher / Lecturer', 'Engineer', 'Government Employee',
                               'Private Employee', 'Student', 'Farmer', 'Textile Mill Worker', 'Garment Factory Worker',
                               'Tailor', 'Pattern Master', 'Textile Machinery Technician', 'Loom Operator', 'Truck Driver',
@@ -792,7 +749,7 @@ class _RegistrationFormState extends State<RegistrationForm> {
                               'Grocery Shop Staff', 'IT / Software Employee', 'Home Maker', 'Retired', 'Others'
                             ], isMobile, value: _selectedProfession, onChanged: (v) => setState(() => _selectedProfession = v), focusNode: _focusNodes['Profession']),
                             if (_selectedProfession == 'Others')
-                              _buildInputField('Enter Profession *', _professionController, isMobile),
+                              _buildInputField('Enter Profession', _professionController, isMobile),
                           ],
                         ),
                         if (!isMobile) const Spacer(),
@@ -876,8 +833,7 @@ class _RegistrationFormState extends State<RegistrationForm> {
                         ),
                       ]),
                       _buildResponsiveRow(isMobile, [
-                        _buildInputField('Street Name *', _streetController, isMobile, focusNode: _focusNodes['Street Name']),
-                        _buildInputField('Door Number *', _doorNoController, isMobile, focusNode: _focusNodes['Door Number']),
+                        _buildInputField('Door No & Street Name *', _streetController, isMobile, focusNode: _focusNodes['Street Name']),
                         _buildInputField('Pin Code *', _pinCodeController, isMobile, keyboardType: TextInputType.number, maxLength: 6, focusNode: _focusNodes['Pin Code']),
                         if (!isMobile) const Spacer(),
                       ]),
@@ -987,9 +943,9 @@ class _RegistrationFormState extends State<RegistrationForm> {
                           ),
                         ]),
                         _buildResponsiveRow(isMobile, [
-                          _buildInputField('Street Name *', _currStreetController, isMobile, focusNode: _focusNodes['Curr Street']),
-                          _buildInputField('Door Number *', _currDoorNoController, isMobile, focusNode: _focusNodes['Curr Door']),
+                          _buildInputField('Door No & Street Name *', _currStreetController, isMobile, focusNode: _focusNodes['Curr Street']),
                           _buildInputField('Pin Code *', _currPinCodeController, isMobile, keyboardType: TextInputType.number, maxLength: 6, focusNode: _focusNodes['Curr Pin']),
+                          if (!isMobile) const Spacer(),
                           if (!isMobile) const Spacer(),
                         ]),
                       ] else if (_selectedCurrentAddressType == 'Other State') ...[
@@ -1051,9 +1007,9 @@ class _RegistrationFormState extends State<RegistrationForm> {
                       const SizedBox(height: 16),
                       _buildResponsiveRow(isMobile, [
                         _buildFileUploadField('Upload Your Passport size photo *', isMobile),
-                        _buildFileUploadField('Upload Aadhar Front image *', isMobile),
-                        _buildFileUploadField('Upload Aadhar Back image *', isMobile),
-                        _buildFileUploadField('Upload Community Certificate *', isMobile),
+                        _buildFileUploadField('Upload Community Certificate', isMobile),
+                        if (!isMobile) const Spacer(),
+                        if (!isMobile) const Spacer(),
                       ]),
                       
                       const SizedBox(height: 12),
@@ -1084,23 +1040,27 @@ class _RegistrationFormState extends State<RegistrationForm> {
                             ),
                           ),
                           TextButton(
-                            onPressed: () {},
+                            onPressed: () {
+                              Navigator.push(context, MaterialPageRoute(builder: (context) => const TermsAndConditionsPage()));
+                            },
                             style: TextButton.styleFrom(
                               padding: EdgeInsets.zero,
                               minimumSize: Size.zero,
                               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                             ),
-                            child: const Text('Terms and Conditions', style: TextStyle(decoration: TextDecoration.underline, fontSize: 13)),
+                            child: const Text('Terms and Conditions', style: TextStyle(decoration: TextDecoration.underline, fontSize: 13, color: mediumBrown, fontWeight: FontWeight.bold)),
                           ),
                           const Text(' and ', style: TextStyle(fontSize: 13)),
                           TextButton(
-                            onPressed: () {},
+                            onPressed: () {
+                              Navigator.push(context, MaterialPageRoute(builder: (context) => const PrivacyPolicyPage()));
+                            },
                             style: TextButton.styleFrom(
                               padding: EdgeInsets.zero,
                               minimumSize: Size.zero,
                               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                             ),
-                            child: const Text('Privacy Policy', style: TextStyle(decoration: TextDecoration.underline, fontSize: 13)),
+                            child: const Text('Privacy Policy', style: TextStyle(decoration: TextDecoration.underline, fontSize: 13, color: mediumBrown, fontWeight: FontWeight.bold)),
                           ),
                         ],
                       ),
@@ -1108,7 +1068,7 @@ class _RegistrationFormState extends State<RegistrationForm> {
                       const SizedBox(height: 20),
                       Center(
                         child: ElevatedButton(
-                          onPressed: _handleRegister,
+                          onPressed: _isAgreed ? _handleRegister : null,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: mediumBrown,
                             foregroundColor: Colors.white,
@@ -1128,8 +1088,9 @@ class _RegistrationFormState extends State<RegistrationForm> {
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildExitButton() {
     return MouseRegion(
@@ -1215,7 +1176,7 @@ class _RegistrationFormState extends State<RegistrationForm> {
     );
   }
 
-  Widget _buildInputField(String label, TextEditingController controller, bool isMobile, {String? hint, TextInputType? keyboardType, bool readOnly = false, int? maxLength, FocusNode? focusNode, Key? key}) {
+  Widget _buildInputField(String label, TextEditingController controller, bool isMobile, {String? hint, FocusNode? focusNode, TextInputType? keyboardType, bool readOnly = false, int? maxLength, Key? fieldKey, AutovalidateMode? autovalidateMode}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1231,12 +1192,13 @@ class _RegistrationFormState extends State<RegistrationForm> {
         ),
         const SizedBox(height: 6),
         TextFormField(
-          key: key,
+          key: fieldKey,
           controller: controller,
           focusNode: focusNode,
           keyboardType: keyboardType,
           readOnly: readOnly,
           maxLength: maxLength,
+          autovalidateMode: autovalidateMode,
           inputFormatters: (keyboardType == TextInputType.phone || keyboardType == TextInputType.number)
               ? [FilteringTextInputFormatter.digitsOnly]
               : null,
@@ -1248,18 +1210,13 @@ class _RegistrationFormState extends State<RegistrationForm> {
               if (val.length < 10) return 'Phone number should contain 10 digits.';
               if (_phoneExists) return 'Phone number already exist.';
             }
-            if (label.contains('Aadhar')) {
-              if (val.isEmpty) return _showMandatoryErrors ? 'Please fill this field' : null;
-              if (val.length < 12) return 'Aadhar number should contain 12 digits.';
-              if (_aadharExists) return 'Aadhar number already exist.';
-            }
             if (label.contains('*') && val.trim().isEmpty && _showMandatoryErrors) {
               return 'Please fill this field';
             }
             return null;
           },
           decoration: InputDecoration(
-            hintText: hint,
+            hintText: hint ?? '',
             counterText: "", // Hide character counter
             hintStyle: const TextStyle(fontSize: 13, color: Colors.grey),
             fillColor: Colors.white.withOpacity(0.9),
@@ -1347,11 +1304,13 @@ class _RegistrationFormState extends State<RegistrationForm> {
           ),
           const SizedBox(height: 4),
           Wrap(
-            spacing: 8,
+            spacing: 12,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               _buildRadioOption('Male'),
               _buildRadioOption('Female'),
-              _buildRadioOption('Other'),
+              _buildRadioOption('Others'),
             ],
           ),
           if (_selectedGender == null && _showMandatoryErrors)
@@ -1447,9 +1406,6 @@ class _RegistrationFormState extends State<RegistrationForm> {
           text: const TextSpan(
             text: 'Email',
             style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF333333)),
-            children: [
-              TextSpan(text: ' *', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
-            ],
           ),
         ),
         const SizedBox(height: 6),
@@ -1458,7 +1414,7 @@ class _RegistrationFormState extends State<RegistrationForm> {
           focusNode: focusNode,
           validator: (value) {
             final val = value ?? '';
-            if (val.isEmpty) return _showMandatoryErrors ? 'Please enter email' : null;
+            if (val.isEmpty) return null;
             if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(val)) return 'Invalid email';
             return null;
           },
@@ -1481,8 +1437,11 @@ class _RegistrationFormState extends State<RegistrationForm> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        Wrap(
+          spacing: 12,
+          runSpacing: 8,
+          alignment: WrapAlignment.start,
+          crossAxisAlignment: WrapCrossAlignment.center,
           children: [
             RichText(
               text: const TextSpan(
@@ -1494,11 +1453,21 @@ class _RegistrationFormState extends State<RegistrationForm> {
               ),
             ),
             Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Checkbox(value: _whatsappSameAsPhone, onChanged: (v) => setState(() {
-                  _whatsappSameAsPhone = v!;
-                  if (v) _whatsappController.text = _phoneController.text;
-                }), activeColor: primaryBrown),
+                SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: Checkbox(
+                    value: _whatsappSameAsPhone, 
+                    onChanged: (v) => setState(() {
+                      _whatsappSameAsPhone = v!;
+                      if (v) _whatsappController.text = _phoneController.text;
+                    }), 
+                    activeColor: primaryBrown
+                  ),
+                ),
+                const SizedBox(width: 4),
                 const Text('Same as Phone', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500)),
               ],
             ),
@@ -1552,6 +1521,8 @@ class _RegistrationFormState extends State<RegistrationForm> {
           const SizedBox(height: 4),
           Wrap(
             spacing: 16,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: options.map((o) => MouseRegion(
               cursor: SystemMouseCursors.click,
               child: GestureDetector(
@@ -1584,8 +1555,6 @@ class _RegistrationFormState extends State<RegistrationForm> {
   Widget _buildFileUploadField(String label, bool isMobile) {
     XFile? selectedFile;
     if (label.contains('Passport')) selectedFile = _memberImage;
-    else if (label.contains('Front')) selectedFile = _aadharFront;
-    else if (label.contains('Back')) selectedFile = _aadharBack;
     else if (label.contains('Community')) selectedFile = _communityCert;
 
     return Column(
@@ -1615,8 +1584,6 @@ class _RegistrationFormState extends State<RegistrationForm> {
                   final file = result.files.single;
                   final xFile = file.path != null ? XFile(file.path!, name: file.name) : XFile.fromData(file.bytes!, name: file.name);
                   if (label.contains('Passport')) _memberImage = xFile;
-                  else if (label.contains('Front')) _aadharFront = xFile;
-                  else if (label.contains('Back')) _aadharBack = xFile;
                   else if (label.contains('Community')) _communityCert = xFile;
                 });
               }
@@ -1648,6 +1615,11 @@ class _RegistrationFormState extends State<RegistrationForm> {
             ),
           ),
         ),
+        if (label.contains('*') && selectedFile == null && _showMandatoryErrors)
+          Padding(
+            padding: const EdgeInsets.only(top: 4, left: 4),
+            child: Text('Please select a file', style: TextStyle(color: Colors.red[700], fontSize: 11)),
+          ),
       ],
     );
   }
@@ -1690,7 +1662,6 @@ class _RegistrationFormState extends State<RegistrationForm> {
   void dispose() {
     _nameController.dispose();
     _phoneController.dispose();
-    _aadharController.dispose();
     _emailController.dispose();
     _whatsappController.dispose();
     _dobController.dispose();
