@@ -52,6 +52,7 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
 
   // State Variables
   bool _phoneExists = false;
+  String _initialPhone = '';
   final _phoneFieldKey = GlobalKey<FormFieldState>();
   
   String? _selectedRelationship;
@@ -107,11 +108,12 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
     super.initState();
     _loadInitialData();
     
+    _initialPhone = widget.memberData['Phonenumber']?.toString().trim() ?? '';
+    
     _phoneController.addListener(() {
-      final currentPhone = _phoneController.text;
-      final initialPhone = widget.memberData['Phonenumber']?.toString() ?? '';
+      final currentPhone = _phoneController.text.trim();
       
-      if (currentPhone.length == 10 && currentPhone != initialPhone) {
+      if (currentPhone.length == 10 && currentPhone != _initialPhone) {
         _checkExistence(currentPhone);
       } else {
         if (_phoneExists) setState(() => _phoneExists = false);
@@ -177,8 +179,9 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
     _selectedDistrict = d['District'];
     _selectedTaluk = d['Taluk'];
     _selectedPanchayat = d['Panchayat'];
-    _selectedVillage = d['Village'];
-    _streetController.text = d['Street'] ?? '';
+    final street = d['Street'] ?? '';
+    final doorNo = d['Doornumber']?.toString() ?? '';
+    _streetController.text = doorNo.isNotEmpty ? "$doorNo, $street" : street;
     _pinCodeController.text = d['Pincode']?.toString() ?? '';
     
     // Current Address
@@ -187,8 +190,9 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
     _selectedCurrDistrict = d['Curdistrict'];
     _selectedCurrTaluk = d['Curtaluk'];
     _selectedCurrPanchayat = d['Curpanchayat'];
-    _selectedCurrVillage = d['Curvillage'];
-    _currStreetController.text = d['Curstreet'] ?? '';
+    final curStreet = d['Curstreet'] ?? '';
+    final curDoorNo = d['Curdoorno']?.toString() ?? '';
+    _currStreetController.text = curDoorNo.isNotEmpty ? "$curDoorNo, $curStreet" : curStreet;
     _currPinCodeController.text = d['Curpincode']?.toString() ?? '';
     _selectedCountry = d['Curnricountry'];
     _selectedCurrCity = d['Curnricity'];
@@ -354,8 +358,9 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
                           autovalidateMode: AutovalidateMode.onUserInteraction,
                           validator: (v) {
                             if (v == null || v.isEmpty) return null;
-                            if (v.length != 10) return 'Invalid phone number';
-                            if (_phoneExists) return 'Phone number already registered';
+                            final phone = v.trim();
+                            if (phone.length != 10) return 'Invalid phone number';
+                            if (_phoneExists && phone != _initialPhone) return 'Phone number already registered';
                             return null;
                           }
                         ),
@@ -734,7 +739,6 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
       request.fields['gender'] = _selectedGender ?? '';
       request.fields['blood_group'] = _selectedBloodGroup ?? '';
       request.fields['married'] = _selectedMarried ?? '';
-      request.fields['alive_status'] = _selectedAliveStatus;
       request.fields['valuvu'] = _valuvuController.text.trim();
       request.fields['thottam'] = _thottamController.text.trim();
       request.fields['kulam'] = 'Poondurai Kaadai';
@@ -745,9 +749,17 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
       
       request.fields['district'] = _selectedDistrict ?? '';
       request.fields['taluk'] = _selectedTaluk ?? '';
-      request.fields['panchayat'] = _selectedPanchayat ?? '';
-      request.fields['village'] = _selectedVillage ?? '';
-      request.fields['street'] = _streetController.text.trim();
+      // Split native street by comma
+      String fullStreet = _streetController.text.trim();
+      String doorNo = '';
+      String streetName = fullStreet;
+      if (fullStreet.contains(',')) {
+        int commaIndex = fullStreet.indexOf(',');
+        doorNo = fullStreet.substring(0, commaIndex).trim();
+        streetName = fullStreet.substring(commaIndex + 1).trim();
+      }
+      request.fields['street'] = streetName;
+      request.fields['door_no'] = doorNo;
       request.fields['pincode'] = _pinCodeController.text.trim();
 
       request.fields['cur_address_type'] = _selectedCurrentAddressType == 'Tamil Nadu' ? 'TamilNadu' : (_selectedCurrentAddressType == 'Other State' ? 'OtherState' : 'NRI');
@@ -756,7 +768,18 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
       request.fields['cur_taluk'] = _selectedCurrTaluk ?? '';
       request.fields['cur_panchayat'] = _selectedCurrPanchayat ?? '';
       request.fields['cur_village'] = _selectedCurrVillage ?? '';
-      request.fields['cur_street'] = _currStreetController.text.trim();
+      
+      // Split current street by comma
+      String fullCurStreet = _currStreetController.text.trim();
+      String curDoorNo = '';
+      String curStreetName = fullCurStreet;
+      if (fullCurStreet.contains(',')) {
+        int commaIndex = fullCurStreet.indexOf(',');
+        curDoorNo = fullCurStreet.substring(0, commaIndex).trim();
+        curStreetName = fullCurStreet.substring(commaIndex + 1).trim();
+      }
+      request.fields['cur_street'] = curStreetName;
+      request.fields['cur_door_no'] = curDoorNo;
       request.fields['cur_pincode'] = _currPinCodeController.text.trim();
       request.fields['nri_country'] = _selectedCountry ?? '';
       request.fields['nri_state'] = _selectedCurrState ?? '';

@@ -528,8 +528,17 @@ class _RegistrationFormState extends State<RegistrationForm> {
       request.fields['taluk'] = _selectedTaluk == 'Others' ? _manualTalukController.text : (_selectedTaluk ?? '');
       request.fields['panchayat'] = _selectedPanchayat == 'Others' ? _manualPanchayatController.text : (_selectedPanchayat ?? '');
       request.fields['village'] = _selectedVillage == 'Others' ? _manualVillageController.text : (_selectedVillage ?? '');
-      request.fields['street'] = _streetController.text;
-      request.fields['door_no'] = '';
+      // Split native street by comma
+      String fullStreet = _streetController.text.trim();
+      String doorNo = '';
+      String streetName = fullStreet;
+      if (fullStreet.contains(',')) {
+        int commaIndex = fullStreet.indexOf(',');
+        doorNo = fullStreet.substring(0, commaIndex).trim();
+        streetName = fullStreet.substring(commaIndex + 1).trim();
+      }
+      request.fields['street'] = streetName;
+      request.fields['door_no'] = doorNo;
       request.fields['pincode'] = _pinCodeController.text;
       request.fields['cur_address_type'] = _selectedCurrentAddressType ?? '';
       request.fields['cur_state'] = _selectedCurrentAddressType == 'Tamil Nadu' ? 'Tamil Nadu' : (_selectedCurrState ?? '');
@@ -537,8 +546,18 @@ class _RegistrationFormState extends State<RegistrationForm> {
       request.fields['cur_taluk'] = _selectedCurrTaluk == 'Others' ? _manualCurrTalukController.text : (_selectedCurrTaluk ?? '');
       request.fields['cur_panchayat'] = _selectedCurrPanchayat == 'Others' ? _manualCurrPanchayatController.text : (_selectedCurrPanchayat ?? '');
       request.fields['cur_village'] = _selectedCurrVillage == 'Others' ? _manualCurrVillageController.text : (_selectedCurrVillage ?? '');
-      request.fields['cur_street'] = _currStreetController.text;
-      request.fields['cur_door_no'] = '';
+      
+      // Split current street by comma
+      String fullCurStreet = _currStreetController.text.trim();
+      String curDoorNo = '';
+      String curStreetName = fullCurStreet;
+      if (fullCurStreet.contains(',')) {
+        int commaIndex = fullCurStreet.indexOf(',');
+        curDoorNo = fullCurStreet.substring(0, commaIndex).trim();
+        curStreetName = fullCurStreet.substring(commaIndex + 1).trim();
+      }
+      request.fields['cur_street'] = curStreetName;
+      request.fields['cur_door_no'] = curDoorNo;
       request.fields['cur_pincode'] = _currPinCodeController.text;
       request.fields['nri_country'] = _selectedCountry ?? '';
       request.fields['nri_state'] = _selectedCurrState ?? '';

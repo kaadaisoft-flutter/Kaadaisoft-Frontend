@@ -1,11 +1,11 @@
 {
-    "name": "kaadaisoft",
-    "short_name": "kaadaisoft",
+    "name": "Poondurai Kaadai Kulam",
+    "short_name": "Kaadaikulam",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#FF9800",
+    "theme_color": "#FF9800",
+    "description": "Poondurai Kaadai Kulam - Member Management System",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

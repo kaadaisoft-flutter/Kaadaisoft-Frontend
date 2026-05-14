@@ -134,13 +134,18 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
   }
 
   Future<void> _checkExistence(String phone) async {
+    final familyId = widget.parentData['Familymembershipid'] ?? 
+                     widget.parentData['familymembershipid'] ?? 
+                     widget.parentData['Existfamilyid'] ?? 
+                     widget.parentData['existfamilyid'] ?? '';
+
     try {
       final response = await http.post(
         Uri.parse(ApiConfig.checkExistence),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'phone': phone,
-          'family_id': widget.parentData['Existfamilyid'] ?? widget.parentData['Familymembershipid'] ?? '',
+          'family_id': familyId,
         }),
       );
 
@@ -879,17 +884,37 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
       request.fields['taluk'] = _selectedTaluk ?? '';
       request.fields['panchayat'] = _selectedPanchayat ?? '';
       request.fields['village'] = _selectedVillage ?? '';
-      request.fields['street'] = _streetController.text;
-      request.fields['door_no'] = '';
+      // Split native street by comma
+      String fullStreet = _streetController.text.trim();
+      String doorNo = '';
+      String streetName = fullStreet;
+      if (fullStreet.contains(',')) {
+        int commaIndex = fullStreet.indexOf(',');
+        doorNo = fullStreet.substring(0, commaIndex).trim();
+        streetName = fullStreet.substring(commaIndex + 1).trim();
+      }
+      request.fields['street'] = streetName;
+      request.fields['door_no'] = doorNo;
       request.fields['pincode'] = _pinCodeController.text;
 
-      request.fields['cur_address_type'] = _selectedCurrentAddressType ?? '';
+      request.fields['cur_address_type'] = _selectedCurrentAddressType == 'Tamil Nadu' ? 'TamilNadu' : (_selectedCurrentAddressType == 'Other State' ? 'OtherState' : 'NRI');
+      request.fields['cur_state'] = _selectedCurrState ?? '';
       request.fields['cur_district'] = _selectedCurrDistrict ?? '';
       request.fields['cur_taluk'] = _selectedCurrTaluk ?? '';
       request.fields['cur_panchayat'] = _selectedCurrPanchayat ?? '';
       request.fields['cur_village'] = _selectedCurrVillage ?? '';
-      request.fields['cur_street'] = _currStreetController.text;
-      request.fields['cur_door_no'] = '';
+      
+      // Split current street by comma
+      String fullCurStreet = _currStreetController.text.trim();
+      String curDoorNo = '';
+      String curStreetName = fullCurStreet;
+      if (fullCurStreet.contains(',')) {
+        int commaIndex = fullCurStreet.indexOf(',');
+        curDoorNo = fullCurStreet.substring(0, commaIndex).trim();
+        curStreetName = fullCurStreet.substring(commaIndex + 1).trim();
+      }
+      request.fields['cur_street'] = curStreetName;
+      request.fields['cur_door_no'] = curDoorNo;
       request.fields['cur_pincode'] = _currPinCodeController.text;
       request.fields['cur_state'] = _selectedCurrentAddressType == 'Tamil Nadu' ? 'Tamil Nadu' : (_selectedCurrState ?? '');
       request.fields['nri_country'] = _selectedCountry ?? '';

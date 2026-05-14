@@ -5,7 +5,7 @@ class ApiConfig {
   // Use 10.0.2.2 for Android Emulator to access host localhost
   static String get baseUrl {
     // Using provided laptop IP for mobile/wireless debugging access
-    return 'http://192.168.68.114:8000';
+    return 'http://localhost:8000';
   }
 
   // Common endpoints

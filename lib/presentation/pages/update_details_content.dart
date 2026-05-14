@@ -356,23 +356,39 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
 
       
       // Native Address
+      String fullStreet = _streetCtrl.text.trim();
+      String doorNo = '';
+      String streetName = fullStreet;
+      if (fullStreet.contains(',')) {
+        int commaIndex = fullStreet.indexOf(',');
+        doorNo = fullStreet.substring(0, commaIndex).trim();
+        streetName = fullStreet.substring(commaIndex + 1).trim();
+      }
       request.fields['district'] = _district ?? '';
       request.fields['taluk'] = _taluk ?? '';
       request.fields['panchayat'] = _panchayat ?? '';
       request.fields['village'] = _village ?? '';
-      request.fields['street'] = _streetCtrl.text.trim();
-      request.fields['door_no'] = '';
+      request.fields['street'] = streetName;
+      request.fields['door_no'] = doorNo;
       request.fields['pincode'] = _pincodeCtrl.text.trim();
       
       // Current Address
+      String fullCurStreet = _curStreetCtrl.text.trim();
+      String curDoorNo = '';
+      String curStreetName = fullCurStreet;
+      if (fullCurStreet.contains(',')) {
+        int commaIndex = fullCurStreet.indexOf(',');
+        curDoorNo = fullCurStreet.substring(0, commaIndex).trim();
+        curStreetName = fullCurStreet.substring(commaIndex + 1).trim();
+      }
       request.fields['cur_address_type'] = _curAddressType ?? '';
       request.fields['cur_state'] = _curState ?? '';
       request.fields['cur_district'] = _curDistrict ?? '';
       request.fields['cur_taluk'] = _curTalukCtrl.text.trim();
       request.fields['cur_panchayat'] = _curPanchayatCtrl.text.trim();
       request.fields['cur_village'] = _curVillageCtrl.text.trim();
-      request.fields['cur_street'] = _curStreetCtrl.text.trim();
-      request.fields['cur_door_no'] = '';
+      request.fields['cur_street'] = curStreetName;
+      request.fields['cur_door_no'] = curDoorNo;
       request.fields['cur_pincode'] = _curPincodeCtrl.text.trim();
       request.fields['nri_country'] = _nriCountryCtrl.text.trim();
       request.fields['nri_state'] = _nriStateCtrl.text.trim();
