@@ -924,8 +924,10 @@ class _AssignCoordinatorViewState extends State<AssignCoordinatorView> {
   }
 
   Widget _buildField({required String label, required Widget child, required double width}) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 700;
     return SizedBox(
-      width: width,
+      width: isMobile ? double.infinity : width,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

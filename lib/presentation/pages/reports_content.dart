@@ -214,7 +214,7 @@ class _ReportsContentState extends State<ReportsContent> {
       String url = '';
       
       if (_selectedStatus == 'All' && _selectedEventId == null) {
-        url = '${ApiConfig.paymentMembers}?page=1&limit=$_totalItems';
+        url = '${ApiConfig.paymentMembers}?page=1&limit=5000';
         if (widget.userId != null) {
           url += '&user_id=${widget.userId}&role=${widget.role}';
         }
@@ -223,7 +223,7 @@ class _ReportsContentState extends State<ReportsContent> {
           'event_id': _selectedEventId.toString(),
           'status': _selectedStatus,
           'page': '1',
-          'limit': '$_totalItems',
+          'limit': '5000',
         };
         if (widget.userId != null) {
           params['user_id'] = widget.userId.toString();
@@ -238,7 +238,7 @@ class _ReportsContentState extends State<ReportsContent> {
         final data = jsonDecode(response.body);
         List<dynamic> fetchedData = data['data'];
 
-        // Apply same "Fully Paid" filtering for download
+        // Apply same status filtering for download consistency
         if (_selectedStatus == 'Paid') {
           fetchedData = fetchedData.where((member) {
             double eventMoney = 0.0;
@@ -258,6 +258,26 @@ class _ReportsContentState extends State<ReportsContent> {
             }
             
             return pendingCash <= 0 && paidCash > 0;
+          }).toList();
+        } else if (_selectedStatus == 'Pending') {
+          fetchedData = fetchedData.where((member) {
+            double eventMoney = 0.0;
+            try {
+              final event = _events.firstWhere((e) => e['Id'] == _selectedEventId);
+              eventMoney = double.tryParse(event['TaxAmount']?.toString() ?? '0') ?? 0.0;
+            } catch (e) {}
+
+            final paidCashStr = member['Collectedamount']?.toString() ?? member['paidamount']?.toString() ?? '0.0';
+            final paidCash = double.tryParse(paidCashStr) ?? 0.0;
+            
+            double pendingCash = 0.0;
+            if (member.containsKey('balanceamount') && member['balanceamount'] != null) {
+              pendingCash = double.tryParse(member['balanceamount'].toString()) ?? 0.0;
+            } else {
+              pendingCash = eventMoney - paidCash;
+            }
+            
+            return pendingCash > 0;
           }).toList();
         }
         allData = fetchedData;

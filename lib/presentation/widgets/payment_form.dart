@@ -1,0 +1,833 @@
+import 'dart:convert';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
+import '../../utils/api_config.dart';
+import 'loading_spinner.dart';
+import 'custom_dialog.dart';
+import '../../utils/bank_list.dart';
+import 'package:qr_flutter/qr_flutter.dart';
+
+class PaymentForm extends StatefulWidget {
+  final Map<String, dynamic> memberData;
+  final VoidCallback onPaymentSuccess;
+  final int? initialYear;
+  final int? initialEventId;
+
+  const PaymentForm({
+    super.key,
+    required this.memberData,
+    required this.onPaymentSuccess,
+    this.initialYear,
+    this.initialEventId,
+  });
+
+  @override
+  State<PaymentForm> createState() => _PaymentFormState();
+}
+
+class _PaymentFormState extends State<PaymentForm> {
+  final _formKey = GlobalKey<FormState>();
+  
+  // Controllers
+  final _amountController = TextEditingController();
+  final _receiverController = TextEditingController();
+  final _bankNameController = TextEditingController();
+  final _refNoController = TextEditingController();
+  final _chequeNoController = TextEditingController();
+  final _upiIdController = TextEditingController();
+
+  // State
+  List<int> _years = [];
+  List<dynamic> _events = [];
+  int? _selectedYear;
+  int? _selectedEventId;
+  String _paymentMethod = 'Cash';
+  bool _isConfirmed = false;
+  bool _isLoading = false;
+  bool _isSummaryLoading = false;
+  String? _selectedBank;
+  bool _showOtherBank = false;
+  final _otherBankController = TextEditingController();
+
+  // Summary Data
+  int _totalAmount = 0;
+  int _alreadyPaid = 0;
+  int _balance = 0; // The fixed balance from backend
+  int _displayedBalance = 0; // Dynamic balance shown in UI
+
+  @override
+  void initState() {
+    super.initState();
+    _amountController.addListener(_updateDisplayedBalance);
+    _fetchYears();
+  }
+
+  void _updateDisplayedBalance() {
+    final text = _amountController.text;
+    if (text.isEmpty) {
+      setState(() => _displayedBalance = _balance);
+      return;
+    }
+    
+    final payAmount = int.tryParse(text) ?? 0;
+    setState(() {
+      _displayedBalance = _balance - payAmount;
+    });
+  }
+
+  @override
+  void dispose() {
+    _amountController.removeListener(_updateDisplayedBalance);
+    _amountController.dispose();
+    _receiverController.dispose();
+    _bankNameController.dispose();
+    _refNoController.dispose();
+    _chequeNoController.dispose();
+    _upiIdController.dispose();
+    _otherBankController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _fetchYears() async {
+    try {
+      final response = await http.get(Uri.parse(ApiConfig.eventYears));
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        setState(() {
+          _years = List<int>.from(data['data']);
+          if (widget.initialYear != null && _years.contains(widget.initialYear)) {
+            _selectedYear = widget.initialYear;
+            _fetchEvents(_selectedYear!);
+          } else {
+            _selectedYear = null; 
+          }
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching years: $e');
+    }
+  }
+
+  Future<void> _fetchEvents(int year) async {
+    try {
+      final response = await http.get(Uri.parse('${ApiConfig.eventsByYear}/$year'));
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        setState(() {
+          _events = data['data'] ?? [];
+          if (widget.initialEventId != null && _events.any((e) => e['Id'] == widget.initialEventId)) {
+            _selectedEventId = widget.initialEventId;
+            _fetchSummary(_selectedEventId!);
+          } else {
+            _selectedEventId = null;
+            _totalAmount = 0;
+            _alreadyPaid = 0;
+            _balance = 0;
+            _amountController.clear();
+          }
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching events: $e');
+    }
+  }
+
+  Future<void> _fetchSummary(int eventId) async {
+    setState(() => _isSummaryLoading = true);
+    try {
+      final memberId = widget.memberData['Familymembershipid'];
+      final response = await http.get(Uri.parse('${ApiConfig.paymentSummary}/$memberId/$eventId'));
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        setState(() {
+          _totalAmount = data['total_amount'];
+          _alreadyPaid = data['already_paid'];
+          _balance = data['balance'];
+          _displayedBalance = _balance;
+          _amountController.text = "0";
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching summary: $e');
+    } finally {
+      setState(() => _isSummaryLoading = false);
+    }
+  }
+
+  Future<void> _saveReceipt() async {
+    if (!_formKey.currentState!.validate()) return;
+    if (!_isConfirmed) {
+      showStatusDialog(context, title: 'Confirmation Required', message: 'Please confirm the details before saving.', type: DialogType.warning);
+      return;
+    }
+
+    setState(() => _isLoading = true);
+    try {
+      final body = {
+        'member_id': widget.memberData['Familymembershipid'],
+        'event_id': _selectedEventId,
+        'paid_amount': int.parse(_amountController.text),
+        'payment_method': _paymentMethod,
+        'received_by': _receiverController.text,
+        'payment_date': DateFormat('yyyy-MM-dd').format(DateTime.now()),
+        'bank_name': (_paymentMethod == 'Bank' || _paymentMethod == 'Cheque') ? (_selectedBank == 'Other Bank' ? _otherBankController.text : _selectedBank) : null,
+        'transaction_id': _paymentMethod == 'Bank' ? _refNoController.text : null,
+        'check_no': _paymentMethod == 'Cheque' ? _chequeNoController.text : null,
+        'upi_id': _paymentMethod == 'UPI' ? _upiIdController.text : null,
+      };
+
+      final response = await http.post(
+        Uri.parse(ApiConfig.saveReceipt),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(body),
+      );
+
+      if (response.statusCode == 200) {
+        if (mounted) {
+          showStatusDialog(
+            context,
+            title: 'Success',
+            message: 'Payment receipt saved successfully.',
+            type: DialogType.success,
+          ).then((_) {
+            widget.onPaymentSuccess();
+          });
+        }
+      } else {
+        final error = jsonDecode(response.body)['detail'] ?? 'Failed to save receipt';
+        if (mounted) showStatusDialog(context, title: 'Error', message: error, type: DialogType.error);
+      }
+    } catch (e) {
+      if (mounted) showStatusDialog(context, title: 'Connection Error', message: 'Unable to save receipt.', type: DialogType.error);
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  void _showBankSearchDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        String searchQuery = "";
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            final filteredBanks = bankList.where((bank) => 
+              bank.toLowerCase().contains(searchQuery.toLowerCase())
+            ).toList();
+
+            return Dialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              child: Container(
+                width: 400,
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.account_balance, color: Color(0xFF3B82F6)),
+                        const SizedBox(width: 12),
+                        const Text('Choose bank', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                        const Spacer(),
+                        IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close)),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      decoration: InputDecoration(
+                        hintText: 'Search bank...',
+                        prefixIcon: const Icon(Icons.search),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                        isDense: true,
+                      ),
+                      onChanged: (val) {
+                        setDialogState(() => searchQuery = val);
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxHeight: 400),
+                      child: filteredBanks.isEmpty 
+                        ? const Padding(
+                            padding: EdgeInsets.all(20),
+                            child: Text('No banks found'),
+                          )
+                        : ListView.builder(
+                            shrinkWrap: true,
+                            itemCount: filteredBanks.length,
+                            itemBuilder: (context, index) {
+                              final bank = filteredBanks[index];
+                              return ListTile(
+                                title: Text(bank, style: const TextStyle(fontSize: 14)),
+                                onTap: () {
+                                  setState(() {
+                                    _selectedBank = bank;
+                                    _showOtherBank = bank == 'Other Bank';
+                                  });
+                                  Navigator.pop(context);
+                                },
+                              );
+                            },
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    bool isMobile = MediaQuery.of(context).size.width < 800;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFFDF8F5),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          )
+        ],
+      ),
+      padding: EdgeInsets.all(isMobile ? 16 : 32),
+      child: Form(
+        key: _formKey,
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header
+              Row(
+                children: [
+                  const Icon(Icons.receipt_long, color: Color(0xFF3B82F6), size: 28),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Payment Details', 
+                      style: TextStyle(
+                        fontSize: isMobile ? 18 : 22, 
+                        fontWeight: FontWeight.bold, 
+                        color: const Color(0xFF1E293B)
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close)),
+                ],
+              ),
+              const Divider(height: 32),
+
+              if (isMobile) 
+                Column(children: [
+                  _buildMemberInfoCard(isMobile),
+                  const SizedBox(height: 16),
+                  _buildEventInfoCard(),
+                  const SizedBox(height: 16),
+                  _buildSummaryCard(),
+                ])
+              else
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(flex: 3, child: _buildMemberInfoCard(isMobile)),
+                    const SizedBox(width: 16),
+                    Expanded(flex: 3, child: _buildEventInfoCard()),
+                    const SizedBox(width: 16),
+                    Expanded(flex: 2, child: _buildSummaryCard()),
+                  ],
+                ),
+
+              const SizedBox(height: 24),
+              _buildPaymentMethodCard(),
+              const SizedBox(height: 24),
+              _buildReceiverCard(isMobile),
+              const SizedBox(height: 32),
+              
+              Center(
+                child: SizedBox(
+                  width: isMobile ? double.infinity : 300,
+                  height: 50,
+                  child: ElevatedButton.icon(
+                    onPressed: _isLoading ? null : _saveReceipt,
+                    icon: _isLoading ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Icon(Icons.check_circle_outline),
+                    label: Text(_isLoading ? 'Saving...' : 'Save Receipt', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF3B82F6),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      elevation: 0,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCard({required String title, required IconData icon, required Widget child}) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4))],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 20, color: const Color(0xFF3B82F6)),
+              const SizedBox(width: 10),
+              Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF3B82F6))),
+            ],
+          ),
+          const SizedBox(height: 20),
+          child,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMemberInfoCard(bool isMobile) {
+    final address = "${widget.memberData['Street'] ?? ''}, ${widget.memberData['Village'] ?? ''}, ${widget.memberData['Taluk'] ?? ''}, ${widget.memberData['District'] ?? ''}, Tamil Nadu - ${widget.memberData['Pincode'] ?? ''}";
+    
+    return _buildCard(
+      title: 'Member Info',
+      icon: Icons.person_outline,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _infoRow('Name:', widget.memberData['Name'] ?? 'N/A', isBold: true),
+          const SizedBox(height: 12),
+          _infoRow('ID:', widget.memberData['Familymembershipid'] ?? 'N/A', color: const Color(0xFF3B82F6), isBold: true),
+          const SizedBox(height: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Address:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF64748B))),
+              const SizedBox(height: 4),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.location_on, size: 14, color: Color(0xFF94A3B8)),
+                  const SizedBox(width: 4),
+                  Expanded(child: Text(address, style: const TextStyle(fontSize: 12, color: Color(0xFF1E293B), height: 1.4))),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _infoRow(String label, String value, {Color? color, bool isBold = false}) {
+    return Row(
+      children: [
+        Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF64748B))),
+        const SizedBox(width: 12),
+        Expanded(child: Text(value, style: TextStyle(fontSize: 14, fontWeight: isBold ? FontWeight.bold : FontWeight.normal, color: color ?? const Color(0xFF1E293B)), overflow: TextOverflow.ellipsis)),
+      ],
+    );
+  }
+
+  Widget _buildEventInfoCard() {
+    return _buildCard(
+      title: 'Event Info',
+      icon: Icons.event_note_outlined,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Event Year', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF64748B))),
+          const SizedBox(height: 6),
+          DropdownButtonFormField<int?>(
+            value: _selectedYear,
+            decoration: InputDecoration(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              isDense: true,
+            ),
+            items: [
+              const DropdownMenuItem<int?>(value: null, child: Text('Choose Year')),
+              ..._years.map((y) => DropdownMenuItem<int?>(value: y, child: Text(y.toString()))),
+            ],
+            onChanged: (val) {
+              setState(() {
+                _selectedYear = val;
+                if (val != null) {
+                  _fetchEvents(val);
+                } else {
+                  _events = [];
+                  _selectedEventId = null;
+                  _totalAmount = 0;
+                  _alreadyPaid = 0;
+                  _balance = 0;
+                  _displayedBalance = 0;
+                }
+              });
+            },
+          ),
+          const SizedBox(height: 16),
+          const Text('Event', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF64748B))),
+          const SizedBox(height: 6),
+          DropdownButtonFormField<int>(
+            value: _selectedEventId,
+            isExpanded: true,
+            decoration: InputDecoration(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              isDense: true,
+              hintText: 'Choose Event',
+            ),
+            items: _events.map((e) => DropdownMenuItem<int>(value: e['Id'], child: Text(e['EventName'], overflow: TextOverflow.ellipsis))).toList(),
+            onChanged: (val) {
+              setState(() => _selectedEventId = val);
+              if (val != null) _fetchSummary(val);
+            },
+            validator: (v) => v == null ? 'Required' : null,
+          ),
+          const SizedBox(height: 16),
+          const Text('Pay Amount *', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF64748B))),
+          const SizedBox(height: 6),
+          TextFormField(
+            controller: _amountController,
+            keyboardType: TextInputType.number,
+            inputFormatters: [
+              FilteringTextInputFormatter.digitsOnly,
+              TextInputFormatter.withFunction((oldValue, newValue) {
+                if (newValue.text.isEmpty) return newValue;
+                final val = int.tryParse(newValue.text) ?? 0;
+                if (val > _balance) return oldValue;
+                return newValue;
+              }),
+            ],
+            decoration: InputDecoration(
+              prefixText: '₹ ',
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              isDense: true,
+            ),
+            validator: (v) {
+              if (v == null || v.isEmpty) return 'Required';
+              final amt = int.tryParse(v) ?? 0;
+              if (amt <= 0) return 'Must be greater than 0';
+              if (amt > _balance) return 'Cannot exceed balance (₹ $_balance)';
+              return null;
+            },
+          ),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(color: const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(8), border: Border.all(color: const Color(0xFFE2E8F0))),
+            child: Row(
+              children: [
+                const Icon(Icons.calendar_today, size: 14, color: Color(0xFF64748B)),
+                const SizedBox(width: 10),
+                Text('Date: ${DateFormat('dd MMM yyyy').format(DateTime.now())}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF1E293B))),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSummaryCard() {
+    return _buildCard(
+      title: 'Rs Summary',
+      icon: Icons.summarize_outlined,
+      child: _isSummaryLoading 
+        ? const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator(strokeWidth: 2)))
+        : Column(
+            children: [
+              _summaryRow('Total Amount', _totalAmount, Colors.black87),
+              const Divider(height: 24),
+              _summaryRow('Already Paid', _alreadyPaid, Colors.green),
+              const Divider(height: 24),
+              _summaryRow('Balance Amount', _displayedBalance, Colors.red, isBold: true),
+            ],
+          ),
+    );
+  }
+
+  Widget _summaryRow(String label, int amount, Color color, {bool isBold = false}) {
+    bool isInvalid = label == 'Balance Amount' && amount < 0;
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Color(0xFF64748B))),
+        const SizedBox(height: 4),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: isInvalid ? Colors.red.shade50 : const Color(0xFFF8FAFC), 
+            borderRadius: BorderRadius.circular(8), 
+            border: Border.all(color: isInvalid ? Colors.red.shade300 : const Color(0xFFE2E8F0))
+          ),
+          child: Text(
+            isInvalid ? 'Invalid Amount' : '₹ $amount', 
+            style: TextStyle(
+              fontSize: 15, 
+              fontWeight: isBold ? FontWeight.bold : FontWeight.w600, 
+              color: isInvalid ? Colors.red.shade900 : color
+            )
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPaymentMethodCard() {
+    return _buildCard(
+      title: 'Payment Method',
+      icon: Icons.payments_outlined,
+      child: Column(
+        children: [
+          Wrap(
+            spacing: 24,
+            runSpacing: 16,
+            children: [
+              _methodRadio('Bank', Icons.account_balance),
+              _methodRadio('Cheque', Icons.article_outlined),
+              _methodRadio('UPI', Icons.qr_code_scanner),
+              _methodRadio('Cash', Icons.money),
+            ],
+          ),
+          if (_paymentMethod != 'Cash') ...[
+            const SizedBox(height: 24),
+            if (_paymentMethod == 'Bank' || _paymentMethod == 'Cheque') ...[
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Choose Bank *', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF64748B))),
+                  const SizedBox(height: 6),
+                  InkWell(
+                    onTap: _showBankSearchDialog,
+                    child: IgnorePointer(
+                      child: TextFormField(
+                        controller: TextEditingController(text: _selectedBank ?? ''),
+                        decoration: InputDecoration(
+                          hintText: 'Choose bank',
+                          hintStyle: const TextStyle(fontSize: 13),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                          isDense: true,
+                          suffixIcon: const Icon(Icons.arrow_drop_down),
+                        ),
+                        validator: (v) => (_selectedBank == null || _selectedBank!.isEmpty) ? 'Required' : null,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              if (_showOtherBank) ...[
+                const SizedBox(height: 16),
+                _textField('Other Bank Name *', _otherBankController),
+              ],
+              const SizedBox(height: 16),
+            ],
+            
+            if (_paymentMethod == 'UPI') ...[
+              Center(
+                child: Column(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: QrImageView(
+                        data: "upi://pay?pa=KADAIKULANARPANIMANDRAM@iob&pn=Poondurai%20Kaadaikulam%20Narpanimandram&cu=INR",
+                        version: QrVersions.auto,
+                        size: 200.0,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'UPI ID:',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF64748B)),
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      'KADAIKULANARPANIMANDRAM@iob',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF3B82F6)),
+                    ),
+                    const SizedBox(height: 24),
+                    Container(
+                      constraints: const BoxConstraints(maxWidth: 400),
+                      child: _textField('UPI Transaction ID *', _upiIdController),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+
+            if (_paymentMethod == 'Bank' || _paymentMethod == 'Cheque')
+              Row(
+                children: [
+                  if (_paymentMethod == 'Bank')
+                    Expanded(child: _textField('Reference ID *', _refNoController)),
+                  if (_paymentMethod == 'Cheque')
+                    Expanded(child: _textField('Cheque Number *', _chequeNoController)),
+                ],
+              ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _methodRadio(String value, IconData icon) {
+    bool isSelected = _paymentMethod == value;
+    return InkWell(
+      onTap: () => setState(() => _paymentMethod = value),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Radio<String>(
+            value: value,
+            groupValue: _paymentMethod,
+            onChanged: (v) => setState(() => _paymentMethod = v!),
+            activeColor: const Color(0xFF3B82F6),
+          ),
+          Icon(icon, size: 20, color: isSelected ? const Color(0xFF3B82F6) : const Color(0xFF64748B)),
+          const SizedBox(width: 8),
+          Text(value, style: TextStyle(fontSize: 14, fontWeight: isSelected ? FontWeight.bold : FontWeight.w500, color: isSelected ? const Color(0xFF1E293B) : const Color(0xFF64748B))),
+        ],
+      ),
+    );
+  }
+
+  Widget _textField(String label, TextEditingController controller) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF64748B))),
+        const SizedBox(height: 6),
+        TextFormField(
+          controller: controller,
+          decoration: InputDecoration(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+            isDense: true,
+          ),
+          validator: (v) => (v == null || v.isEmpty) ? 'Required' : null,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildReceiverCard(bool isMobile) {
+    return _buildCard(
+      title: 'Receiver Info',
+      icon: Icons.person_add_alt_1_outlined,
+      child: isMobile 
+        ? Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Person Received the Money *', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF64748B))),
+              const SizedBox(height: 6),
+              TextFormField(
+                controller: _receiverController,
+                decoration: InputDecoration(
+                  hintText: 'Enter name of receiver',
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                validator: (v) => (v == null || v.isEmpty) ? 'Required' : null,
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: _isConfirmed ? Colors.green.withOpacity(0.05) : Colors.transparent,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: _isConfirmed ? Colors.green.withOpacity(0.3) : const Color(0xFFE2E8F0)),
+                ),
+                child: Row(
+                  children: [
+                    Checkbox(
+                      value: _isConfirmed,
+                      onChanged: (v) => setState(() => _isConfirmed = v!),
+                      activeColor: Colors.green,
+                    ),
+                    const Expanded(child: Text('Confirm Details', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF059669)))),
+                  ],
+                ),
+              ),
+            ],
+          )
+        : Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Expanded(
+                flex: 3,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Person Received the Money *', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF64748B))),
+                    const SizedBox(height: 6),
+                    TextFormField(
+                      controller: _receiverController,
+                      decoration: InputDecoration(
+                        hintText: 'Enter name of receiver',
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                      validator: (v) => (v == null || v.isEmpty) ? 'Required' : null,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 24),
+              Expanded(
+                flex: 2,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: _isConfirmed ? Colors.green.withOpacity(0.05) : Colors.transparent,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: _isConfirmed ? Colors.green.withOpacity(0.3) : const Color(0xFFE2E8F0)),
+                  ),
+                  child: Row(
+                    children: [
+                      Checkbox(
+                        value: _isConfirmed,
+                        onChanged: (v) => setState(() => _isConfirmed = v!),
+                        activeColor: Colors.green,
+                      ),
+                      const Expanded(child: Text('Confirm Details', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF059669)))),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+    );
+  }
+}

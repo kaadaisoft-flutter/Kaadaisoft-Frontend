@@ -2,9 +2,15 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../widgets/loading_spinner.dart';
+import '../widgets/payment_form.dart';
+import '../widgets/receipt_dialog.dart';
+import '../widgets/receipt_content.dart';
 import '../widgets/custom_dialog.dart';
 import '../../utils/api_config.dart';
+import '../utils/pdf_generator.dart';
+import 'package:screenshot/screenshot.dart';
 import 'update_details_content.dart';
+import 'package:intl/intl.dart';
 
 class PaymentsContent extends StatefulWidget {
   final int? userId;
@@ -18,6 +24,7 @@ class PaymentsContent extends StatefulWidget {
 
 class _PaymentsContentState extends State<PaymentsContent> {
   List<dynamic> _members = [];
+  List<dynamic> _fullFilteredMembers = [];
   bool _isLoading = true;
   String _errorMessage = '';
 
@@ -218,7 +225,25 @@ class _PaymentsContentState extends State<PaymentsContent> {
     }
   }
 
-  Future<void> _applyFilters() async {
+  void _goToPage(int page) {
+    setState(() {
+      _currentPage = page;
+    });
+    if (_selectedEventId == null) {
+      _fetchMembers();
+    } else {
+      // Manual pagination from _fullFilteredMembers
+      int start = (_currentPage - 1) * _itemsPerPage;
+      int end = start + _itemsPerPage;
+      if (start > _totalItems) start = 0;
+      if (end > _totalItems) end = _totalItems;
+      setState(() {
+        _members = _fullFilteredMembers.sublist(start, end);
+      });
+    }
+  }
+
+  Future<void> _applyFilters({bool resetPage = true}) async {
     if (_selectedEventId == null) {
       showStatusDialog(
         context,
@@ -229,13 +254,17 @@ class _PaymentsContentState extends State<PaymentsContent> {
       return;
     }
 
+    if (resetPage) {
+      _currentPage = 1;
+    }
+
     setState(() => _isLoading = true);
     try {
       Map<String, String> params = {
         'event_id': _selectedEventId.toString(),
         'status': _selectedStatus,
-        'page': '$_currentPage',
-        'limit': '$_itemsPerPage',
+        'page': '1', // Fetch everything for local filtering/pagination
+        'limit': '5000',
       };
 
       if (_selectedDistrict != null) params['district'] = _selectedDistrict!;
@@ -252,9 +281,41 @@ class _PaymentsContentState extends State<PaymentsContent> {
       
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
+        List<dynamic> results = data['data'];
+
+        // Get the selected event tax amount
+        double eventMoney = 0.0;
+        try {
+          final event = _events.firstWhere((e) => e['Id'] == _selectedEventId);
+          eventMoney = double.tryParse(event['TaxAmount']?.toString() ?? '0') ?? 0.0;
+        } catch (e) {}
+
+        // Apply "Fully Paid" vs "Pending" filtering logic
+        if (_selectedStatus == 'Paid') {
+          results = results.where((member) {
+            final paidCash = double.tryParse(member['paidamount']?.toString() ?? '0') ?? 0.0;
+            double pendingCash = (member['balanceamount'] != null) ? double.tryParse(member['balanceamount'].toString()) ?? 0.0 : eventMoney - paidCash;
+            return pendingCash <= 0 && paidCash > 0;
+          }).toList();
+        } else if (_selectedStatus == 'Pending') {
+          results = results.where((member) {
+            final paidCash = double.tryParse(member['paidamount']?.toString() ?? '0') ?? 0.0;
+            double pendingCash = (member['balanceamount'] != null) ? double.tryParse(member['balanceamount'].toString()) ?? 0.0 : eventMoney - paidCash;
+            return pendingCash > 0;
+          }).toList();
+        }
+
+        _fullFilteredMembers = results;
+        _totalItems = results.length;
+
+        // Manual pagination
+        int start = (_currentPage - 1) * _itemsPerPage;
+        int end = start + _itemsPerPage;
+        if (start > _totalItems) start = 0;
+        if (end > _totalItems) end = _totalItems;
+
         setState(() {
-          _members = data['data'];
-          _totalItems = data['total'];
+          _members = _fullFilteredMembers.sublist(start, end);
           _isLoading = false;
         });
       }
@@ -299,18 +360,29 @@ class _PaymentsContentState extends State<PaymentsContent> {
   }
 
   Widget _buildMemberView() {
+    bool isMobile = MediaQuery.of(context).size.width < 800;
     final member = _memberData;
     final coord = _coordinatorData;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.all(isMobile ? 12 : 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Header
-          const Text('Payments', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF172030))),
+          Text(
+            'Member Financial Report', 
+            style: TextStyle(
+              fontSize: isMobile ? 20 : 24, 
+              fontWeight: FontWeight.bold, 
+              color: const Color(0xFF172030)
+            )
+          ),
           const SizedBox(height: 4),
-          const Text('Your profile details, assigned coordinator, and payment receipts', style: TextStyle(color: Colors.black54)),
+          Text(
+            'Your profile details, assigned coordinator, and payment receipts', 
+            style: TextStyle(fontSize: isMobile ? 12 : 14, color: Colors.black54)
+          ),
           const SizedBox(height: 24),
 
           // Member Details Card
@@ -319,6 +391,7 @@ class _PaymentsContentState extends State<PaymentsContent> {
               title: 'Member Details:',
               data: member,
               showPayNow: true,
+              isMobile: isMobile,
             ),
 
           if (member != null) const SizedBox(height: 24),
@@ -329,6 +402,7 @@ class _PaymentsContentState extends State<PaymentsContent> {
               title: 'Coordinator Details:',
               data: coord,
               showPayNow: false,
+              isMobile: isMobile,
             ),
 
           if (coord == null && member == null)
@@ -363,23 +437,42 @@ class _PaymentsContentState extends State<PaymentsContent> {
                     color: Color(0xFF172030),
                     borderRadius: BorderRadius.only(topLeft: Radius.circular(12), topRight: Radius.circular(12)),
                   ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Row(
+                  child: isMobile 
+                    ? Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Icon(Icons.receipt_long, color: Colors.white70, size: 18),
-                          SizedBox(width: 8),
-                          Text('Payment Receipt History', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
+                          const Row(
+                            children: [
+                              Icon(Icons.receipt_long, color: Colors.white70, size: 18),
+                              SizedBox(width: 8),
+                              Text('Payment Receipt History', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(20)),
+                            child: Text('${_receipts.length} record(s)', style: const TextStyle(color: Colors.white, fontSize: 12)),
+                          ),
+                        ],
+                      )
+                    : Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Row(
+                            children: [
+                              Icon(Icons.receipt_long, color: Colors.white70, size: 18),
+                              SizedBox(width: 8),
+                              Text('Payment Receipt History', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
+                            ],
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(20)),
+                            child: Text('${_receipts.length} record(s)', style: const TextStyle(color: Colors.white, fontSize: 12)),
+                          ),
                         ],
                       ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(20)),
-                        child: Text('${_receipts.length} record(s)', style: const TextStyle(color: Colors.white, fontSize: 12)),
-                      ),
-                    ],
-                  ),
                 ),
                 if (_receipts.isEmpty)
                   const Padding(
@@ -387,7 +480,7 @@ class _PaymentsContentState extends State<PaymentsContent> {
                     child: Center(child: Text('No payment receipts found.', style: TextStyle(color: Colors.black45))),
                   )
                 else
-                  ..._buildGroupedReceiptTables(),
+                  ..._buildGroupedReceiptTables(isMobile),
               ],
             ),
           ),
@@ -396,7 +489,7 @@ class _PaymentsContentState extends State<PaymentsContent> {
     );
   }
 
-  Widget _buildProfileCard({required String title, required Map<String, dynamic> data, bool showPayNow = false}) {
+  Widget _buildProfileCard({required String title, required Map<String, dynamic> data, bool showPayNow = false, bool isMobile = false}) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -423,41 +516,88 @@ class _PaymentsContentState extends State<PaymentsContent> {
               ),
               borderRadius: BorderRadius.only(topLeft: Radius.circular(16), topRight: Radius.circular(16)),
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
+            child: isMobile 
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.verified_user_rounded, color: Colors.blue, size: 20),
-                    const SizedBox(width: 12),
-                    Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 16, letterSpacing: 0.2)),
+                    Row(
+                      children: [
+                        Icon(
+                          data['Role'] == 2 ? Icons.admin_panel_settings_rounded : Icons.verified_user_rounded, 
+                          color: data['Role'] == 2 ? Colors.orangeAccent : Colors.blue, 
+                          size: 20
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            data['Role'] == 2 ? 'Coordinator Details:' : title, 
+                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 16, letterSpacing: 0.2),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (showPayNow) ...[
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: () => _showPaymentDialog(data),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF3B82F6),
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                          child: const Text('PAY NOW', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 11, letterSpacing: 0.5)),
+                        ),
+                      ),
+                    ],
+                  ],
+                )
+              : Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          data['Role'] == 2 ? Icons.admin_panel_settings_rounded : Icons.verified_user_rounded, 
+                          color: data['Role'] == 2 ? Colors.orangeAccent : Colors.blue, 
+                          size: 20
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          data['Role'] == 2 ? 'Coordinator Details:' : title, 
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 16, letterSpacing: 0.2)
+                        ),
+                      ],
+                    ),
+                    if (showPayNow)
+                      ElevatedButton(
+                        onPressed: () => _showPaymentDialog(data),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF3B82F6),
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        child: const Text('PAY NOW', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 11, letterSpacing: 0.5)),
+                      ),
                   ],
                 ),
-                if (showPayNow)
-                  ElevatedButton(
-                    onPressed: () {},
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF3B82F6),
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    ),
-                    child: const Text('PAY NOW', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 11, letterSpacing: 0.5)),
-                  ),
-              ],
-            ),
           ),
           Padding(
             padding: const EdgeInsets.all(12),
             child: Column(
               children: [
-                _buildInfoRow('Full Name', data['Name'] ?? '-', icon: Icons.person_outline, isFirst: true),
-                _buildInfoRow('Membership ID', data['Familymembershipid'] ?? '-', icon: Icons.badge_outlined, valueColor: Colors.blue.shade700),
-                _buildInfoRow('Taluk / Region', data['Taluk'] ?? '-', icon: Icons.location_city_outlined),
-                _buildInfoRow('District', data['District'] ?? '-', icon: Icons.map_outlined),
-                _buildInfoRow('Pincode', data['Pincode']?.toString() ?? '-', icon: Icons.pin_drop_outlined),
-                _buildInfoRow('Contact Number', data['Phonenumber']?.toString() ?? '-', icon: Icons.phone_android_outlined, valueColor: Colors.green.shade700, isLast: true),
+                _buildInfoRow('Full Name', data['Name'] ?? '-', icon: Icons.person_outline, isFirst: true, isMobile: isMobile),
+                _buildInfoRow('Membership ID', data['Familymembershipid'] ?? '-', icon: Icons.badge_outlined, valueColor: Colors.blue.shade700, isMobile: isMobile),
+                _buildInfoRow('Taluk / Region', data['Taluk'] ?? '-', icon: Icons.location_city_outlined, isMobile: isMobile),
+                _buildInfoRow('District', data['District'] ?? '-', icon: Icons.map_outlined, isMobile: isMobile),
+                _buildInfoRow('Pincode', data['Pincode']?.toString() ?? '-', icon: Icons.pin_drop_outlined, isMobile: isMobile),
+                _buildInfoRow('Contact Number', data['Phonenumber']?.toString() ?? '-', icon: Icons.phone_android_outlined, valueColor: Colors.green.shade700, isLast: true, isMobile: isMobile),
               ],
             ),
           ),
@@ -466,9 +606,9 @@ class _PaymentsContentState extends State<PaymentsContent> {
     );
   }
 
-  Widget _buildInfoRow(String label, String value, {required IconData icon, Color? valueColor, bool isFirst = false, bool isLast = false}) {
+  Widget _buildInfoRow(String label, String value, {required IconData icon, Color? valueColor, bool isFirst = false, bool isLast = false, bool isMobile = false}) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      padding: EdgeInsets.symmetric(horizontal: isMobile ? 8 : 16, vertical: 14),
       decoration: BoxDecoration(
         border: isLast ? null : Border(bottom: BorderSide(color: Colors.black.withOpacity(0.04), width: 1)),
       ),
@@ -479,17 +619,18 @@ class _PaymentsContentState extends State<PaymentsContent> {
             decoration: BoxDecoration(color: const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(8)),
             child: Icon(icon, size: 16, color: const Color(0xFF64748B)),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 12),
           Expanded(
-            flex: 2,
+            flex: isMobile ? 3 : 2,
             child: Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Color(0xFF64748B))),
           ),
           Expanded(
-            flex: 3,
+            flex: isMobile ? 4 : 3,
             child: Text(
               value,
               style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: valueColor ?? const Color(0xFF1E293B)),
               textAlign: TextAlign.right,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
@@ -497,7 +638,7 @@ class _PaymentsContentState extends State<PaymentsContent> {
     );
   }
 
-  List<Widget> _buildGroupedReceiptTables() {
+  List<Widget> _buildGroupedReceiptTables(bool isMobile) {
     final Map<String, List<dynamic>> grouped = {};
     for (var r in _receipts) {
       final name = r['eventname']?.toString() ?? 'Other';
@@ -530,8 +671,8 @@ class _PaymentsContentState extends State<PaymentsContent> {
               headingRowColor: WidgetStateProperty.all(const Color(0xFFF8FAFC)),
               dataRowMinHeight: 56,
               dataRowMaxHeight: 64,
-              horizontalMargin: 24,
-              columnSpacing: 24,
+              horizontalMargin: isMobile ? 12 : 24,
+              columnSpacing: isMobile ? 16 : 24,
               dividerThickness: 0.5,
               border: TableBorder(horizontalInside: BorderSide(color: Colors.black.withOpacity(0.05), width: 0.5)),
               columns: const [
@@ -591,9 +732,11 @@ class _PaymentsContentState extends State<PaymentsContent> {
                     )),
                     DataCell(Row(
                       children: [
-                        _buildActionBtn(icon: Icons.remove_red_eye_outlined, color: Colors.blue, tooltip: 'View', onTap: () {}),
-                        const SizedBox(width: 12),
-                        _buildActionBtn(icon: Icons.file_download_outlined, color: Colors.blueGrey, tooltip: 'Download', onTap: () {}),
+                        _buildActionBtn(icon: Icons.remove_red_eye_outlined, color: Colors.blue, tooltip: 'View', onTap: () => _viewReceipt(r, _memberData!)),
+                        const SizedBox(width: 8),
+                        _buildActionBtn(icon: Icons.print_outlined, color: Colors.indigo, tooltip: 'Print', onTap: () => _printReceiptHighFidelity(r, _memberData!)),
+                        const SizedBox(width: 8),
+                        _buildActionBtn(icon: Icons.file_download_outlined, color: Colors.blueGrey, tooltip: 'Download', onTap: () => _downloadReceiptHighFidelity(r, _memberData!)),
                       ],
                     )),
                   ],
@@ -605,6 +748,90 @@ class _PaymentsContentState extends State<PaymentsContent> {
       );
     });
     return sections;
+  }
+
+  void _viewReceipt(Map<String, dynamic> receipt, Map<String, dynamic> member) {
+    showDialog(
+      context: context,
+      builder: (context) => ReceiptDialog(
+        receiptData: receipt,
+        memberData: member,
+      ),
+    );
+  }
+
+  Future<void> _downloadReceiptHighFidelity(Map<String, dynamic> receipt, Map<String, dynamic> member) async {
+    final screenshotController = ScreenshotController();
+    
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: LoadingSpinner(message: 'Generating high-fidelity PDF...')),
+    );
+
+    try {
+      final image = await screenshotController.captureFromWidget(
+        Container(
+          width: 800,
+          child: Material(
+            child: ReceiptContent(
+              receiptData: receipt,
+              memberData: member,
+              isMobile: false,
+            ),
+          ),
+        ),
+        delay: const Duration(milliseconds: 100),
+        targetSize: const Size(800, 1200),
+        pixelRatio: 3.0,
+      );
+
+      if (mounted) Navigator.pop(context);
+
+      if (image != null) {
+        await PdfGenerator.downloadReceiptImage(image, receipt['id']?.toString() ?? 'receipt');
+      }
+    } catch (e) {
+      if (mounted) Navigator.pop(context);
+      debugPrint('Error capturing high-fidelity receipt: $e');
+    }
+  }
+
+  Future<void> _printReceiptHighFidelity(Map<String, dynamic> receipt, Map<String, dynamic> member) async {
+    final screenshotController = ScreenshotController();
+    
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: LoadingSpinner(message: 'Preparing print...')),
+    );
+
+    try {
+      final image = await screenshotController.captureFromWidget(
+        Container(
+          width: 800,
+          child: Material(
+            child: ReceiptContent(
+              receiptData: receipt,
+              memberData: member,
+              isMobile: false,
+            ),
+          ),
+        ),
+        delay: const Duration(milliseconds: 100),
+        targetSize: const Size(800, 1200),
+        pixelRatio: 3.0,
+      );
+
+      if (mounted) Navigator.pop(context);
+
+      if (image != null) {
+        await PdfGenerator.printReceiptImage(image);
+      }
+    } catch (e) {
+      if (mounted) Navigator.pop(context);
+      debugPrint('Error preparing print: $e');
+    }
   }
 
   Widget _buildActionBtn({required IconData icon, required Color color, required String tooltip, required VoidCallback onTap}) {
@@ -638,68 +865,71 @@ class _PaymentsContentState extends State<PaymentsContent> {
 
 
   Widget _buildTopBar(bool isMobile) {
-    return Wrap(
-      spacing: 20,
-      runSpacing: 20,
-      alignment: WrapAlignment.spaceBetween,
-      crossAxisAlignment: WrapCrossAlignment.center,
-      children: [
-        Column(
-          crossAxisAlignment: isMobile ? CrossAxisAlignment.center : CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              '📊 Bulk Payment Upload',
-              style: TextStyle(fontSize: isMobile ? 20 : 24, fontWeight: FontWeight.bold, color: const Color(0xFF1E283C)),
-              textAlign: isMobile ? TextAlign.center : TextAlign.start,
-            ),
-            if (_totalItems > 0)
-              Padding(
-                padding: const EdgeInsets.only(top: 8.0),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    'Total Members: $_totalItems',
-                    style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold),
+    return SizedBox(
+      width: double.infinity,
+      child: Wrap(
+        spacing: 20,
+        runSpacing: 20,
+        alignment: WrapAlignment.spaceBetween,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          Column(
+            crossAxisAlignment: isMobile ? CrossAxisAlignment.center : CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '📊 Bulk Payment Upload',
+                style: TextStyle(fontSize: isMobile ? 20 : 24, fontWeight: FontWeight.bold, color: const Color(0xFF1E283C)),
+                textAlign: isMobile ? TextAlign.center : TextAlign.start,
+              ),
+              if (_totalItems > 0)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8.0),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      'Total Members: $_totalItems',
+                      style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold),
+                    ),
                   ),
                 ),
+            ],
+          ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ElevatedButton.icon(
+                onPressed: () => setState(() => _isFilterVisible = !_isFilterVisible),
+                icon: const Icon(Icons.filter_list, size: 18),
+                label: const Text('Filter'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: Colors.blue,
+                  side: const BorderSide(color: Colors.blue),
+                  padding: EdgeInsets.symmetric(horizontal: isMobile ? 12 : 16, vertical: 8),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                ),
               ),
-          ],
-        ),
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ElevatedButton.icon(
-              onPressed: () => setState(() => _isFilterVisible = !_isFilterVisible),
-              icon: const Icon(Icons.filter_list, size: 18),
-              label: const Text('Filter'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: Colors.blue,
-                side: const BorderSide(color: Colors.blue),
-                padding: EdgeInsets.symmetric(horizontal: isMobile ? 12 : 16, vertical: 8),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+              const SizedBox(width: 8),
+              ElevatedButton.icon(
+                onPressed: () {},
+                icon: const Icon(Icons.upload_file, size: 18),
+                label: const Text('Upload CSV'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  foregroundColor: Colors.white,
+                  padding: EdgeInsets.symmetric(horizontal: isMobile ? 12 : 16, vertical: 8),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                ),
               ),
-            ),
-            const SizedBox(width: 8),
-            ElevatedButton.icon(
-              onPressed: () {},
-              icon: const Icon(Icons.upload_file, size: 18),
-              label: const Text('Upload CSV'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
-                foregroundColor: Colors.white,
-                padding: EdgeInsets.symmetric(horizontal: isMobile ? 12 : 16, vertical: 8),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-              ),
-            ),
-          ],
-        ),
-      ],
+            ],
+          ),
+        ],
+      ),
     );
   }
 
@@ -926,18 +1156,29 @@ class _PaymentsContentState extends State<PaymentsContent> {
     final sno = (_currentPage - 1) * _itemsPerPage + index + 1;
     final role = member['Role'] == 2 ? 'Coordinator' : 'Member';
 
+    double eventMoney = 0.0;
+    if (_selectedEventId != null) {
+      try {
+        final event = _events.firstWhere((e) => e['Id'] == _selectedEventId);
+        eventMoney = double.tryParse(event['TaxAmount']?.toString() ?? '0') ?? 0.0;
+      } catch (e) {}
+    }
+    final paidCash = double.tryParse(member['paidamount']?.toString() ?? '0') ?? 0.0;
+    final pendingCash = (member['balanceamount'] != null) ? double.tryParse(member['balanceamount'].toString()) ?? 0.0 : eventMoney - paidCash;
+    final isFullyPaid = _selectedEventId != null && pendingCash <= 0 && paidCash > 0;
+
+    final showPayNow = !isFullyPaid;
+    final showViewReceipts = _selectedEventId == null || paidCash > 0 || member['payment_status'] == 'Paid';
+
     return Material(
       color: index % 2 == 0 ? Colors.white : const Color(0xFFF8FAFC),
-      child: InkWell(
-        onTap: () => _showEditMemberDialog(member['Id'].toString()),
-        hoverColor: Colors.blue.shade50.withOpacity(0.5),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 20),
-          child: Row(
-            children: [
-              _buildCell(sno.toString(), colSno),
-              _buildCell(member['Familymembershipid'] ?? '-', colFamilyId, isBlue: true),
-              _buildCell(member['Name'] ?? 'N/A', colName),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 20),
+        child: Row(
+          children: [
+            _buildCell(sno.toString(), colSno),
+            _buildCell(member['Familymembershipid'] ?? '-', colFamilyId),
+            _buildCell(member['Name'] ?? 'N/A', colName),
               _buildCell('', colRole, isCentered: true, child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
@@ -955,75 +1196,330 @@ class _PaymentsContentState extends State<PaymentsContent> {
               _buildCell('', colActions, isActions: true, child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  _buildActionButton('Pay Now', Colors.green, () {}),
-                  const SizedBox(width: 8),
-                  _buildActionButton('View Receipts', Colors.blue, () {}),
+                  if (showPayNow)
+                    _buildActionButton('Pay Now', Colors.green, () => _showPaymentDialog(member)),
+                  if (showViewReceipts) ...[
+                    if (showPayNow) const SizedBox(width: 8),
+                    _buildActionButton('View Receipts', Colors.blue, () => _showMemberReceiptsDialog(member)),
+                  ],
                 ],
               )),
             ],
           ),
         ),
-      ),
     );
   }
 
-  void _showEditMemberDialog(String memberId) async {
+
+  void _showMemberReceiptsDialog(Map<String, dynamic> member) async {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const Center(child: CircularProgressIndicator()),
+      builder: (context) => const Center(child: LoadingSpinner(message: 'Fetching member records...')),
     );
 
     try {
-      final response = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/user-details/$memberId'));
+      // Find the actual user ID from the membership ID
+      final response = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/member-coordinator-by-fid/${member['Familymembershipid']}'));
       if (mounted) Navigator.pop(context);
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body)['data'];
+        final data = jsonDecode(response.body);
         if (!mounted) return;
         
         showDialog(
           context: context,
-          barrierDismissible: false,
-          builder: (context) => Dialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-            child: Container(
-              width: 1000,
-              constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.9),
-              child: UpdateDetailsContent(
-                userId: memberId,
-                userRole: 1, // Admin/Manager
-                userData: data,
-                onBack: () {
-                  Navigator.pop(context);
-                  _fetchMembers();
-                },
+          barrierDismissible: true,
+          builder: (context) {
+            bool isMobile = MediaQuery.of(context).size.width < 800;
+            return Dialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              insetPadding: EdgeInsets.symmetric(horizontal: isMobile ? 12 : 20, vertical: 20),
+              child: Container(
+                width: isMobile ? double.infinity : 1100,
+                padding: EdgeInsets.all(isMobile ? 16 : 24),
+                constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.95),
+                child: StatefulBuilder(
+                  builder: (context, setDialogState) {
+                    return SingleChildScrollView(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  'Member Financial Record', 
+                                  style: TextStyle(
+                                    fontSize: isMobile ? 18 : 22, 
+                                    fontWeight: FontWeight.bold, 
+                                    color: const Color(0xFF172030)
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close)),
+                            ],
+                          ),
+                          const Divider(height: 32),
+                          
+                          // Profile Cards
+                          if (isMobile)
+                            Column(
+                              children: [
+                                _buildProfileCard(
+                                  title: 'Member Details:',
+                                  data: data['member'],
+                                  showPayNow: true,
+                                  isMobile: true,
+                                ),
+                                const SizedBox(height: 16),
+                                if (data['coordinator'] != null && data['coordinator']['Name'] != null)
+                                  _buildProfileCard(
+                                    title: 'Coordinator Details:',
+                                    data: data['coordinator'],
+                                    showPayNow: false,
+                                    isMobile: true,
+                                  ),
+                              ],
+                            )
+                          else
+                            Wrap(
+                              spacing: 24,
+                              runSpacing: 24,
+                              children: [
+                                SizedBox(
+                                  width: 510,
+                                  child: _buildProfileCard(
+                                    title: 'Member Details:',
+                                    data: data['member'],
+                                    showPayNow: true,
+                                  ),
+                                ),
+                                if (data['coordinator'] != null && data['coordinator']['Name'] != null)
+                                  SizedBox(
+                                    width: 510,
+                                    child: _buildProfileCard(
+                                      title: 'Coordinator Details:',
+                                      data: data['coordinator'],
+                                      showPayNow: false,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          const SizedBox(height: 32),
+                          
+                          // Receipts Section
+                          _buildReceiptsHistorySection(data['receipts'] ?? [], data['member'], isMobile),
+                        ],
+                      ),
+                    );
+                  }
+                ),
               ),
-            ),
-          ),
+            );
+          },
         );
       } else {
         if (mounted) {
-          showStatusDialog(
-            context,
-            title: 'Error',
-            message: 'Failed to fetch member details',
-            type: DialogType.error,
-          );
+          showStatusDialog(context, title: 'Error', message: 'Failed to load member history', type: DialogType.error);
         }
       }
     } catch (e) {
       if (mounted) Navigator.pop(context);
       if (mounted) {
-        showStatusDialog(
-          context,
-          title: 'Connection Error',
-          message: 'Unable to load member details.',
-          type: DialogType.error,
-        );
+        showStatusDialog(context, title: 'Connection Error', message: 'Unable to reach server', type: DialogType.error);
       }
     }
+  }
+
+  Widget _buildReceiptsHistorySection(List<dynamic> receipts, Map<String, dynamic> memberData, bool isMobile) {
+    final Map<String, List<dynamic>> grouped = {};
+    for (var r in receipts) {
+      final name = r['eventname']?.toString() ?? 'Other';
+      if (!grouped.containsKey(name)) grouped[name] = [];
+      grouped[name]!.add(r);
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.black12),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+            decoration: const BoxDecoration(
+              color: Color(0xFF172030),
+              borderRadius: BorderRadius.only(topLeft: Radius.circular(12), topRight: Radius.circular(12)),
+            ),
+            child: isMobile 
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(Icons.receipt_long, color: Colors.white70, size: 18),
+                        SizedBox(width: 8),
+                        Text('Payment Receipt History', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(20)),
+                      child: Text('${receipts.length} record(s)', style: const TextStyle(color: Colors.white, fontSize: 12)),
+                    ),
+                  ],
+                )
+              : Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(Icons.receipt_long, color: Colors.white70, size: 18),
+                        SizedBox(width: 8),
+                        Text('Payment Receipt History', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
+                      ],
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(20)),
+                      child: Text('${receipts.length} record(s)', style: const TextStyle(color: Colors.white, fontSize: 12)),
+                    ),
+                  ],
+                ),
+          ),
+          if (receipts.isEmpty)
+            const Padding(
+              padding: EdgeInsets.all(32),
+              child: Center(child: Text('No payment receipts found.', style: TextStyle(color: Colors.black45))),
+            )
+          else
+            ...grouped.entries.map((entry) => _buildEventGroupedTable(entry.key, entry.value, memberData, isMobile)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEventGroupedTable(String eventName, List<dynamic> items, Map<String, dynamic> memberData, bool isMobile) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF1F5F9),
+            border: Border(left: BorderSide(color: Colors.blue.shade700, width: 4)),
+          ),
+          child: Text(
+            eventName.toUpperCase(),
+            style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: Colors.blue.shade900, letterSpacing: 1),
+          ),
+        ),
+        Scrollbar(
+          thumbVisibility: true,
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: DataTable(
+              columnSpacing: isMobile ? 16 : 24,
+              horizontalMargin: isMobile ? 12 : 24,
+              headingRowColor: WidgetStateProperty.all(const Color(0xFFF8FAFC)),
+              columns: const [
+                DataColumn(label: Text('SNO', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+                DataColumn(label: Text('TOTAL', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+                DataColumn(label: Text('PAID', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+                DataColumn(label: Text('PENDING', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+                DataColumn(label: Text('BANK / DETAILS', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+                DataColumn(label: Text('DATE', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+                DataColumn(label: Text('YEAR', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+                DataColumn(label: Text('DUES', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+                DataColumn(label: Text('STATUS', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+                DataColumn(label: Text('ACTIONS', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+              ],
+              rows: items.map((r) {
+                final status = r['status']?.toString() ?? 'Pending';
+                final isPaid = status.toLowerCase() == 'paid';
+                return DataRow(cells: [
+                  DataCell(Text('${items.indexOf(r) + 1}')),
+                  DataCell(Text('${r['Taxamount'] ?? '-'} Rs')),
+                  DataCell(Text('${r['paidamount'] ?? '-'} Rs', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold))),
+                  DataCell(Text('${r['balanceamount'] ?? '-'} Rs', style: const TextStyle(color: Colors.red))),
+                  DataCell(Text(r['bankname'] ?? '-')),
+                  DataCell(Text(r['paymentdate'] ?? '-')),
+                  DataCell(Text(r['year']?.toString() ?? '-')),
+                  DataCell(Text(r['dues']?.toString() ?? '-')),
+                  DataCell(Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(color: isPaid ? Colors.green.shade100 : Colors.red.shade100, borderRadius: BorderRadius.circular(4)),
+                    child: Text(status.toUpperCase(), style: TextStyle(fontSize: 10, color: isPaid ? Colors.green.shade800 : Colors.red.shade800, fontWeight: FontWeight.bold)),
+                  )),
+                  DataCell(Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _buildActionBtn(
+                        icon: Icons.remove_red_eye_outlined, 
+                        color: Colors.blue, 
+                        tooltip: 'View', 
+                        onTap: () => _viewReceipt(r, memberData)
+                      ),
+                      const SizedBox(width: 8),
+                      _buildActionBtn(
+                        icon: Icons.print_outlined, 
+                        color: Colors.indigo, 
+                        tooltip: 'Print', 
+                        onTap: () => _printReceiptHighFidelity(r, memberData)
+                      ),
+                      const SizedBox(width: 8),
+                      _buildActionBtn(
+                        icon: Icons.file_download_outlined, 
+                        color: Colors.blueGrey, 
+                        tooltip: 'Download', 
+                        onTap: () => _downloadReceiptHighFidelity(r, memberData)
+                      ),
+                    ],
+                  )),
+                ]);
+              }).toList(),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _showPaymentDialog(Map<String, dynamic> memberData) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+        child: Container(
+          width: 1000,
+          constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.95),
+          child: PaymentForm(
+            memberData: memberData,
+            initialYear: _selectedYear,
+            initialEventId: _selectedEventId,
+            onPaymentSuccess: () {
+              Navigator.pop(context); // Close dialog
+              if (widget.role == 3) {
+                _fetchMemberCoordinator();
+              } else {
+                _fetchMembers();
+              }
+            },
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _buildCell(String text, double width, {bool isHeader = false, bool isBlue = false, bool isActions = false, bool isCentered = true, Widget? child}) {
@@ -1076,18 +1572,18 @@ class _PaymentsContentState extends State<PaymentsContent> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    _buildPageBtn(Icons.chevron_left, _currentPage > 1 ? () => setState(() { _currentPage--; _fetchMembers(); }) : null),
+                    _buildPageBtn(Icons.chevron_left, _currentPage > 1 ? () => _goToPage(_currentPage - 1) : null),
                     const SizedBox(width: 8),
                     ...List.generate(totalPages > 3 ? 3 : totalPages, (i) {
                       int page = i + 1;
-                      return _buildPageNum(page, page == _currentPage, () => setState(() { _currentPage = page; _fetchMembers(); }));
+                      return _buildPageNum(page, page == _currentPage, () => _goToPage(page));
                     }),
                     if (totalPages > 3) ...[
                       const Text('...'),
-                      _buildPageNum(totalPages, totalPages == _currentPage, () => setState(() { _currentPage = totalPages; _fetchMembers(); })),
+                      _buildPageNum(totalPages, totalPages == _currentPage, () => _goToPage(totalPages)),
                     ],
                     const SizedBox(width: 8),
-                    _buildPageBtn(Icons.chevron_right, _currentPage < totalPages ? () => setState(() { _currentPage++; _fetchMembers(); }) : null),
+                    _buildPageBtn(Icons.chevron_right, _currentPage < totalPages ? () => _goToPage(_currentPage + 1) : null),
                   ],
                 ),
               ),
@@ -1102,18 +1598,18 @@ class _PaymentsContentState extends State<PaymentsContent> {
               ),
               Row(
                 children: [
-                  _buildPageBtn(Icons.chevron_left, _currentPage > 1 ? () => setState(() { _currentPage--; _fetchMembers(); }) : null),
+                  _buildPageBtn(Icons.chevron_left, _currentPage > 1 ? () => _goToPage(_currentPage - 1) : null),
                   const SizedBox(width: 8),
                   ...List.generate(totalPages > 5 ? 5 : totalPages, (i) {
                     int page = i + 1;
-                    return _buildPageNum(page, page == _currentPage, () => setState(() { _currentPage = page; _fetchMembers(); }));
+                    return _buildPageNum(page, page == _currentPage, () => _goToPage(page));
                   }),
                   if (totalPages > 5) ...[
                     const Text('...'),
-                    _buildPageNum(totalPages, totalPages == _currentPage, () => setState(() { _currentPage = totalPages; _fetchMembers(); })),
+                    _buildPageNum(totalPages, totalPages == _currentPage, () => _goToPage(totalPages)),
                   ],
                   const SizedBox(width: 8),
-                  _buildPageBtn(Icons.chevron_right, _currentPage < totalPages ? () => setState(() { _currentPage++; _fetchMembers(); }) : null),
+                  _buildPageBtn(Icons.chevron_right, _currentPage < totalPages ? () => _goToPage(_currentPage + 1) : null),
                 ],
               ),
             ],

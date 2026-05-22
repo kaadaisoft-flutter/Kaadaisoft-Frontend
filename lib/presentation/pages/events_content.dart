@@ -42,7 +42,9 @@ class _EventsContentState extends State<EventsContent> {
         final result = jsonDecode(response.body);
         if (mounted) {
           setState(() {
-            _events = result['data'];
+            final List<dynamic> eventsList = List<dynamic>.from(result['data']);
+            eventsList.sort((a, b) => (b['Id'] ?? 0).compareTo(a['Id'] ?? 0));
+            _events = eventsList;
             _isLoading = false;
           });
         }
@@ -65,10 +67,30 @@ class _EventsContentState extends State<EventsContent> {
   }
 
   void _showUpdateEventDialog(Map<String, dynamic> event) {
-    final nameController = TextEditingController(text: event['EventName']);
-    final taxController = TextEditingController(text: event['TaxAmount']?.toString());
-    DateTime fromDate = DateTime.parse(event['From_date'].toString());
-    DateTime toDate = DateTime.parse(event['To_date'].toString());
+    final nameController = TextEditingController(text: event['EventName']?.toString() ?? '');
+    final taxController = TextEditingController(text: event['TaxAmount']?.toString() ?? '0.00');
+    
+    DateTime parseDate(dynamic dateStr) {
+      if (dateStr == null || dateStr == 'N/A' || dateStr.toString().isEmpty) return DateTime.now();
+      try {
+        return DateTime.parse(dateStr.toString());
+      } catch (e) {
+        try {
+          // Try parsing DD-MM-YYYY
+          List<String> parts = dateStr.toString().split('-');
+          if (parts.length == 3) {
+            int d = int.parse(parts[0]);
+            int m = int.parse(parts[1]);
+            int y = int.parse(parts[2]);
+            return DateTime(y, m, d);
+          }
+        } catch (_) {}
+        return DateTime.now();
+      }
+    }
+
+    DateTime fromDate = parseDate(event['From_date']);
+    DateTime toDate = parseDate(event['To_date']);
     bool isSaving = false;
 
     showDialog(
@@ -92,107 +114,131 @@ class _EventsContentState extends State<EventsContent> {
               ),
             ],
           ),
-          content: Container(
-            width: 450,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('EVENT NAME', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black54)),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: nameController,
-                  decoration: InputDecoration(
-                    hintText: 'Enter event name',
-                    filled: true,
-                    fillColor: Colors.grey[50],
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey[200]!)),
-                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey[200]!)),
+          content: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 450),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('EVENT NAME', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black54, letterSpacing: 0.5)),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: nameController,
+                    decoration: InputDecoration(
+                      hintText: 'Enter event name',
+                      filled: true,
+                      fillColor: Colors.grey[50],
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey[200]!)),
+                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey[200]!)),
+                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFF3B82F6), width: 1.5)),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 20),
-                const Text('DURATION', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black54)),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Column(
+                  const SizedBox(height: 20),
+                  const Text('DURATION', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black54, letterSpacing: 0.5)),
+                  const SizedBox(height: 8),
+                  Builder(
+                    builder: (context) {
+                      bool isSmall = MediaQuery.of(context).size.width < 500;
+                      
+                      final fromDateWidget = Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const Text('From', style: TextStyle(fontSize: 11, color: Colors.black45)),
                           const SizedBox(height: 4),
                           _buildDatePicker(context, fromDate, (date) => setDialogState(() => fromDate = date)),
                         ],
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
+                      );
+                      
+                      final toDateWidget = Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const Text('To', style: TextStyle(fontSize: 11, color: Colors.black45)),
                           const SizedBox(height: 4),
                           _buildDatePicker(context, toDate, (date) => setDialogState(() => toDate = date)),
                         ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                const Text('TAX AMOUNT (₹)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black54)),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: taxController,
-                  keyboardType: TextInputType.number,
-                  decoration: InputDecoration(
-                    hintText: 'Enter tax amount',
-                    filled: true,
-                    fillColor: Colors.grey[50],
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey[200]!)),
-                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey[200]!)),
-                  ),
-                ),
-                const SizedBox(height: 32),
-                SizedBox(
-                  width: double.infinity,
-                  height: 50,
-                  child: ElevatedButton(
-                    onPressed: isSaving ? null : () async {
-                      setDialogState(() => isSaving = true);
-                      try {
-                        final response = await http.post(
-                          Uri.parse('${ApiConfig.baseUrl}/api/update-event/${event['Id']}'),
-                          headers: {'Content-Type': 'application/json'},
-                          body: jsonEncode({
-                            'EventName': nameController.text,
-                            'From_date': fromDate.toIso8601String().split('T')[0],
-                            'To_date': toDate.toIso8601String().split('T')[0],
-                            'TaxAmount': taxController.text,
-                          }),
-                        );
+                      );
 
-                        if (response.statusCode == 200) {
-                          Navigator.pop(context);
-                          _fetchEvents();
-                          showStatusDialog(context, title: 'Success', message: 'Event updated successfully', type: DialogType.success);
-                        }
-                      } catch (e) {
-                        showStatusDialog(context, title: 'Error', message: 'Failed to update event', type: DialogType.error);
-                      } finally {
-                        setDialogState(() => isSaving = false);
+                      if (isSmall) {
+                        return Column(
+                          children: [
+                            fromDateWidget,
+                            const SizedBox(height: 12),
+                            toDateWidget,
+                          ],
+                        );
                       }
+
+                      return Row(
+                        children: [
+                          Expanded(child: fromDateWidget),
+                          const SizedBox(width: 16),
+                          Expanded(child: toDateWidget),
+                        ],
+                      );
                     },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF3B82F6),
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                    ),
-                    child: isSaving 
-                      ? const SizedBox(width: 20, height: 20, child: LoadingSpinner())
-                      : const Text('Save Changes', style: TextStyle(fontWeight: FontWeight.bold)),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 20),
+                  const Text('TAX AMOUNT (₹)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black54, letterSpacing: 0.5)),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: taxController,
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(
+                      hintText: 'Enter tax amount',
+                      filled: true,
+                      fillColor: Colors.grey[50],
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey[200]!)),
+                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey[200]!)),
+                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFF3B82F6), width: 1.5)),
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 54,
+                    child: ElevatedButton(
+                      onPressed: isSaving ? null : () async {
+                        setDialogState(() => isSaving = true);
+                        try {
+                          final response = await http.post(
+                            Uri.parse('${ApiConfig.baseUrl}/api/update-event/${event['Id']}'),
+                            headers: {'Content-Type': 'application/json'},
+                            body: jsonEncode({
+                              'EventName': nameController.text,
+                              'From_date': fromDate.toIso8601String().split('T')[0],
+                              'To_date': toDate.toIso8601String().split('T')[0],
+                              'TaxAmount': taxController.text,
+                            }),
+                          );
+
+                          if (response.statusCode == 200) {
+                            Navigator.pop(context);
+                            _fetchEvents();
+                            showStatusDialog(context, title: 'Success', message: 'Event updated successfully', type: DialogType.success);
+                          }
+                        } catch (e) {
+                          showStatusDialog(context, title: 'Error', message: 'Failed to update event', type: DialogType.error);
+                        } finally {
+                          setDialogState(() => isSaving = false);
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF3B82F6),
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      child: isSaving 
+                        ? const SizedBox(width: 24, height: 24, child: LoadingSpinner())
+                        : const Text('Save Changes', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                ],
+              ),
             ),
           ),
         ),
@@ -395,10 +441,16 @@ class _EventsContentState extends State<EventsContent> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(selectedDate != null 
-              ? '${selectedDate.day.toString().padLeft(2, '0')}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.year}'
-              : 'dd-mm-yyyy',
-              style: TextStyle(color: selectedDate != null ? Colors.black87 : Colors.black45),
+            Expanded(
+              child: Text(selectedDate != null 
+                ? '${selectedDate.day.toString().padLeft(2, '0')}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.year}'
+                : 'dd-mm-yyyy',
+                style: TextStyle(
+                  color: selectedDate != null ? Colors.black87 : Colors.black45,
+                  fontSize: 13,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
             const Icon(Icons.calendar_month, size: 18, color: Colors.black54),
           ],
@@ -456,11 +508,16 @@ class _EventsContentState extends State<EventsContent> {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  const Row(
+                  Row(
                     children: [
-                      Icon(Icons.info_outline, size: 14, color: Colors.blue),
-                      SizedBox(width: 4),
-                      Text('Note: Year should be at the end of the event name (e.g. Event_2026).', style: TextStyle(fontSize: 11, color: Colors.blue)),
+                      const Icon(Icons.info_outline, size: 14, color: Colors.blue),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          'Note: Year should be at the end of the event name (e.g. Event_2026).',
+                          style: TextStyle(fontSize: 11, color: Colors.blue[700]),
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 24),
@@ -512,41 +569,62 @@ class _EventsContentState extends State<EventsContent> {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  const Row(
+                  Row(
                     children: [
-                      Icon(Icons.info_outline, size: 14, color: Colors.blue),
-                      SizedBox(width: 4),
-                      Text('Note: Max file size 2MB (JPG, PNG).', style: TextStyle(fontSize: 11, color: Colors.blue)),
+                      const Icon(Icons.info_outline, size: 14, color: Colors.blue),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          'Note: Max file size 2MB (JPG, PNG).',
+                          style: TextStyle(fontSize: 11, color: Colors.blue[700]),
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 24),
 
                   const Text('DURATION', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black54)),
                   const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                  Builder(
+                    builder: (context) {
+                      bool isSmall = MediaQuery.of(context).size.width < 500;
+                      
+                      final fromDateWidget = Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('From', style: TextStyle(fontSize: 11, color: Colors.black45)),
+                          const SizedBox(height: 4),
+                          _buildDatePicker(context, fromDate, (date) => setDialogState(() => fromDate = date)),
+                        ],
+                      );
+                      
+                      final toDateWidget = Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('To', style: TextStyle(fontSize: 11, color: Colors.black45)),
+                          const SizedBox(height: 4),
+                          _buildDatePicker(context, toDate, (date) => setDialogState(() => toDate = date)),
+                        ],
+                      );
+
+                      if (isSmall) {
+                        return Column(
                           children: [
-                            const Text('From', style: TextStyle(fontSize: 11, color: Colors.black45)),
-                            const SizedBox(height: 4),
-                            _buildDatePicker(context, fromDate, (date) => setDialogState(() => fromDate = date)),
+                            fromDateWidget,
+                            const SizedBox(height: 12),
+                            toDateWidget,
                           ],
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text('To', style: TextStyle(fontSize: 11, color: Colors.black45)),
-                            const SizedBox(height: 4),
-                            _buildDatePicker(context, toDate, (date) => setDialogState(() => toDate = date)),
-                          ],
-                        ),
-                      ),
-                    ],
+                        );
+                      }
+
+                      return Row(
+                        children: [
+                          Expanded(child: fromDateWidget),
+                          const SizedBox(width: 16),
+                          Expanded(child: toDateWidget),
+                        ],
+                      );
+                    },
                   ),
                   const SizedBox(height: 24),
 
