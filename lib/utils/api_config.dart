@@ -29,4 +29,6 @@ class ApiConfig {
   static String get bulkUploadMembers => '$baseUrl/api/bulk-upload-members';
   static String get paymentSummary => '$baseUrl/api/payments/event-summary';
   static String get saveReceipt => '$baseUrl/api/payments/save-receipt';
+  static String approveUpdateRequest(int id) => '$baseUrl/api/update-requests/approve/$id';
+  static String rejectUpdateRequest(int id) => '$baseUrl/api/update-requests/reject/$id';
 }

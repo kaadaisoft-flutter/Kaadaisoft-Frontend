@@ -358,7 +358,27 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
       ),
       child: Column(
         children: [
-          _buildDetailRow('Name:', (_userData?['Name'] ?? 'N/A').toString(), isBold: true, isBlue: true, isMobile: isMobile),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: _buildDetailRow('Name:', (_userData?['Name'] ?? 'N/A').toString(), isBold: true, isBlue: true, isMobile: isMobile)),
+              if (_userData?['has_pending_update'] == true)
+                Container(
+                  margin: const EdgeInsets.only(left: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(color: Colors.orange.withOpacity(0.1), borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.orange)),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.hourglass_top, color: Colors.orange, size: 14),
+                      SizedBox(width: 4),
+                      Text('Update In Progress', style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold, fontSize: 12)),
+                    ],
+                  ),
+                ),
+            ],
+          ),
           const SizedBox(height: 32),
           _buildDetailRow('Family Membership ID:', (_userData?['Familymembershipid'] ?? 'N/A').toString(), isPill: true, isMobile: isMobile),
           const SizedBox(height: 32),
@@ -447,7 +467,22 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
                       },
                       cells: [
                         DataCell(Text((index + 1).toString())),
-                        DataCell(Text(fm['Name'] ?? 'N/A')),
+                        DataCell(
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(fm['Name'] ?? 'N/A'),
+                              if (fm['pending_status'] == 'Pending')
+                                const Padding(
+                                  padding: EdgeInsets.only(left: 6.0),
+                                  child: Tooltip(
+                                    message: 'Update in progress',
+                                    child: Icon(Icons.hourglass_top, color: Colors.orange, size: 14),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
                         DataCell(Text(fm['MemberRole'] ?? 'N/A')),
                         DataCell(Text(fm['Gender'] ?? 'N/A')),
                         DataCell(Text(ageStr)),
@@ -616,10 +651,16 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
   Widget _buildAddressLine(IconData icon, String text) {
     if (text.trim().isEmpty || text == 'null' || text == ', ') return const SizedBox.shrink();
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, color: const Color(0xFF3B82F6), size: 18),
+        Padding(
+          padding: const EdgeInsets.only(top: 2.0),
+          child: Icon(icon, color: const Color(0xFF3B82F6), size: 18),
+        ),
         const SizedBox(width: 12),
-        Text(text, style: const TextStyle(fontSize: 16, color: Colors.black87)),
+        Expanded(
+          child: Text(text, style: const TextStyle(fontSize: 16, color: Colors.black87)),
+        ),
       ],
     );
   }

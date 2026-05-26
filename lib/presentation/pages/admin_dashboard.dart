@@ -835,7 +835,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     if (widget.userRole != 3) ...[
                       _buildNotificationIcon(Icons.person_add_alt_1, Colors.orange, _notificationsCount, 'Update Requests'),
                       const SizedBox(width: 12),
-                      _buildNotificationIcon(Icons.notifications_none, Colors.white, _approvalsCount, 'Received Applications'),
+                      _buildNotificationIcon(Icons.notifications_none, Colors.red, _approvalsCount, 'Received Applications'),
                       const SizedBox(width: 12),
                     ],
                     IconButton(
@@ -891,8 +891,16 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
         // Desktop View
         return Container(
-          height: 70,
-          color: const Color(0xFF172030),
+          height: 85, // Matches sidebar header (20 + 44 + 20 = 84) + Divider (1)
+          decoration: const BoxDecoration(
+            color: Color(0xFF172030),
+            border: Border(
+              bottom: BorderSide(
+                color: Colors.white24,
+                width: 1,
+              ),
+            ),
+          ),
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Stack(
             alignment: Alignment.center,
@@ -936,7 +944,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     if (widget.userRole != 3) ...[
                       _buildNotificationIcon(Icons.person_add_alt_1, Colors.orange, _notificationsCount, 'Update Requests'),
                       const SizedBox(width: 8),
-                      _buildNotificationIcon(Icons.notifications_none, Colors.white, _approvalsCount, 'Received Applications'),
+                      _buildNotificationIcon(Icons.notifications_none, Colors.red, _approvalsCount, 'Received Applications'),
                       const SizedBox(width: 12),
                     ],
                     Container(width: 1, height: 30, color: Colors.white24),
@@ -1103,7 +1111,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
             _StatCard(
               title: 'APPROVALS',
               value: _isLoadingStats ? '...' : _approvalsCount.toString(),
-              color: const Color(0xFFF43F5E),
+              color: const Color(0xFF06B6D4),
               width: cardWidth,
               icon: Icons.person_outline,
               onTap: () {
@@ -1118,53 +1126,80 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
   Widget _buildFilterSelector() {
     return Container(
-      padding: const EdgeInsets.all(4),
+      padding: const EdgeInsets.all(6),
       decoration: BoxDecoration(
-        color: const Color(0xFFF1F5F9),
-        borderRadius: BorderRadius.circular(12),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(30),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _buildFilterTab('UNPAID', 'Unpaid Details'),
-          _buildFilterTab('PAID', 'Paid Events'),
+          _buildFilterTab('UNPAID', 'Unpaid Details', Icons.pending_actions_outlined),
+          _buildFilterTab('PAID', 'Paid Events', Icons.check_circle_outline),
         ],
       ),
     );
   }
 
-  Widget _buildFilterTab(String filterValue, String label) {
+  Widget _buildFilterTab(String filterValue, String label, IconData icon) {
     final isSelected = _paymentFilter == filterValue;
-    return InkWell(
+    return GestureDetector(
       onTap: () {
         setState(() {
           _paymentFilter = filterValue;
         });
       },
-      borderRadius: BorderRadius.circular(8),
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOutCubic,
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.white : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
+          gradient: isSelected 
+              ? const LinearGradient(
+                  colors: [Color(0xFF3B82F6), Color(0xFF2563EB)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                )
+              : null,
+          color: isSelected ? null : Colors.transparent,
+          borderRadius: BorderRadius.circular(26),
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
+                    color: const Color(0xFF3B82F6).withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
                   ),
                 ]
               : null,
         ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: isSelected ? const Color(0xFF172030) : Colors.black54,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-            fontSize: 13,
-          ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 18,
+              color: isSelected ? Colors.white : const Color(0xFF64748B),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: TextStyle(
+                color: isSelected ? Colors.white : const Color(0xFF64748B),
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                fontSize: 14,
+                letterSpacing: 0.3,
+              ),
+            ),
+          ],
         ),
       ),
     );

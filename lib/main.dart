@@ -4,6 +4,8 @@ import 'presentation/pages/login_page.dart';
 import 'presentation/pages/admin_dashboard.dart';
 import 'presentation/widgets/loading_spinner.dart';
 
+import 'package:toastification/toastification.dart';
+
 void main() {
   runApp(const MyApp());
 }
@@ -48,20 +50,22 @@ class _MyAppState extends State<MyApp> {
       );
     }
 
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Poondurai Kaadai Kulam',
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.orange),
+    return ToastificationWrapper(
+      child: MaterialApp(
+        debugShowCheckedModeBanner: false,
+        title: 'Poondurai Kaadai Kulam',
+        theme: ThemeData(
+          useMaterial3: true,
+          colorScheme: ColorScheme.fromSeed(seedColor: Colors.orange),
+        ),
+        home: _isLoggedIn!
+            ? AdminDashboard(
+                userId: _userId,
+                userName: _userName ?? 'User',
+                userRole: _userRole ?? 3,
+              )
+            : const LoginPage(),
       ),
-      home: _isLoggedIn!
-          ? AdminDashboard(
-              userId: _userId,
-              userName: _userName ?? 'User',
-              userRole: _userRole ?? 3,
-            )
-          : const LoginPage(),
     );
   }
 }

@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../widgets/loading_spinner.dart';
 import '../../utils/api_config.dart';
+import '../../utils/notification_helper.dart';
 
 class UpdateRequestsContent extends StatefulWidget {
   final VoidCallback? onBackToDashboard;
@@ -239,23 +240,310 @@ class _UpdateRequestsContentState extends State<UpdateRequestsContent> {
           _buildDataCell(req['Taluk'] ?? '-', 130),
           _buildDataCell(req['Panchayat'] ?? '-', 130),
           _buildDataCell(req['Village'] ?? '-', 130),
-          _buildDataCell('', 100, hasDivider: false, child: ElevatedButton(
+          _buildDataCell('', 100, hasDivider: false, child: IconButton(
             onPressed: () {
-              // Action for viewing request
+              _showRequestDetails(req);
             },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              minimumSize: Size.zero,
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              textStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-            ),
-            child: const Text('VIEW'),
+            icon: const Icon(Icons.visibility),
+            color: Colors.blue,
+            tooltip: 'View Details',
           )),
         ],
       ),
+    );
+  }
+
+  Future<void> _handleApprove(int requestId) async {
+    try {
+      final response = await http.post(
+        Uri.parse(ApiConfig.approveUpdateRequest(requestId)),
+      );
+      if (response.statusCode == 200) {
+        if (mounted) {
+          NotificationHelper.showSuccess(context, 'Request approved successfully');
+          _fetchRequests();
+        }
+      } else {
+        if (mounted) {
+          NotificationHelper.showError(context, 'Failed to approve request: ${response.body}');
+        }
+      }
+    } catch (e) {
+      debugPrint('Error approving request: $e');
+    }
+  }
+
+  Future<void> _handleReject(int requestId) async {
+    try {
+      final response = await http.post(
+        Uri.parse(ApiConfig.rejectUpdateRequest(requestId)),
+      );
+      if (response.statusCode == 200) {
+        if (mounted) {
+          NotificationHelper.showSuccess(context, 'Request rejected successfully');
+          _fetchRequests();
+        }
+      } else {
+        if (mounted) {
+          NotificationHelper.showError(context, 'Failed to reject request: ${response.body}');
+        }
+      }
+    } catch (e) {
+      debugPrint('Error rejecting request: $e');
+    }
+  }
+
+  void _showRequestDetails(dynamic req) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        final data = Map<String, dynamic>.from(req);
+        
+        // Extract updated_data
+        final updatedDataRaw = data['updated_data'];
+        Map<String, dynamic> updatedDataMap = {};
+        if (updatedDataRaw != null) {
+          if (updatedDataRaw is String) {
+            try {
+              updatedDataMap = json.decode(updatedDataRaw);
+            } catch (e) {
+              debugPrint('Error decoding updated_data: $e');
+            }
+          } else if (updatedDataRaw is Map) {
+            updatedDataMap = Map<String, dynamic>.from(updatedDataRaw);
+          }
+        }
+
+        // Internal system fields to hide
+        final systemFields = [
+          'id', 'request_id', 'status', 'familymembershipid', 'existfamilyid',
+          'memberrole', 'role', 'approvedstatus', 'isshow', 'created_at',
+          'password', 'coordinator_id', 'coordinator_two_id', 'aadharnumber',
+          'aadhar_hash', 'assigned_areas_count', 'state_id', 'updated_at'
+        ];
+
+        // Remove empty, very large base64 strings, and system fields
+        data.removeWhere((k, v) => 
+            v == null || 
+            v.toString().isEmpty || 
+            k.toLowerCase().contains('image') || 
+            k.toLowerCase().contains('cert') || 
+            k == 'updated_data' ||
+            systemFields.contains(k.toLowerCase()) ||
+            v.toString().length > 150);
+        
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          child: Container(
+            width: 600,
+            constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.8),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF172030),
+                    borderRadius: BorderRadius.only(topLeft: Radius.circular(12), topRight: Radius.circular(12)),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Update Request Details', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                      IconButton(
+                        icon: const Icon(Icons.close, color: Colors.white),
+                        onPressed: () => Navigator.pop(context),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                    ],
+                  ),
+                ),
+                Flexible(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Member Info', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.blue)),
+                        const SizedBox(height: 16),
+                        ...data.entries.map((e) {
+                          final formattedKey = e.key.replaceAll(RegExp(r'(?<=[a-z])[A-Z]'), r' $0').toUpperCase();
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                SizedBox(
+                                  width: 180,
+                                  child: Text(
+                                    formattedKey,
+                                    style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.black54, fontSize: 13),
+                                  ),
+                                ),
+                                const Text(':', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black54)),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    e.value.toString(),
+                                    style: const TextStyle(color: Colors.black87, fontSize: 14, fontWeight: FontWeight.w500),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                        
+                        if (updatedDataMap.isNotEmpty) ...[
+                          const SizedBox(height: 24),
+                          const Divider(),
+                          const SizedBox(height: 16),
+                          const Text('Requested Updates', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.orange)),
+                          const SizedBox(height: 16),
+                          ...updatedDataMap.entries.map((e) {
+                            // Skip base64 or very large values
+                            if (e.value.toString().length > 150) {
+                              return const SizedBox.shrink();
+                            }
+                            final key = e.key.toLowerCase();
+                            final isImageField = key == 'member_image' || key == 'community_cert';
+                            final formattedKey = e.key.replaceAll(RegExp(r'(?<=[a-z])[A-Z]'), r' $0').toUpperCase();
+                            final labelText = key == 'member_image' ? 'PASSPORT PHOTO' : key == 'community_cert' ? 'COMMUNITY CERTIFICATE' : formattedKey;
+
+                            if (isImageField && e.value.toString().isNotEmpty) {
+                              final imageUrl = '${ApiConfig.baseUrl}/assets/uploads/${e.value}';
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 16),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      labelText,
+                                      style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.black54, fontSize: 13),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Container(
+                                      decoration: BoxDecoration(
+                                        border: Border.all(color: Colors.orange, width: 2),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(6),
+                                        child: Image.network(
+                                          imageUrl,
+                                          height: 160,
+                                          fit: BoxFit.contain,
+                                          errorBuilder: (ctx, err, st) => Container(
+                                            height: 80,
+                                            color: Colors.grey.shade100,
+                                            child: Center(
+                                              child: Text('Image: ${e.value}', style: const TextStyle(color: Colors.orange, fontSize: 12)),
+                                            ),
+                                          ),
+                                          loadingBuilder: (ctx, child, progress) {
+                                            if (progress == null) return child;
+                                            return const SizedBox(height: 80, child: Center(child: CircularProgressIndicator()));
+                                          },
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text('New image uploaded', style: TextStyle(color: Colors.orange.shade700, fontSize: 11, fontStyle: FontStyle.italic)),
+                                  ],
+                                ),
+                              );
+                            }
+
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  SizedBox(
+                                    width: 180,
+                                    child: Text(
+                                      formattedKey,
+                                      style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.black54, fontSize: 13),
+                                    ),
+                                  ),
+                                  const Text(':', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black54)),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Text(
+                                      e.value.toString(),
+                                      style: const TextStyle(
+                                        color: Colors.orange,
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                        decoration: TextDecoration.underline,
+                                        decorationColor: Colors.green,
+                                        decorationThickness: 2.0,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }).toList(),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    border: Border(top: BorderSide(color: Colors.grey.shade200)),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      ElevatedButton(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          _handleApprove(req['request_id']);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        ),
+                        child: const Text('APPROVE', style: TextStyle(fontWeight: FontWeight.bold)),
+                      ),
+                      const SizedBox(width: 12),
+                      ElevatedButton(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          _handleReject(req['request_id']);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        ),
+                        child: const Text('REJECT', style: TextStyle(fontWeight: FontWeight.bold)),
+                      ),
+                      const SizedBox(width: 12),
+                      ElevatedButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        ),
+                        child: const Text('CLOSE', style: TextStyle(fontWeight: FontWeight.bold)),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
