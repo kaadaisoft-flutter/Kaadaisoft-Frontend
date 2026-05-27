@@ -111,7 +111,7 @@ class _UpdateRequestsContentState extends State<UpdateRequestsContent> {
                               children: [
                                 // Header
                                 Container(
-                                  color: const Color(0xFF172030),
+                                  color: const Color(0xFF2D1B18),
                                   height: 48,
                                   child: Row(
                                     children: [
@@ -186,7 +186,7 @@ class _UpdateRequestsContentState extends State<UpdateRequestsContent> {
                             child: Container(
                               width: 32, height: 32,
                               decoration: BoxDecoration(
-                                color: isActive ? const Color(0xFF1E283C) : Colors.transparent,
+                                color: isActive ? const Color(0xFF2D1B18) : Colors.transparent,
                                 borderRadius: BorderRadius.circular(6),
                                 border: isActive ? null : Border.all(color: Colors.black12),
                               ),
@@ -343,7 +343,7 @@ class _UpdateRequestsContentState extends State<UpdateRequestsContent> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                   decoration: const BoxDecoration(
-                    color: Color(0xFF172030),
+                    color: Color(0xFF2D1B18),
                     borderRadius: BorderRadius.only(topLeft: Radius.circular(12), topRight: Radius.circular(12)),
                   ),
                   child: Row(

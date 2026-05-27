@@ -132,7 +132,7 @@ class _ReceivedApplicationsContentState extends State<ReceivedApplicationsConten
                       style: TextStyle(
                         fontSize: isMobile ? 18 : 22,
                         fontWeight: FontWeight.bold,
-                        color: const Color(0xFF172030),
+                        color: const Color(0xFF2D1B18),
                       ),
                     ),
                   ],
@@ -169,7 +169,7 @@ class _ReceivedApplicationsContentState extends State<ReceivedApplicationsConten
                               // Table Header
                               Container(
                                 decoration: const BoxDecoration(
-                                  color: Color(0xFF172030),
+                                  color: Color(0xFF2D1B18),
                                   borderRadius: BorderRadius.only(
                                     topLeft: Radius.circular(12),
                                     topRight: Radius.circular(12),

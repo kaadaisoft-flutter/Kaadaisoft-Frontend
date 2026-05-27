@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:html' as html;
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../widgets/loading_spinner.dart';
@@ -269,11 +270,14 @@ class _CoordinatorDetailsContentState extends State<CoordinatorDetailsContent> {
                 children: [
                   Icon(Icons.person, color: Color(0xFF1976D2), size: 28),
                   SizedBox(width: 12),
-                  Text('Coordinator Details:', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF172030))),
+                  Text('Coordinator Details:', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF2D1B18))),
                 ],
               ),
               ElevatedButton.icon(
-                onPressed: () {}, // Download ID Card placeholder
+                onPressed: () {
+                  final url = '${ApiConfig.baseUrl}/api/download-id-card/${widget.numericId}';
+                  html.window.open(url, '_blank');
+                },
                 icon: const Icon(Icons.badge_outlined, size: 18),
                 label: const Text('Download ID Card'),
                 style: ElevatedButton.styleFrom(
@@ -295,7 +299,7 @@ class _CoordinatorDetailsContentState extends State<CoordinatorDetailsContent> {
             children: [
               Icon(Icons.group, color: Color(0xFF1976D2), size: 24),
               SizedBox(width: 12),
-              Text('Family Members', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF172030))),
+              Text('Family Members', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF2D1B18))),
             ],
           ),
           const SizedBox(height: 16),
@@ -307,7 +311,7 @@ class _CoordinatorDetailsContentState extends State<CoordinatorDetailsContent> {
             children: [
               const Icon(Icons.location_city, color: Color(0xFF1976D2), size: 24),
               const SizedBox(width: 12),
-              Text('Total Members: ${_assignedMembers.length}', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF172030))),
+              Text('Total Members: ${_assignedMembers.length}', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF2D1B18))),
             ],
           ),
           const SizedBox(height: 16),
@@ -486,7 +490,7 @@ class _CoordinatorDetailsContentState extends State<CoordinatorDetailsContent> {
         borderRadius: BorderRadius.circular(12),
         child: DataTable(
           headingRowHeight: 50,
-          headingRowColor: MaterialStateProperty.all(const Color(0xFF172030)),
+          headingRowColor: MaterialStateProperty.all(const Color(0xFF2D1B18)),
           columns: const [
             DataColumn(label: Text('S.NO', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
             DataColumn(label: Text('NAME', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
@@ -544,7 +548,7 @@ class _CoordinatorDetailsContentState extends State<CoordinatorDetailsContent> {
         borderRadius: BorderRadius.circular(12),
         child: DataTable(
           headingRowHeight: 50,
-          headingRowColor: MaterialStateProperty.all(const Color(0xFF172030)),
+          headingRowColor: MaterialStateProperty.all(const Color(0xFF2D1B18)),
           columns: const [
             DataColumn(label: Text('S.NO', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
             DataColumn(label: Text('MEMBER DETAILS', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),

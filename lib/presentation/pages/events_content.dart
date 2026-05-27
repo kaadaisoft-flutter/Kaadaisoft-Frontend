@@ -728,7 +728,7 @@ class _EventsContentState extends State<EventsContent> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Events Management', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF172030))),
+                  const Text('Events Management', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF2D1B18))),
                   const SizedBox(height: 16),
                   if (widget.role == 1)
                     SizedBox(
@@ -738,7 +738,7 @@ class _EventsContentState extends State<EventsContent> {
                         icon: const Icon(Icons.add, size: 18),
                         label: const Text('Add New Event'),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF172030),
+                          backgroundColor: const Color(0xFF2D1B18),
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -751,14 +751,14 @@ class _EventsContentState extends State<EventsContent> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('Events Management', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF172030))),
+                  const Text('Events Management', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF2D1B18))),
                   if (widget.role == 1)
                     ElevatedButton.icon(
                       onPressed: _showAddEventDialog,
                       icon: const Icon(Icons.add, size: 18),
                       label: const Text('Add New Event'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF172030),
+                        backgroundColor: const Color(0xFF2D1B18),
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -796,7 +796,7 @@ class _EventsContentState extends State<EventsContent> {
                           children: [
                             // Table Header
                             Container(
-                              color: const Color(0xFF172030),
+                              color: const Color(0xFF2D1B18),
                               height: 48,
                               child: Row(
                                 children: [
@@ -965,7 +965,7 @@ class _EventsContentState extends State<EventsContent> {
             const SizedBox(height: 24),
             const Text(
               'Move to Trash?',
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF172030)),
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF2D1B18)),
             ),
             const SizedBox(height: 12),
             Text(

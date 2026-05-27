@@ -13,6 +13,7 @@ import 'received_applications_content.dart';
 import 'payments_content.dart';
 import 'reports_content.dart';
 import 'update_requests_content.dart';
+import 'id_card_benefits_content.dart';
 import '../widgets/loading_spinner.dart';
 import '../widgets/custom_dialog.dart';
 import '../widgets/payment_form.dart';
@@ -35,10 +36,11 @@ class AdminDashboard extends StatefulWidget {
   State<AdminDashboard> createState() => _AdminDashboardState();
 }
 
-class _AdminDashboardState extends State<AdminDashboard> {
+class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProviderStateMixin {
   // Current active menu item
   String _activeItem = 'Dashboard';
   final List<String> _navigationHistory = [];
+  AnimationController? _blinkController;
 
   int _membersCount = 0;
   int _coordinatorsCount = 3;
@@ -106,12 +108,18 @@ class _AdminDashboardState extends State<AdminDashboard> {
   void dispose() {
     _dashboardScrollController.dispose();
     _statsTimer?.cancel();
+    _blinkController?.dispose();
     super.dispose();
   }
 
   @override
   void initState() {
     super.initState();
+    _blinkController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    )..repeat(reverse: true);
+
     _fetchStats();
     _fetchPaymentDetails();
     _loadActiveItem();
@@ -285,6 +293,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
   List<Map<String, dynamic>> get _menuItems {
     final allItems = [
       {'title': 'Dashboard', 'icon': Icons.bar_chart, 'color': const Color(0xFF0EA5E9)},
+      {'title': 'ID Card Benefits', 'icon': Icons.card_membership, 'color': const Color(0xFFC49A3C)},
       {'title': 'My Details', 'icon': Icons.person_outline, 'color': const Color(0xFF10B981)},
       {'title': 'Coordinators', 'icon': Icons.shopping_cart_checkout, 'color': const Color(0xFFF59E0B)}, 
       {'title': 'Members', 'icon': Icons.group_outlined, 'color': const Color(0xFF8B5CF6)},
@@ -302,6 +311,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
         item['title'] == 'My Details' || 
         item['title'] == 'Events' || 
         item['title'] == 'Payments' || 
+        item['title'] == 'ID Card Benefits' ||
         item['title'] == 'Logout'
       ).toList();
     }
@@ -452,6 +462,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
   @override
   Widget build(BuildContext context) {
+    if (_blinkController == null) {
+      _blinkController = AnimationController(
+        vsync: this,
+        duration: const Duration(milliseconds: 800),
+      )..repeat(reverse: true);
+    }
+
     final isDesktop = MediaQuery.of(context).size.width >= 900;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
@@ -587,6 +604,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
           },
       );
     }
+    
+    if (_activeItem == 'ID Card Benefits') {
+      return Padding(
+        padding: contentPadding,
+        child: const IdCardBenefitsContent(
+          key: ValueKey('ID Card Benefits'),
+        ),
+      );
+    }
 
     // Default: Dashboard Content
     return _buildDashboardContent();
@@ -612,7 +638,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFF172030),
+                color: Color(0xFF2D1B18),
               ),
             ),
           ),
@@ -630,7 +656,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     final isDesktop = MediaQuery.of(context).size.width >= 900;
 
     return Container(
-      color: const Color(0xFF172030), // Dark sidebar color
+      color: const Color(0xFF2D1B18), // Dark sidebar color matching splash screen
       child: SafeArea(
         child: Column(
           children: [
@@ -762,34 +788,60 @@ class _AdminDashboardState extends State<AdminDashboard> {
               }
             },
             borderRadius: BorderRadius.circular(8),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 150),
-              decoration: BoxDecoration(
-                color: isHighlighted ? Colors.white.withOpacity(0.08) : Colors.transparent,
-                borderRadius: BorderRadius.circular(8),
-                border: isHighlighted 
-                    ? Border.all(color: (isLogout ? Colors.red : const Color(0xFF0EA5E9)).withOpacity(0.4)) 
-                    : null,
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: Row(
-                children: [
-                  Icon(item['icon'], color: iconColor, size: 22),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      item['title'],
-                      style: TextStyle(
-                        color: textColor,
-                        fontSize: 15,
-                        fontWeight: isHighlighted ? FontWeight.bold : FontWeight.w500,
-                      ),
-                    ),
+            child: Builder(
+              builder: (context) {
+                Widget content = AnimatedContainer(
+                  duration: const Duration(milliseconds: 150),
+                  decoration: BoxDecoration(
+                    color: isHighlighted ? Colors.white.withOpacity(0.08) : Colors.transparent,
+                    borderRadius: BorderRadius.circular(8),
+                    border: isHighlighted 
+                        ? Border.all(color: (isLogout ? Colors.red : const Color(0xFF0EA5E9)).withOpacity(0.4)) 
+                        : null,
                   ),
-                  if (isHighlighted)
-                    Icon(Icons.chevron_right, color: isLogout ? Colors.red : const Color(0xFF0EA5E9), size: 18),
-                ],
-              ),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  child: Row(
+                    children: [
+                      Icon(item['icon'], color: iconColor, size: 22),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          item['title'],
+                          style: TextStyle(
+                            color: textColor,
+                            fontSize: 15,
+                            fontWeight: isHighlighted ? FontWeight.bold : FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                      if (isHighlighted)
+                        Icon(Icons.chevron_right, color: isLogout ? Colors.red : const Color(0xFF0EA5E9), size: 18),
+                    ],
+                  ),
+                );
+
+                if (item['title'] == 'ID Card Benefits' && _blinkController != null && !isActive) {
+                  return AnimatedBuilder(
+                    animation: _blinkController!,
+                    builder: (context, child) {
+                      return Container(
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFC49A3C).withOpacity(0.25 * _blinkController!.value),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: const Color(0xFFC49A3C).withOpacity(0.6 * _blinkController!.value),
+                            width: 1.5,
+                          ),
+                        ),
+                        child: child,
+                      );
+                    },
+                    child: content,
+                  );
+                }
+
+                return content;
+              },
             ),
           );
         },
@@ -805,7 +857,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
         if (isMobile) {
           final topPadding = MediaQuery.of(context).padding.top;
           return Container(
-            color: const Color(0xFF172030),
+            color: const Color(0xFF2D1B18),
             padding: EdgeInsets.fromLTRB(16, topPadding + 8, 16, 12),
             child: Column(
               children: [
@@ -893,7 +945,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
         return Container(
           height: 85, // Matches sidebar header (20 + 44 + 20 = 84) + Divider (1)
           decoration: const BoxDecoration(
-            color: Color(0xFF172030),
+            color: Color(0xFF2D1B18),
             border: Border(
               bottom: BorderSide(
                 color: Colors.white24,
@@ -1139,12 +1191,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
           ),
         ],
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _buildFilterTab('UNPAID', 'Unpaid Details', Icons.pending_actions_outlined),
-          _buildFilterTab('PAID', 'Paid Events', Icons.check_circle_outline),
-        ],
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildFilterTab('UNPAID', 'Unpaid Details', Icons.pending_actions_outlined),
+            _buildFilterTab('PAID', 'Paid Events', Icons.check_circle_outline),
+          ],
+        ),
       ),
     );
   }
@@ -1304,14 +1359,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF1E293B), Color(0xFF0F172A)],
+          colors: [Color(0xFF2D1B18), Color(0xFF2D1B18)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF1E293B).withOpacity(0.25),
+            color: const Color(0xFF2D1B18).withOpacity(0.25),
             blurRadius: 16,
             offset: const Offset(0, 8),
           ),
@@ -1451,7 +1506,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                 style: const TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
-                                  color: Color(0xFF172030),
+                                  color: Color(0xFF2D1B18),
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,

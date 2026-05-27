@@ -33,7 +33,7 @@ class LoadingSpinner extends StatelessWidget {
             Text(
               message!,
               style: const TextStyle(
-                color: Color(0xFF172030),
+                color: Color(0xFF2D1B18),
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
               ),

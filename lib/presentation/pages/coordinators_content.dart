@@ -319,7 +319,7 @@ class _CoordinatorsContentState extends State<CoordinatorsContent> {
                   style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF1E283C),
+                    color: Color(0xFF2D1B18),
                   ),
                 ),
                 Row(
@@ -351,7 +351,7 @@ class _CoordinatorsContentState extends State<CoordinatorsContent> {
                       icon: const Icon(Icons.person_add_alt_1, color: Colors.white, size: 18),
                       label: const Text('Assign', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF1E283C),
+                        backgroundColor: const Color(0xFF2D1B18),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                         elevation: 0,
@@ -373,7 +373,7 @@ class _CoordinatorsContentState extends State<CoordinatorsContent> {
           children: [
             const Text(
               'Total Coordinators: ',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF1E283C)),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF2D1B18)),
             ),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -415,7 +415,7 @@ class _CoordinatorsContentState extends State<CoordinatorsContent> {
                         children: [
                           // Header
                           Container(
-                            color: const Color(0xFF172030),
+                            color: const Color(0xFF2D1B18),
                             padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
                             child: const Row(
                               children: [
@@ -503,7 +503,7 @@ class _CoordinatorsContentState extends State<CoordinatorsContent> {
                                   child: Container(
                                     width: 32, height: 32,
                                     decoration: BoxDecoration(
-                                      color: isActive ? const Color(0xFF1E283C) : Colors.transparent,
+                                      color: isActive ? const Color(0xFF2D1B18) : Colors.transparent,
                                       borderRadius: BorderRadius.circular(6),
                                       border: isActive ? null : Border.all(color: Colors.black12),
                                     ),

@@ -6,7 +6,7 @@ class PrivacyPolicyPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A), // Dark top background
+      backgroundColor: const Color(0xFF2D1B18), // Dark top background
       body: SingleChildScrollView(
         child: Column(
           children: [
@@ -18,7 +18,7 @@ class PrivacyPolicyPage extends StatelessWidget {
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
+                  colors: [Color(0xFF2D1B18), Color(0xFF2D1B18)],
                 ),
               ),
               child: Column(
@@ -206,7 +206,7 @@ class PrivacyPolicyPage extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFF0F172A),
+                color: Color(0xFF2D1B18),
               ),
             ),
           ),

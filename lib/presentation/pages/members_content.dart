@@ -189,7 +189,7 @@ class _MembersContentState extends State<MembersContent> {
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
-                              color: Color(0xFF1E283C),
+                              color: Color(0xFF2D1B18),
                             ),
                           ),
                           Container(
@@ -261,7 +261,7 @@ class _MembersContentState extends State<MembersContent> {
                         children: [
                           // Table Header
                           Container(
-                            color: const Color(0xFF172030),
+                            color: const Color(0xFF2D1B18),
                             padding: const EdgeInsets.symmetric(vertical: 8),
                             child: Row(
                               children: [
@@ -351,7 +351,7 @@ class _MembersContentState extends State<MembersContent> {
                                 child: Container(
                                   width: 32, height: 32,
                                   decoration: BoxDecoration(
-                                    color: isActive ? const Color(0xFF1E283C) : Colors.transparent,
+                                    color: isActive ? const Color(0xFF2D1B18) : Colors.transparent,
                                     borderRadius: BorderRadius.circular(6),
                                     border: isActive ? null : Border.all(color: Colors.black12),
                                   ),
@@ -1221,7 +1221,7 @@ class _MembersContentState extends State<MembersContent> {
               children: [
                 Icon(Icons.search_rounded, color: Colors.amber.shade700, size: 24),
                 const SizedBox(width: 12),
-                const Text('Advanced Search Filters', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1E283C))),
+                const Text('Advanced Search Filters', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF2D1B18))),
               ],
             ),
           ),

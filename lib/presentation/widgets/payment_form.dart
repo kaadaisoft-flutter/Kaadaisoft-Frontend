@@ -316,7 +316,7 @@ class _PaymentFormState extends State<PaymentForm> {
                       style: TextStyle(
                         fontSize: isMobile ? 18 : 22, 
                         fontWeight: FontWeight.bold, 
-                        color: const Color(0xFF1E293B)
+                        color: const Color(0xFF2D1B18)
                       ),
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -425,7 +425,7 @@ class _PaymentFormState extends State<PaymentForm> {
                 children: [
                   const Icon(Icons.location_on, size: 14, color: Color(0xFF94A3B8)),
                   const SizedBox(width: 4),
-                  Expanded(child: Text(address, style: const TextStyle(fontSize: 12, color: Color(0xFF1E293B), height: 1.4))),
+                  Expanded(child: Text(address, style: const TextStyle(fontSize: 12, color: Color(0xFF2D1B18), height: 1.4))),
                 ],
               ),
             ],
@@ -440,7 +440,7 @@ class _PaymentFormState extends State<PaymentForm> {
       children: [
         Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF64748B))),
         const SizedBox(width: 12),
-        Expanded(child: Text(value, style: TextStyle(fontSize: 14, fontWeight: isBold ? FontWeight.bold : FontWeight.normal, color: color ?? const Color(0xFF1E293B)), overflow: TextOverflow.ellipsis)),
+        Expanded(child: Text(value, style: TextStyle(fontSize: 14, fontWeight: isBold ? FontWeight.bold : FontWeight.normal, color: color ?? const Color(0xFF2D1B18)), overflow: TextOverflow.ellipsis)),
       ],
     );
   }
@@ -537,7 +537,7 @@ class _PaymentFormState extends State<PaymentForm> {
               children: [
                 const Icon(Icons.calendar_today, size: 14, color: Color(0xFF64748B)),
                 const SizedBox(width: 10),
-                Text('Date: ${DateFormat('dd MMM yyyy').format(DateTime.now())}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF1E293B))),
+                Text('Date: ${DateFormat('dd MMM yyyy').format(DateTime.now())}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF2D1B18))),
               ],
             ),
           ),
@@ -717,7 +717,7 @@ class _PaymentFormState extends State<PaymentForm> {
           ),
           Icon(icon, size: 20, color: isSelected ? const Color(0xFF3B82F6) : const Color(0xFF64748B)),
           const SizedBox(width: 8),
-          Text(value, style: TextStyle(fontSize: 14, fontWeight: isSelected ? FontWeight.bold : FontWeight.w500, color: isSelected ? const Color(0xFF1E293B) : const Color(0xFF64748B))),
+          Text(value, style: TextStyle(fontSize: 14, fontWeight: isSelected ? FontWeight.bold : FontWeight.w500, color: isSelected ? const Color(0xFF2D1B18) : const Color(0xFF64748B))),
         ],
       ),
     );

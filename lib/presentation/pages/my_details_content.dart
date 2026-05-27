@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:html' as html;
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../widgets/loading_spinner.dart';
@@ -193,7 +194,7 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
                             style: TextStyle(
                               fontSize: isMobile ? 20 : 28, 
                               fontWeight: FontWeight.bold, 
-                              color: const Color(0xFF172030),
+                              color: const Color(0xFF2D1B18),
                               letterSpacing: -0.5,
                             ),
                             overflow: TextOverflow.ellipsis,
@@ -204,7 +205,10 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
                   ),
                   const SizedBox(width: 16),
                   ElevatedButton.icon(
-                    onPressed: () => setState(() => _showIDCard = true),
+                    onPressed: () {
+                      final url = '${ApiConfig.baseUrl}/api/download-id-card/${widget.userId}';
+                      html.window.open(url, '_blank');
+                    },
                     icon: Icon(Icons.badge_outlined, size: isMobile ? 16 : 20),
                     label: Text(
                       'Download ID Card',
@@ -251,7 +255,7 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
                   SizedBox(width: 12),
                   Text(
                     'Family Members', 
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF172030))
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF2D1B18))
                   ),
                 ],
               ),
@@ -425,7 +429,7 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
                   showCheckboxColumn: false,
                   headingRowHeight: 50,
                   columnSpacing: 24,
-                  headingRowColor: MaterialStateProperty.all(const Color(0xFF172030)),
+                  headingRowColor: MaterialStateProperty.all(const Color(0xFF2D1B18)),
                   columns: const [
                     DataColumn(label: Text('S.No', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
                     DataColumn(label: Text('Name', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),

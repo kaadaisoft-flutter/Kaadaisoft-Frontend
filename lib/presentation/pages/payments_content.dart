@@ -375,7 +375,7 @@ class _PaymentsContentState extends State<PaymentsContent> {
             style: TextStyle(
               fontSize: isMobile ? 20 : 24, 
               fontWeight: FontWeight.bold, 
-              color: const Color(0xFF172030)
+              color: const Color(0xFF2D1B18)
             )
           ),
           const SizedBox(height: 4),
@@ -434,7 +434,7 @@ class _PaymentsContentState extends State<PaymentsContent> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                   decoration: const BoxDecoration(
-                    color: Color(0xFF172030),
+                    color: Color(0xFF2D1B18),
                     borderRadius: BorderRadius.only(topLeft: Radius.circular(12), topRight: Radius.circular(12)),
                   ),
                   child: isMobile 
@@ -497,7 +497,7 @@ class _PaymentsContentState extends State<PaymentsContent> {
         border: Border.all(color: const Color(0xFFE2E8F0)),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF1E293B).withOpacity(0.03),
+            color: const Color(0xFF2D1B18).withOpacity(0.03),
             blurRadius: 20,
             offset: const Offset(0, 8),
           )
@@ -510,7 +510,7 @@ class _PaymentsContentState extends State<PaymentsContent> {
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
             decoration: const BoxDecoration(
               gradient: LinearGradient(
-                colors: [Color(0xFF1E293B), Color(0xFF0F172A)],
+                colors: [Color(0xFF2D1B18), Color(0xFF2D1B18)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -628,7 +628,7 @@ class _PaymentsContentState extends State<PaymentsContent> {
             flex: isMobile ? 4 : 3,
             child: Text(
               value,
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: valueColor ?? const Color(0xFF1E293B)),
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: valueColor ?? const Color(0xFF2D1B18)),
               textAlign: TextAlign.right,
               overflow: TextOverflow.ellipsis,
             ),
@@ -879,7 +879,7 @@ class _PaymentsContentState extends State<PaymentsContent> {
             children: [
               Text(
                 '📊 Bulk Payment Upload',
-                style: TextStyle(fontSize: isMobile ? 20 : 24, fontWeight: FontWeight.bold, color: const Color(0xFF1E283C)),
+                style: TextStyle(fontSize: isMobile ? 20 : 24, fontWeight: FontWeight.bold, color: const Color(0xFF2D1B18)),
                 textAlign: isMobile ? TextAlign.center : TextAlign.start,
               ),
               if (_totalItems > 0)
@@ -1112,7 +1112,7 @@ class _PaymentsContentState extends State<PaymentsContent> {
               children: [
                 // Header
                 Container(
-                  color: const Color(0xFF172030),
+                  color: const Color(0xFF2D1B18),
                   padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 20),
                   child: Row(
                     children: [
@@ -1254,7 +1254,7 @@ class _PaymentsContentState extends State<PaymentsContent> {
                                   style: TextStyle(
                                     fontSize: isMobile ? 18 : 22, 
                                     fontWeight: FontWeight.bold, 
-                                    color: const Color(0xFF172030)
+                                    color: const Color(0xFF2D1B18)
                                   ),
                                   overflow: TextOverflow.ellipsis,
                                 ),
@@ -1355,7 +1355,7 @@ class _PaymentsContentState extends State<PaymentsContent> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
             decoration: const BoxDecoration(
-              color: Color(0xFF172030),
+              color: Color(0xFF2D1B18),
               borderRadius: BorderRadius.only(topLeft: Radius.circular(12), topRight: Radius.circular(12)),
             ),
             child: isMobile 
@@ -1636,7 +1636,7 @@ class _PaymentsContentState extends State<PaymentsContent> {
         child: Container(
           width: 32, height: 32,
           decoration: BoxDecoration(
-            color: active ? const Color(0xFF1E283C) : Colors.transparent,
+            color: active ? const Color(0xFF2D1B18) : Colors.transparent,
             borderRadius: BorderRadius.circular(8),
             border: active ? null : Border.all(color: Colors.black12),
           ),

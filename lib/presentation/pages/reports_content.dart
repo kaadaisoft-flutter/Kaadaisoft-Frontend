@@ -601,7 +601,7 @@ class _ReportsContentState extends State<ReportsContent> {
               children: [
                 // Header
                 Container(
-                  color: const Color(0xFF172030),
+                  color: const Color(0xFF2D1B18),
                   height: 48, // Reduced height
                   child: Row(
                     children: [
@@ -888,7 +888,7 @@ class _ReportsContentState extends State<ReportsContent> {
         child: Container(
           width: 32, height: 32,
           decoration: BoxDecoration(
-            color: active ? const Color(0xFF1E283C) : Colors.transparent,
+            color: active ? const Color(0xFF2D1B18) : Colors.transparent,
             borderRadius: BorderRadius.circular(8),
             border: active ? null : Border.all(color: Colors.black12),
           ),
