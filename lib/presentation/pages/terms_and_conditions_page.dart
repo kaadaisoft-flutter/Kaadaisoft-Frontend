@@ -18,7 +18,7 @@ class TermsAndConditionsPage extends StatelessWidget {
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [Color(0xFF2D1B18), Color(0xFF2D1B18)],
+                  colors: [const Color(0xFF2D1B18), const Color(0xFF2D1B18)],
                 ),
               ),
               child: Column(
@@ -91,7 +91,7 @@ class TermsAndConditionsPage extends StatelessWidget {
                     const Text(
                       'LAST UPDATED: MAY 07, 2026',
                       style: TextStyle(
-                        color: Color(0xFFE65100),
+                        color: const Color(0xFFE65100),
                         fontWeight: FontWeight.w600,
                         fontSize: 13,
                         letterSpacing: 1,
@@ -103,9 +103,9 @@ class TermsAndConditionsPage extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 20),
                       decoration: const BoxDecoration(
-                        color: Color(0xFFFFF3E0),
+                        color: const Color(0xFFFFF3E0),
                         border: Border(
-                          left: BorderSide(color: Color(0xFFE65100), width: 4),
+                          left: BorderSide(color: const Color(0xFFE65100), width: 4),
                         ),
                         borderRadius: BorderRadius.only(
                           topRight: Radius.circular(12),
@@ -115,7 +115,7 @@ class TermsAndConditionsPage extends StatelessWidget {
                       child: const Text(
                         'Please read these terms and conditions carefully before using our services. By using our platform, you agree to comply with and be bound by these terms.',
                         style: TextStyle(
-                          color: Color(0xFFE65100),
+                          color: const Color(0xFFE65100),
                           fontWeight: FontWeight.bold,
                           fontSize: 16.5,
                           height: 1.6,
@@ -163,7 +163,7 @@ class TermsAndConditionsPage extends StatelessWidget {
               child: Text(
                 '© 2026 Poondurai Kaadai Kulam. All rights reserved.',
                 style: const TextStyle(
-                  color: Color(0xFF475569),
+                  color: const Color(0xFF475569),
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -196,7 +196,7 @@ class TermsAndConditionsPage extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFF2D1B18),
+                color: const Color(0xFF2D1B18),
               ),
             ),
           ),
@@ -210,7 +210,7 @@ class TermsAndConditionsPage extends StatelessWidget {
       text,
       style: const TextStyle(
         fontSize: 16.5,
-        color: Color(0xFF475569),
+        color: const Color(0xFF475569),
         height: 1.7,
       ),
     );

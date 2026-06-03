@@ -49,7 +49,7 @@ class CustomDialog extends StatelessWidget {
         break;
       case DialogType.info:
         icon = Icons.info_rounded;
-        iconColor = const Color(0xFF3B82F6);
+        iconColor = const Color(0xFF5D1712);
         iconBgColor = const Color(0xFFEFF6FF);
         break;
 
@@ -93,7 +93,7 @@ class CustomDialog extends StatelessWidget {
             style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w800,
-              color: Color(0xFF1F2937),
+              color: const Color(0xFF1F2937),
               letterSpacing: -0.4,
             ),
             textAlign: TextAlign.center,
@@ -104,7 +104,7 @@ class CustomDialog extends StatelessWidget {
             message,
             style: const TextStyle(
               fontSize: 14,
-              color: Color(0xFF6B7280),
+              color: const Color(0xFF6B7280),
               height: 1.4,
               fontWeight: FontWeight.w500,
             ),

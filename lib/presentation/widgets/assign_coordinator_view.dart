@@ -25,6 +25,8 @@ class _AssignCoordinatorViewState extends State<AssignCoordinatorView> {
   final TextEditingController _searchCoordinatorController = TextEditingController();
   final TextEditingController _reassignNewMemberController = TextEditingController();
   final TextEditingController _removeCoordinatorController = TextEditingController();
+  final TextEditingController _newTalukController = TextEditingController();
+  final TextEditingController _newPanchayatController = TextEditingController();
   final TextEditingController _newVillageController = TextEditingController();
   
   String? _selectedMemberId;
@@ -59,6 +61,8 @@ class _AssignCoordinatorViewState extends State<AssignCoordinatorView> {
   String _addPanchayat = 'Choose Panchayat';
   List<String> _addTaluks = ['Choose Taluk'];
   List<String> _addPanchayats = ['Choose Panchayat'];
+  String _addSelectedVillage = 'Choose Village';
+  List<String> _addVillages = ['Choose Village', '+ Add New Village'];
 
   String _removeDistrict = 'Choose District';
   String _removeTaluk = 'Choose Taluk';
@@ -121,15 +125,17 @@ class _AssignCoordinatorViewState extends State<AssignCoordinatorView> {
   Future<void> _fetchVillages(String panchayat, bool isAssign) async {
     if (panchayat == 'Choose Panchayat') return;
     try {
-      final response = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/villages/$panchayat'));
+      final response = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/villages-assign/$panchayat'));
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final List<String> selectedNames = isAssign ? _assignSelectedVillageNames : _reassignSelectedVillageNames;
         final villages = (data['data'] as List).map((v) {
-          final vName = v.toString();
+          final vName = v['village_name'].toString();
+          final isFull = v['is_full'] == 1;
           return {
             'name': vName,
-            'selected': selectedNames.contains(vName)
+            'selected': selectedNames.contains(vName),
+            'is_full': isFull
           };
         }).toList();
         
@@ -139,6 +145,33 @@ class _AssignCoordinatorViewState extends State<AssignCoordinatorView> {
           } else {
             _reassignVillagesList = villages;
           }
+        });
+      }
+    } catch (e) {}
+  }
+
+  Future<void> _fetchVillagesForAdd(String panchayat) async {
+    if (panchayat == 'Choose Panchayat') {
+      setState(() {
+        _addVillages = ['Choose Village', '+ Add New Village'];
+        _addSelectedVillage = 'Choose Village';
+      });
+      return;
+    } else if (panchayat == '+ Add New Panchayat') {
+      setState(() {
+        _addVillages = ['Choose Village', '+ Add New Village'];
+        _addSelectedVillage = '+ Add New Village';
+      });
+      return;
+    }
+    try {
+      final response = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/villages/$panchayat'));
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        setState(() {
+          _addVillages = ['Choose Village', ...List<String>.from(data['data'])];
+          if (!_addVillages.contains('+ Add New Village')) _addVillages.add('+ Add New Village');
+          _addSelectedVillage = 'Choose Village';
         });
       }
     } catch (e) {}
@@ -230,7 +263,7 @@ class _AssignCoordinatorViewState extends State<AssignCoordinatorView> {
         try {
           final errorData = jsonDecode(response.body);
           if (errorData['detail'] != null) {
-            errorMsg = errorData['detail'];
+            errorMsg = errorData['detail'].toString().replaceFirst(RegExp(r'^Server Error: \d+: '), '');
           }
         } catch (_) {}
         showStatusDialog(context, title: 'Error', message: errorMsg, type: DialogType.error);
@@ -282,7 +315,7 @@ class _AssignCoordinatorViewState extends State<AssignCoordinatorView> {
         try {
           final errorData = jsonDecode(response.body);
           if (errorData['detail'] != null) {
-            errorMsg = errorData['detail'];
+            errorMsg = errorData['detail'].toString().replaceFirst(RegExp(r'^Server Error: \d+: '), '');
           }
         } catch (_) {}
         showStatusDialog(context, title: 'Error', message: errorMsg, type: DialogType.error);
@@ -353,10 +386,18 @@ class _AssignCoordinatorViewState extends State<AssignCoordinatorView> {
   }
 
   Future<void> _addVillage() async {
-    if (_addPanchayat == 'Choose Panchayat' || _newVillageController.text.isEmpty) {
-      showStatusDialog(context, title: 'Error', message: 'Please select Panchayat and enter village name', type: DialogType.error);
+    bool hasTalukError = _addTaluk == 'Choose Taluk' || (_addTaluk == '+ Add New Taluk' && _newTalukController.text.isEmpty);
+    bool hasPanchayatError = _addPanchayat == 'Choose Panchayat' || (_addPanchayat == '+ Add New Panchayat' && _newPanchayatController.text.isEmpty);
+    bool hasVillageError = _addSelectedVillage == 'Choose Village' || (_addSelectedVillage == '+ Add New Village' && _newVillageController.text.isEmpty);
+
+    if (_addDistrict == 'Choose District' || hasTalukError || hasPanchayatError || hasVillageError) {
+      showStatusDialog(context, title: 'Error', message: 'Please complete all required fields', type: DialogType.error);
       return;
     }
+
+    final talukToAdd = _addTaluk == '+ Add New Taluk' ? _newTalukController.text : _addTaluk;
+    final panchayatToAdd = _addPanchayat == '+ Add New Panchayat' ? _newPanchayatController.text : _addPanchayat;
+    final villageNameToAdd = _addSelectedVillage == '+ Add New Village' ? _newVillageController.text : _addSelectedVillage;
 
     setState(() => _isAddingVillage = true);
     try {
@@ -365,17 +406,26 @@ class _AssignCoordinatorViewState extends State<AssignCoordinatorView> {
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'district': _addDistrict,
-          'taluk': _addTaluk,
-          'panchayat': _addPanchayat,
-          'village_name': _newVillageController.text,
+          'taluk': talukToAdd,
+          'panchayat': panchayatToAdd,
+          'village_name': villageNameToAdd,
         }),
       );
 
       if (response.statusCode == 200) {
         showStatusDialog(context, title: 'Success', message: 'Village added successfully', type: DialogType.success);
+        _newTalukController.clear();
+        _newPanchayatController.clear();
         _newVillageController.clear();
       } else {
-        showStatusDialog(context, title: 'Error', message: 'Failed to add village', type: DialogType.error);
+        String errorMsg = 'Failed to add village';
+        try {
+          final errorData = jsonDecode(response.body);
+          if (errorData['detail'] != null) {
+            errorMsg = errorData['detail'].toString().replaceFirst(RegExp(r'^Server Error: \d+: '), '');
+          }
+        } catch (_) {}
+        showStatusDialog(context, title: 'Error', message: errorMsg, type: DialogType.error);
       }
     } catch (e) {
       showStatusDialog(context, title: 'Error', message: 'Connection error', type: DialogType.error);
@@ -425,7 +475,7 @@ class _AssignCoordinatorViewState extends State<AssignCoordinatorView> {
             children: [
               InkWell(
                 onTap: widget.onBack,
-                child: const Text('Coordinators', style: TextStyle(color: Colors.blue, fontWeight: FontWeight.w500)),
+                child: const Text('Coordinators', style: TextStyle(color: const Color(0xFF5D1712), fontWeight: FontWeight.w500)),
               ),
               const Text(' / Assigncoordinators', style: TextStyle(color: Colors.black54)),
             ],
@@ -436,7 +486,7 @@ class _AssignCoordinatorViewState extends State<AssignCoordinatorView> {
           _buildFormCard(
             title: 'Assign Coordinator',
             icon: Icons.person_add_alt_1,
-            accentColor: Colors.blue,
+            accentColor: const Color(0xFF5D1712),
             child: _buildAssignFormContent(),
             buttonText: 'Assign',
             onButtonPressed: _assignCoordinator,
@@ -798,12 +848,15 @@ class _AssignCoordinatorViewState extends State<AssignCoordinatorView> {
             items: _districts,
             onChanged: (val) async {
               final taluks = await _getTaluks(val!);
+              if (!taluks.contains('+ Add New Taluk')) taluks.add('+ Add New Taluk');
               setState(() {
                 _addDistrict = val;
                 _addTaluks = taluks;
                 _addTaluk = 'Choose Taluk';
                 _addPanchayats = ['Choose Panchayat'];
                 _addPanchayat = 'Choose Panchayat';
+                _addVillages = ['Choose Village', '+ Add New Village'];
+                _addSelectedVillage = 'Choose Village';
               });
             },
           ),
@@ -815,40 +868,102 @@ class _AssignCoordinatorViewState extends State<AssignCoordinatorView> {
             value: _addTaluk,
             items: _addTaluks,
             onChanged: (val) async {
-              final panchayats = await _getPanchayats(val!);
-              setState(() {
-                _addTaluk = val;
-                _addPanchayats = panchayats;
-                _addPanchayat = 'Choose Panchayat';
-              });
+              if (val != '+ Add New Taluk') {
+                final panchayats = await _getPanchayats(val!);
+                if (!panchayats.contains('+ Add New Panchayat')) panchayats.add('+ Add New Panchayat');
+                setState(() {
+                  _addTaluk = val;
+                  _addPanchayats = panchayats;
+                  _addPanchayat = 'Choose Panchayat';
+                  _addVillages = ['Choose Village', '+ Add New Village'];
+                  _addSelectedVillage = 'Choose Village';
+                });
+              } else {
+                setState(() {
+                  _addTaluk = val!;
+                  _addPanchayats = ['Choose Panchayat', '+ Add New Panchayat'];
+                  _addPanchayat = '+ Add New Panchayat';
+                  _addVillages = ['Choose Village', '+ Add New Village'];
+                  _addSelectedVillage = '+ Add New Village';
+                });
+              }
             },
           ),
           width: 180,
         ),
+        if (_addTaluk == '+ Add New Taluk')
+          _buildField(
+            label: 'New Taluk Name:',
+            child: TextField(
+              controller: _newTalukController,
+              decoration: InputDecoration(
+                hintText: 'Enter new taluk',
+                hintStyle: const TextStyle(fontSize: 13),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: const BorderSide(color: Colors.black12)),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              ),
+            ),
+            width: 180,
+          ),
         _buildField(
           label: 'Panchayats:',
           child: _buildDropdown(
             value: _addPanchayat,
             items: _addPanchayats,
             onChanged: (val) {
-              setState(() => _addPanchayat = val!);
+              if (val != '+ Add New Panchayat') {
+                setState(() => _addPanchayat = val!);
+                _fetchVillagesForAdd(val!);
+              } else {
+                setState(() {
+                  _addPanchayat = val!;
+                  _addVillages = ['Choose Village', '+ Add New Village'];
+                  _addSelectedVillage = '+ Add New Village';
+                });
+              }
             },
           ),
           width: 180,
         ),
-        _buildField(
-          label: 'New Village Name:',
-          child: TextField(
-            controller: _newVillageController,
-            decoration: InputDecoration(
-              hintText: 'Enter new village',
-              hintStyle: const TextStyle(fontSize: 13),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: const BorderSide(color: Colors.black12)),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        if (_addPanchayat == '+ Add New Panchayat')
+          _buildField(
+            label: 'New Panchayat Name:',
+            child: TextField(
+              controller: _newPanchayatController,
+              decoration: InputDecoration(
+                hintText: 'Enter new panchayat',
+                hintStyle: const TextStyle(fontSize: 13),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: const BorderSide(color: Colors.black12)),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              ),
             ),
+            width: 180,
           ),
-          width: 250,
+        _buildField(
+          label: 'Villages in Panchayat:',
+          child: _buildDropdown(
+            value: _addSelectedVillage,
+            items: _addVillages,
+            onChanged: (val) {
+              setState(() => _addSelectedVillage = val!);
+            },
+          ),
+          width: 180,
         ),
+        if (_addSelectedVillage == '+ Add New Village')
+          _buildField(
+            label: 'New Village Name:',
+            child: TextField(
+              controller: _newVillageController,
+              decoration: InputDecoration(
+                hintText: 'Enter new village',
+                hintStyle: const TextStyle(fontSize: 13),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: const BorderSide(color: Colors.black12)),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              ),
+            ),
+            width: 250,
+          ),
       ],
     );
   }
@@ -963,14 +1078,14 @@ class _AssignCoordinatorViewState extends State<AssignCoordinatorView> {
             return Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                color: isSelected ? Colors.blue.withOpacity(0.1) : null,
+                color: isSelected ? const Color(0xFF5D1712).withOpacity(0.1) : null,
                 border: const Border(bottom: BorderSide(color: Colors.black12, width: 0.5)),
               ),
               child: Text(
                 item,
                 style: TextStyle(
                   fontSize: 13,
-                  color: isSelected ? Colors.blue : Colors.black87,
+                  color: isSelected ? const Color(0xFF5D1712) : Colors.black87,
                   fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                 ),
               ),
@@ -1091,7 +1206,8 @@ class _AssignCoordinatorViewState extends State<AssignCoordinatorView> {
               itemBuilder: (context, index) {
                 final village = villages[index];
                 final isSelected = village['selected'] ?? false;
-                final canSelect = selectedNames.length < 4 || isSelected;
+                final isFull = village['is_full'] ?? false;
+                final canSelect = (selectedNames.length < 4 || isSelected) && !isFull;
 
                 return Row(
                   children: [
@@ -1113,7 +1229,17 @@ class _AssignCoordinatorViewState extends State<AssignCoordinatorView> {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    Expanded(child: Text(village['name'], style: TextStyle(fontSize: 12, color: canSelect ? Colors.black : Colors.grey), overflow: TextOverflow.ellipsis)),
+                    Expanded(
+                      child: Text(
+                        village['name'], 
+                        style: TextStyle(
+                          fontSize: 12, 
+                          color: canSelect ? Colors.black : Colors.grey,
+                          decoration: isFull ? TextDecoration.lineThrough : null,
+                        ), 
+                        overflow: TextOverflow.ellipsis
+                      )
+                    ),
                   ],
                 );
               },

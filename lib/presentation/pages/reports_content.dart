@@ -12,8 +12,9 @@ import 'update_details_content.dart';
 class ReportsContent extends StatefulWidget {
   final int? userId;
   final int? role;
+  final String? globalSearchQuery;
 
-  const ReportsContent({super.key, this.userId, this.role});
+  const ReportsContent({super.key, this.userId, this.role, this.globalSearchQuery});
 
   @override
   State<ReportsContent> createState() => _ReportsContentState();
@@ -427,7 +428,7 @@ class _ReportsContentState extends State<ReportsContent> {
               spacing: 24,
               runSpacing: 24,
               children: [
-                _buildFilterDropdown('CHOOSE EVENT YEAR', Icons.calendar_today, Colors.blue, _years, _selectedYear, (val) {
+                _buildFilterDropdown('CHOOSE EVENT YEAR', Icons.calendar_today, const Color(0xFF5D1712), _years, _selectedYear, (val) {
                   setState(() => _selectedYear = val);
                   _fetchEvents(val!);
                 }),
@@ -445,7 +446,7 @@ class _ReportsContentState extends State<ReportsContent> {
                 icon: const Icon(Icons.filter_alt),
                 label: const Text('Apply Filter'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF3B82F6),
+                  backgroundColor: const Color(0xFF5D1712),
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 14),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -535,7 +536,7 @@ class _ReportsContentState extends State<ReportsContent> {
           value: value,
           groupValue: _selectedStatus,
           onChanged: (val) => setState(() => _selectedStatus = val!),
-          activeColor: Colors.blue,
+          activeColor: const Color(0xFF5D1712),
           visualDensity: VisualDensity.compact,
         ),
         Text(label, style: const TextStyle(fontSize: 13)),
@@ -579,8 +580,8 @@ class _ReportsContentState extends State<ReportsContent> {
     if (_errorMessage.isNotEmpty) return Center(child: Text(_errorMessage, style: const TextStyle(color: Colors.red)));
 
     final bool showEventCols = _selectedEventId != null;
-    // Total table width (sum of columns + spacing)
-    final double totalTableWidth = colSno + colFamilyId + colName + colRole + colPhone + colDistrict + colTaluk + colPanchayat + colVillage + (showEventCols ? colEventMoney + colPaidCash + colPending + colStatus + colLastPaid : 0) + 60;
+    final double fixedWidth = colSno + colFamilyId + colName + colPhone + 20; // 20 is left padding
+    final double scrollableWidth = colRole + colDistrict + colTaluk + colPanchayat + colVillage + (showEventCols ? colEventMoney + colPaidCash + colPending + colStatus + colLastPaid : 0) + 20; // 20 is right padding
 
     return Container(
       decoration: BoxDecoration(
@@ -589,59 +590,120 @@ class _ReportsContentState extends State<ReportsContent> {
         border: Border.all(color: Colors.black12),
       ),
       clipBehavior: Clip.antiAlias,
-      child: Scrollbar(
-        controller: _horizontalScrollController,
-        thumbVisibility: true,
-        child: SingleChildScrollView(
-          controller: _horizontalScrollController,
-          scrollDirection: Axis.horizontal,
-          child: SizedBox(
-            width: totalTableWidth,
-            child: Column(
-              children: [
-                // Header
-                Container(
-                  color: const Color(0xFF2D1B18),
-                  height: 48, // Reduced height
-                  child: Row(
-                    children: [
-                      _buildCell('S.NO', colSno, isHeader: true, hasDivider: true),
-                      _buildCell('FAMILYMEMBERSHIP ID', colFamilyId, isHeader: true, hasDivider: true),
-                      _buildCell('USER NAME', colName, isHeader: true, hasDivider: true),
-                      _buildCell('ROLE', colRole, isHeader: true, hasDivider: true),
-                      _buildCell('PHONE NO', colPhone, isHeader: true, hasDivider: true),
-                      _buildCell('DISTRICT', colDistrict, isHeader: true, hasDivider: true),
-                      _buildCell('TALUK', colTaluk, isHeader: true, hasDivider: true),
-                      _buildCell('PANCHAYAT', colPanchayat, isHeader: true, hasDivider: true),
-                      _buildCell('VILLAGE', colVillage, isHeader: true, hasDivider: showEventCols),
-                      if (showEventCols) ...[
-                        _buildCell('EVENTMONEY', colEventMoney, isHeader: true, hasDivider: true),
-                        _buildCell('PAIDCASH', colPaidCash, isHeader: true, hasDivider: true),
-                        _buildCell('PENDING', colPending, isHeader: true, hasDivider: true),
-                        _buildCell('STATUS', colStatus, isHeader: true, hasDivider: true),
-                        _buildCell('LASTPAID', colLastPaid, isHeader: true, hasDivider: false),
-                      ],
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isNarrow = constraints.maxWidth < 600;
+          
+          Widget rightPart = Column(
+            children: [
+              // Header
+              Container(
+                color: const Color(0xFF2D1B18),
+                height: 48,
+                padding: const EdgeInsets.only(right: 20),
+                child: Row(
+                  children: [
+                    _buildCell('ROLE', colRole, isHeader: true, hasDivider: true),
+                    _buildCell('DISTRICT', colDistrict, isHeader: true, hasDivider: true),
+                    _buildCell('TALUK', colTaluk, isHeader: true, hasDivider: true),
+                    _buildCell('PANCHAYAT', colPanchayat, isHeader: true, hasDivider: true),
+                    _buildCell('VILLAGE', colVillage, isHeader: true, hasDivider: showEventCols),
+                    if (showEventCols) ...[
+                      _buildCell('EVENTMONEY', colEventMoney, isHeader: true, hasDivider: true),
+                      _buildCell('PAIDCASH', colPaidCash, isHeader: true, hasDivider: true),
+                      _buildCell('PENDING', colPending, isHeader: true, hasDivider: true),
+                      _buildCell('STATUS', colStatus, isHeader: true, hasDivider: true),
+                      _buildCell('LASTPAID', colLastPaid, isHeader: true, hasDivider: false),
                     ],
-                  ),
+                  ],
                 ),
-                // Data
-                _reportData.isEmpty
-                    ? const Padding(
-                        padding: EdgeInsets.all(32.0),
-                        child: Center(child: Text('No data found for selected filters')),
-                      )
-                    : ListView.separated(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        padding: EdgeInsets.zero,
-                        itemCount: _reportData.length,
-                        separatorBuilder: (context, index) => const Divider(height: 1),
-                        itemBuilder: (context, index) => _buildDataRow(index),
+              ),
+              // Data
+              _reportData.isEmpty
+                  ? const Padding(
+                      padding: EdgeInsets.all(32.0),
+                      child: Center(child: Text('No data found for selected filters')),
+                    )
+                  : ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      padding: EdgeInsets.zero,
+                      itemCount: _reportData.length,
+                      itemBuilder: (context, index) => _buildScrollableDataRow(index),
+                    ),
+            ],
+          );
+          
+          Widget tableContent = Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Fixed Left Part
+              SizedBox(
+                width: fixedWidth,
+                child: Column(
+                  children: [
+                    // Header
+                    Container(
+                      color: const Color(0xFF2D1B18),
+                      height: 48,
+                      padding: const EdgeInsets.only(left: 20),
+                      child: Row(
+                        children: [
+                          _buildCell('S.NO', colSno, isHeader: true, hasDivider: true),
+                          _buildCell('FAMILYMEMBERSHIP ID', colFamilyId, isHeader: true, hasDivider: true),
+                          _buildCell('USER NAME', colName, isHeader: true, hasDivider: true),
+                          _buildCell('PHONE NO', colPhone, isHeader: true, hasDivider: true),
+                        ],
                       ),
-              ],
-            ),
-          ),
-        ),
+                    ),
+                    // Data
+                    _reportData.isEmpty
+                        ? Container()
+                        : ListView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            padding: EdgeInsets.zero,
+                            itemCount: _reportData.length,
+                            itemBuilder: (context, index) => _buildFixedDataRow(index),
+                          ),
+                  ],
+                ),
+              ),
+              
+              // Scrollable Right Part
+              isNarrow
+                  ? SizedBox(width: scrollableWidth, child: rightPart)
+                  : Expanded(
+                      child: Scrollbar(
+                        controller: _horizontalScrollController,
+                        thumbVisibility: true,
+                        child: SingleChildScrollView(
+                          controller: _horizontalScrollController,
+                          scrollDirection: Axis.horizontal,
+                          child: SizedBox(
+                            width: scrollableWidth,
+                            child: rightPart,
+                          ),
+                        ),
+                      ),
+                    ),
+            ],
+          );
+          
+          if (isNarrow) {
+            return Scrollbar(
+              controller: _horizontalScrollController,
+              thumbVisibility: true,
+              child: SingleChildScrollView(
+                controller: _horizontalScrollController,
+                scrollDirection: Axis.horizontal,
+                child: tableContent,
+              ),
+            );
+          }
+          
+          return tableContent;
+        },
       ),
     );
   }
@@ -728,7 +790,7 @@ class _ReportsContentState extends State<ReportsContent> {
               child: Text(
                 text,
                 style: TextStyle(
-                  color: isHeader ? Colors.white : (isBlue ? Colors.blue : Colors.black87),
+                  color: isHeader ? Colors.white : (isBlue ? const Color(0xFF5D1712) : Colors.black87),
                   fontWeight: isHeader || isBlue || isBold ? FontWeight.bold : FontWeight.normal,
                   fontSize: isHeader ? 11 : 13,
                 ),
@@ -751,9 +813,32 @@ class _ReportsContentState extends State<ReportsContent> {
     }
   }
 
-  Widget _buildDataRow(int index) {
+  Widget _buildFixedDataRow(int index) {
     final member = _reportData[index];
     final sno = (_currentPage - 1) * _itemsPerPage + index + 1;
+
+    return Material(
+      color: index % 2 == 0 ? Colors.white : const Color(0xFFF8FAFC),
+      child: Container(
+        height: 46,
+        padding: const EdgeInsets.only(left: 20),
+        decoration: const BoxDecoration(
+          border: Border(bottom: BorderSide(color: Colors.black12, width: 0.5)),
+        ),
+        child: Row(
+          children: [
+            _buildCell(sno.toString(), colSno, hasDivider: true),
+            _buildCell(member['Familymembershipid'] ?? '-', colFamilyId, isBlue: true, hasDivider: true),
+            _buildCell(member['Name'] ?? 'N/A', colName, isBold: true, hasDivider: true),
+            _buildCell(member['Phonenumber']?.toString() ?? '-', colPhone, hasDivider: true),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildScrollableDataRow(int index) {
+    final member = _reportData[index];
 
     double eventMoney = 0.0;
     if (_selectedEventId != null) {
@@ -761,7 +846,7 @@ class _ReportsContentState extends State<ReportsContent> {
         final event = _events.firstWhere((e) => e['Id'] == _selectedEventId);
         eventMoney = double.tryParse(event['TaxAmount']?.toString() ?? '0') ?? 0.0;
       } catch (e) {
-        eventMoney = double.tryParse(member['Taxamount']?.toString() ?? member['taxamount']?.toString() ?? '0.0') ?? 0.0;
+        eventMoney = double.tryParse(member['TaxAmount']?.toString() ?? member['taxamount']?.toString() ?? '0.0') ?? 0.0;
       }
     }
 
@@ -788,34 +873,33 @@ class _ReportsContentState extends State<ReportsContent> {
     final lastPaidRaw = member['paymentdate']?.toString().split(' ').first ?? member['Updated_at']?.toString().split(' ').first ?? member['updated_at']?.toString().split(' ').first ?? member['created_at']?.toString().split(' ').first ?? '-';
     final lastPaid = _formatDate(lastPaidRaw);
 
+    final bool showEventCols = _selectedEventId != null;
+
     return Material(
       color: index % 2 == 0 ? Colors.white : const Color(0xFFF8FAFC),
       child: Container(
-        height: 46, // Reduced height for 10-item visibility
+        height: 46,
+        padding: const EdgeInsets.only(right: 20),
         decoration: const BoxDecoration(
           border: Border(bottom: BorderSide(color: Colors.black12, width: 0.5)),
         ),
         child: Row(
-            children: [
-              _buildCell(sno.toString(), colSno, hasDivider: true),
-              _buildCell(member['Familymembershipid'] ?? '-', colFamilyId, isBlue: true, hasDivider: true),
-              _buildCell(member['Name'] ?? 'N/A', colName, isBold: true, hasDivider: true),
-              _buildCell(member['Role']?.toString() ?? '-', colRole, isPill: true, hasDivider: true),
-              _buildCell(member['Phonenumber']?.toString() ?? '-', colPhone, hasDivider: true),
-              _buildCell(member['District'] ?? '-', colDistrict, hasDivider: true),
-              _buildCell(member['Taluk'] ?? '-', colTaluk, hasDivider: true),
-              _buildCell(member['Panchayat'] ?? '-', colPanchayat, hasDivider: true),
-              _buildCell(member['Village'] ?? '-', colVillage, hasDivider: _selectedEventId != null),
-              if (_selectedEventId != null) ...[
-                _buildCell(eventMoney.toStringAsFixed(1), colEventMoney, hasDivider: true),
-                _buildCell(paidCash.toStringAsFixed(1), colPaidCash, hasDivider: true),
-                _buildCell(pendingCash.toStringAsFixed(1), colPending, isBold: true, isBlue: pendingCash > 0, hasDivider: true),
-                _buildCell(status, colStatus, isPill: true, hasDivider: true),
-                _buildCell(lastPaid, colLastPaid, hasDivider: false),
-              ],
+          children: [
+            _buildCell(member['Role']?.toString() ?? '-', colRole, isPill: true, hasDivider: true),
+            _buildCell(member['District'] ?? '-', colDistrict, hasDivider: true),
+            _buildCell(member['Taluk'] ?? '-', colTaluk, hasDivider: true),
+            _buildCell(member['Panchayat'] ?? '-', colPanchayat, hasDivider: true),
+            _buildCell(member['Village'] ?? '-', colVillage, hasDivider: showEventCols),
+            if (showEventCols) ...[
+              _buildCell(eventMoney.toStringAsFixed(1), colEventMoney, hasDivider: true),
+              _buildCell(paidCash.toStringAsFixed(1), colPaidCash, hasDivider: true),
+              _buildCell(pendingCash.toStringAsFixed(1), colPending, isBold: true, isBlue: pendingCash > 0, hasDivider: true),
+              _buildCell(status, colStatus, isPill: true, hasDivider: true),
+              _buildCell(lastPaid, colLastPaid, hasDivider: false),
             ],
-          ),
+          ],
         ),
+      ),
     );
   }
 
@@ -875,7 +959,7 @@ class _ReportsContentState extends State<ReportsContent> {
       child: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(border: Border.all(color: Colors.black12), borderRadius: BorderRadius.circular(8)),
-        child: Icon(icon, size: 16, color: onTap == null ? Colors.grey : Colors.blue),
+        child: Icon(icon, size: 16, color: onTap == null ? Colors.grey : const Color(0xFF5D1712)),
       ),
     );
   }

@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:dropdown_search/dropdown_search.dart';
 import 'package:http/http.dart' as http;
 import '../widgets/loading_spinner.dart';
 import '../widgets/payment_form.dart';
@@ -15,8 +16,9 @@ import 'package:intl/intl.dart';
 class PaymentsContent extends StatefulWidget {
   final int? userId;
   final int? role;
+  final String? globalSearchQuery;
 
-  const PaymentsContent({super.key, this.userId, this.role});
+  const PaymentsContent({super.key, this.userId, this.role, this.globalSearchQuery});
 
   @override
   State<PaymentsContent> createState() => _PaymentsContentState();
@@ -75,7 +77,19 @@ class _PaymentsContentState extends State<PaymentsContent> {
   @override
   void initState() {
     super.initState();
+    if (widget.globalSearchQuery != null) {
+      _searchController.text = widget.globalSearchQuery!;
+    }
     _fetchInitialData();
+  }
+
+  @override
+  void didUpdateWidget(covariant PaymentsContent oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.globalSearchQuery != oldWidget.globalSearchQuery) {
+      _searchController.text = widget.globalSearchQuery ?? '';
+      _fetchInitialData();
+    }
   }
 
   Future<void> _fetchInitialData() async {
@@ -243,6 +257,21 @@ class _PaymentsContentState extends State<PaymentsContent> {
     }
   }
 
+  void _clearFilters() {
+    setState(() {
+      _selectedDistrict = null;
+      _selectedTaluk = null;
+      _selectedPanchayat = null;
+      _selectedVillage = null;
+      _selectedYear = null;
+      _selectedEventId = null;
+      _selectedStatus = 'Paid';
+    });
+    _searchController.clear();
+    _currentPage = 1;
+    _fetchMembers();
+  }
+
   Future<void> _applyFilters({bool resetPage = true}) async {
     if (_selectedEventId == null) {
       showStatusDialog(
@@ -371,41 +400,23 @@ class _PaymentsContentState extends State<PaymentsContent> {
         children: [
           // Header
           Text(
-            'Member Financial Report', 
+            'My Financial Report', 
             style: TextStyle(
               fontSize: isMobile ? 20 : 24, 
               fontWeight: FontWeight.bold, 
               color: const Color(0xFF2D1B18)
             )
           ),
-          const SizedBox(height: 4),
-          Text(
-            'Your profile details, assigned coordinator, and payment receipts', 
-            style: TextStyle(fontSize: isMobile ? 12 : 14, color: Colors.black54)
-          ),
-          const SizedBox(height: 24),
-
           // Member Details Card
           if (member != null)
             _buildProfileCard(
-              title: 'Member Details:',
+              title: 'My Details:',
               data: member,
               showPayNow: true,
               isMobile: isMobile,
             ),
 
-          if (member != null) const SizedBox(height: 24),
-
-          // Coordinator Details Card
-          if (coord != null)
-            _buildProfileCard(
-              title: 'Coordinator Details:',
-              data: coord,
-              showPayNow: false,
-              isMobile: isMobile,
-            ),
-
-          if (coord == null && member == null)
+          if (member == null)
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(color: Colors.orange.shade50, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.orange.shade200)),
@@ -434,7 +445,7 @@ class _PaymentsContentState extends State<PaymentsContent> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                   decoration: const BoxDecoration(
-                    color: Color(0xFF2D1B18),
+                    color: const Color(0xFF2D1B18),
                     borderRadius: BorderRadius.only(topLeft: Radius.circular(12), topRight: Radius.circular(12)),
                   ),
                   child: isMobile 
@@ -510,7 +521,7 @@ class _PaymentsContentState extends State<PaymentsContent> {
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
             decoration: const BoxDecoration(
               gradient: LinearGradient(
-                colors: [Color(0xFF2D1B18), Color(0xFF2D1B18)],
+                colors: [const Color(0xFF2D1B18), const Color(0xFF2D1B18)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -524,7 +535,7 @@ class _PaymentsContentState extends State<PaymentsContent> {
                       children: [
                         Icon(
                           data['Role'] == 2 ? Icons.admin_panel_settings_rounded : Icons.verified_user_rounded, 
-                          color: data['Role'] == 2 ? Colors.orangeAccent : Colors.blue, 
+                          color: data['Role'] == 2 ? Colors.orangeAccent : const Color(0xFF5D1712), 
                           size: 20
                         ),
                         const SizedBox(width: 12),
@@ -544,7 +555,7 @@ class _PaymentsContentState extends State<PaymentsContent> {
                         child: ElevatedButton(
                           onPressed: () => _showPaymentDialog(data),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF3B82F6),
+                            backgroundColor: const Color(0xFF5D1712),
                             foregroundColor: Colors.white,
                             elevation: 0,
                             padding: const EdgeInsets.symmetric(vertical: 10),
@@ -563,7 +574,7 @@ class _PaymentsContentState extends State<PaymentsContent> {
                       children: [
                         Icon(
                           data['Role'] == 2 ? Icons.admin_panel_settings_rounded : Icons.verified_user_rounded, 
-                          color: data['Role'] == 2 ? Colors.orangeAccent : Colors.blue, 
+                          color: data['Role'] == 2 ? Colors.orangeAccent : const Color(0xFF5D1712), 
                           size: 20
                         ),
                         const SizedBox(width: 12),
@@ -577,7 +588,7 @@ class _PaymentsContentState extends State<PaymentsContent> {
                       ElevatedButton(
                         onPressed: () => _showPaymentDialog(data),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF3B82F6),
+                          backgroundColor: const Color(0xFF5D1712),
                           foregroundColor: Colors.white,
                           elevation: 0,
                           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
@@ -593,7 +604,7 @@ class _PaymentsContentState extends State<PaymentsContent> {
             child: Column(
               children: [
                 _buildInfoRow('Full Name', data['Name'] ?? '-', icon: Icons.person_outline, isFirst: true, isMobile: isMobile),
-                _buildInfoRow('Membership ID', data['Familymembershipid'] ?? '-', icon: Icons.badge_outlined, valueColor: Colors.blue.shade700, isMobile: isMobile),
+                _buildInfoRow('Membership ID', data['Familymembershipid'] ?? '-', icon: Icons.badge_outlined, valueColor: const Color(0xFF5D1712), isMobile: isMobile),
                 _buildInfoRow('Taluk / Region', data['Taluk'] ?? '-', icon: Icons.location_city_outlined, isMobile: isMobile),
                 _buildInfoRow('District', data['District'] ?? '-', icon: Icons.map_outlined, isMobile: isMobile),
                 _buildInfoRow('Pincode', data['Pincode']?.toString() ?? '-', icon: Icons.pin_drop_outlined, isMobile: isMobile),
@@ -622,7 +633,7 @@ class _PaymentsContentState extends State<PaymentsContent> {
           const SizedBox(width: 12),
           Expanded(
             flex: isMobile ? 3 : 2,
-            child: Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Color(0xFF64748B))),
+            child: Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: const Color(0xFF64748B))),
           ),
           Expanded(
             flex: isMobile ? 4 : 3,
@@ -654,99 +665,135 @@ class _PaymentsContentState extends State<PaymentsContent> {
           padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
           decoration: BoxDecoration(
             color: const Color(0xFFF1F5F9),
-            border: Border(left: BorderSide(color: Colors.blue.shade700, width: 4)),
+            border: Border(left: BorderSide(color: const Color(0xFF5D1712), width: 4)),
           ),
           child: Text(
             eventName.toUpperCase(),
-            style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: Colors.blue.shade900, letterSpacing: 1),
+            style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: const Color(0xFF5D1712), letterSpacing: 1),
           ),
         ),
       );
       sections.add(
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: DataTable(
-              headingRowColor: WidgetStateProperty.all(const Color(0xFFF8FAFC)),
-              dataRowMinHeight: 56,
-              dataRowMaxHeight: 64,
-              horizontalMargin: isMobile ? 12 : 24,
-              columnSpacing: isMobile ? 16 : 24,
-              dividerThickness: 0.5,
-              border: TableBorder(horizontalInside: BorderSide(color: Colors.black.withOpacity(0.05), width: 0.5)),
-              columns: const [
-                DataColumn(label: Text('S.NO', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 11, color: Colors.black54))),
-                DataColumn(label: Text('TOTAL AMOUNT', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 11, color: Colors.black54))),
-                DataColumn(label: Text('PAID', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 11, color: Colors.black54))),
-                DataColumn(label: Text('PENDING', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 11, color: Colors.black54))),
-                DataColumn(label: Text('BANK / DETAILS', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 11, color: Colors.black54))),
-                DataColumn(label: Text('DATE', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 11, color: Colors.black54))),
-                DataColumn(label: Text('YEAR', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 11, color: Colors.black54))),
-                DataColumn(label: Text('DUES', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 11, color: Colors.black54))),
-                DataColumn(label: Text('STATUS', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 11, color: Colors.black54))),
-                DataColumn(label: Text('ACTIONS', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 11, color: Colors.black54))),
-              ],
-              rows: List.generate(items.length, (i) {
-                final r = items[i];
-                final status = r['status']?.toString() ?? 'Pending';
-                final balance = (r['balanceamount'] ?? 0.0);
-                final balanceVal = balance is double ? balance : double.tryParse(balance.toString()) ?? 0.0;
-                final taxamt = r['Taxamount'] ?? r['taxamount'] ?? 0.0;
-                final taxVal = taxamt is double ? taxamt : double.tryParse(taxamt.toString()) ?? 0.0;
-                final paid = r['Collectedamount'] ?? r['paidamount'] ?? 0.0;
-                final paidVal = paid is double ? paid : double.tryParse(paid.toString()) ?? 0.0;
-                final dues = r['dues']?.toString() ?? '-';
-                final isPaid = status.toLowerCase() == 'paid';
-                
-                return DataRow(
-                  cells: [
-                    DataCell(Text('${i + 1}', style: const TextStyle(fontSize: 13, color: Colors.black87))),
-                    DataCell(Text('${taxVal.toStringAsFixed(0)} Rs', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500))),
-                    DataCell(Text('${paidVal.toStringAsFixed(0)} Rs', style: const TextStyle(fontSize: 13, color: Colors.green, fontWeight: FontWeight.w600))),
-                    DataCell(Text('${balanceVal.toStringAsFixed(0)} Rs', style: TextStyle(fontSize: 13, color: balanceVal > 0 ? Colors.red : Colors.green, fontWeight: FontWeight.w700))),
-                    DataCell(
-                      Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
+        LayoutBuilder(
+          builder: (context, constraints) {
+            return _HorizontalScrollWrapper(
+              builder: (context, controller) {
+                return Scrollbar(
+                  controller: controller,
+                  thumbVisibility: true,
+                  child: SingleChildScrollView(
+                    controller: controller,
+                    scrollDirection: Axis.horizontal,
+                    child: Container(
+                      width: constraints.maxWidth > 990 ? constraints.maxWidth : 990,
+                      color: Colors.white,
+                      child: Column(
                         children: [
-                          Text(r['bankname']?.toString() ?? r['banknameforcheckque']?.toString() ?? '-', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
-                          if (r['referencenumber'] != null)
-                            Text(r['referencenumber'].toString(), style: const TextStyle(fontSize: 10, color: Colors.black45)),
-                        ],
-                      )
-                    ),
-                    DataCell(Text(r['paymentdate']?.toString() ?? '-', style: const TextStyle(fontSize: 13))),
-                    DataCell(Text(r['year']?.toString() ?? '-', style: const TextStyle(fontSize: 13))),
-                    DataCell(Text(dues, style: const TextStyle(fontSize: 13))),
-                    DataCell(Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: isPaid ? const Color(0xFFDCFCE7) : const Color(0xFFFEE2E2),
-                        borderRadius: BorderRadius.circular(6),
+                          // Header
+                      Container(
+                        color: const Color(0xFFF8FAFC),
+                        height: 48,
+                        child: Row(
+                          children: [
+                            _buildHistoryHeaderCell('S.NO', 50),
+                            _buildHistoryHeaderCell('TOTAL AMOUNT', 120),
+                            _buildHistoryHeaderCell('PAID', 100),
+                            _buildHistoryHeaderCell('PENDING', 100),
+                            Expanded(child: _buildHistoryHeaderCell('BANK / DETAILS', 150)),
+                            _buildHistoryHeaderCell('DATE', 100),
+                            _buildHistoryHeaderCell('YEAR', 70),
+                            _buildHistoryHeaderCell('DUES', 70),
+                            _buildHistoryHeaderCell('STATUS', 80),
+                            _buildHistoryHeaderCell('ACTIONS', 150, hasDivider: false),
+                          ],
+                        ),
                       ),
-                      child: Text(
-                        status.toUpperCase(), 
-                        style: TextStyle(fontSize: 10, color: isPaid ? const Color(0xFF166534) : const Color(0xFF991B1B), fontWeight: FontWeight.w800, letterSpacing: 0.5)
-                      ),
-                    )),
-                    DataCell(Row(
-                      children: [
-                        _buildActionBtn(icon: Icons.remove_red_eye_outlined, color: Colors.blue, tooltip: 'View', onTap: () => _viewReceipt(r, _memberData!)),
-                        const SizedBox(width: 8),
-                        _buildActionBtn(icon: Icons.print_outlined, color: Colors.indigo, tooltip: 'Print', onTap: () => _printReceiptHighFidelity(r, _memberData!)),
-                        const SizedBox(width: 8),
-                        _buildActionBtn(icon: Icons.file_download_outlined, color: Colors.blueGrey, tooltip: 'Download', onTap: () => _downloadReceiptHighFidelity(r, _memberData!)),
-                      ],
-                    )),
-                  ],
-                );
-              }),
-            ),
-          ),
-        ),
-      );
-    });
+                      // Rows
+                      ...items.map((r) {
+                        final i = items.indexOf(r);
+                        final status = r['status']?.toString() ?? 'Pending';
+                        final balance = (r['balanceamount'] ?? 0.0);
+                        final balanceVal = balance is double ? balance : double.tryParse(balance.toString()) ?? 0.0;
+                        final taxamt = r['TaxAmount'] ?? r['taxamount'] ?? 0.0;
+                        final taxVal = taxamt is double ? taxamt : double.tryParse(taxamt.toString()) ?? 0.0;
+                        final paid = r['Collectedamount'] ?? r['paidamount'] ?? 0.0;
+                        final paidVal = paid is double ? paid : double.tryParse(paid.toString()) ?? 0.0;
+                        final dues = r['dues']?.toString() ?? '-';
+                        final isPaid = status.toLowerCase() == 'paid';
+                        
+                        return Container(
+                          height: 48,
+                          decoration: BoxDecoration(
+                            border: Border(bottom: BorderSide(color: Colors.grey.shade100)),
+                          ),
+                          child: Row(
+                            children: [
+                              _buildHistoryDataCell('${i + 1}', 50),
+                              _buildHistoryDataCell('${taxVal.toStringAsFixed(0)} Rs', 120),
+                              _buildHistoryDataCell('${paidVal.toStringAsFixed(0)} Rs', 100, color: Colors.green),
+                              _buildHistoryDataCell('${balanceVal.toStringAsFixed(0)} Rs', 100, color: balanceVal > 0 ? Colors.red : Colors.green),
+                              Expanded(child: _buildHistoryDataCell(
+                                '', 
+                                150, 
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(r['bankname']?.toString() ?? r['banknameforcheckque']?.toString() ?? '-', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+                                    if (r['referencenumber'] != null)
+                                      Text(r['referencenumber'].toString(), style: const TextStyle(fontSize: 9, color: Colors.black45)),
+                                  ],
+                                )
+                              )),
+                              _buildHistoryDataCell(r['paymentdate']?.toString() ?? '-', 100),
+                              _buildHistoryDataCell(r['year']?.toString() ?? '-', 70),
+                              _buildHistoryDataCell(dues, 70),
+                              _buildHistoryDataCell('', 80, child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(color: isPaid ? Colors.green.shade100 : Colors.red.shade100, borderRadius: BorderRadius.circular(4)),
+                                child: Text(status.toUpperCase(), style: TextStyle(fontSize: 10, color: isPaid ? Colors.green.shade800 : Colors.red.shade800, fontWeight: FontWeight.bold)),
+                              )),
+                              _buildHistoryDataCell('', 150, hasDivider: false, child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  _buildActionBtn(
+                                    icon: Icons.remove_red_eye_outlined, 
+                                    color: const Color(0xFF5D1712), 
+                                    tooltip: 'View', 
+                                    onTap: () => _viewReceipt(r, _memberData!)
+                                  ),
+                                  const SizedBox(width: 8),
+                                  _buildActionBtn(
+                                    icon: Icons.print_outlined, 
+                                    color: Colors.indigo, 
+                                    tooltip: 'Print', 
+                                    onTap: () => _printReceiptHighFidelity(r, _memberData!)
+                                  ),
+                                  const SizedBox(width: 8),
+                                  _buildActionBtn(
+                                    icon: Icons.file_download_outlined, 
+                                    color: Colors.blueGrey, 
+                                    tooltip: 'Download', 
+                                    onTap: () => _downloadReceiptHighFidelity(r, _memberData!)
+                                  ),
+                                ],
+                              )),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    ),
+  );
+});
     return sections;
   }
 
@@ -888,12 +935,12 @@ class _PaymentsContentState extends State<PaymentsContent> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                     decoration: BoxDecoration(
-                      color: Colors.blue.withOpacity(0.1),
+                      color: const Color(0xFF5D1712).withOpacity(0.1),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
                       'Total Members: $_totalItems',
-                      style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold),
+                      style: const TextStyle(color: const Color(0xFF5D1712), fontWeight: FontWeight.bold),
                     ),
                   ),
                 ),
@@ -908,8 +955,8 @@ class _PaymentsContentState extends State<PaymentsContent> {
                 label: const Text('Filter'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.white,
-                  foregroundColor: Colors.blue,
-                  side: const BorderSide(color: Colors.blue),
+                  foregroundColor: const Color(0xFF5D1712),
+                  side: const BorderSide(color: const Color(0xFF5D1712)),
                   padding: EdgeInsets.symmetric(horizontal: isMobile ? 12 : 16, vertical: 8),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
                 ),
@@ -1008,19 +1055,75 @@ class _PaymentsContentState extends State<PaymentsContent> {
                     ],
                   ),
                 ), isMobile),
-                SizedBox(
-                  height: 44,
+                Container(
                   width: isMobile ? double.infinity : null,
-                  child: ElevatedButton(
-                    onPressed: _applyFilters,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                    ),
-                    child: const Text('Apply Filter'),
-                  ),
+                  child: isMobile
+                      ? Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            SizedBox(
+                              height: 44,
+                              child: ElevatedButton.icon(
+                                onPressed: _clearFilters,
+                                icon: const Icon(Icons.clear, size: 18),
+                                label: const Text('Clear'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.white,
+                                  foregroundColor: Colors.red,
+                                  side: const BorderSide(color: Colors.red),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            SizedBox(
+                              height: 44,
+                              child: ElevatedButton(
+                                onPressed: _applyFilters,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF5D1712),
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                ),
+                                child: const Text('Apply Filter'),
+                              ),
+                            ),
+                          ],
+                        )
+                      : Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            SizedBox(
+                              height: 44,
+                              child: ElevatedButton.icon(
+                                onPressed: _clearFilters,
+                                icon: const Icon(Icons.clear, size: 18),
+                                label: const Text('Clear'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.white,
+                                  foregroundColor: Colors.red,
+                                  side: const BorderSide(color: Colors.red),
+                                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            SizedBox(
+                              height: 44,
+                              child: ElevatedButton(
+                                onPressed: _applyFilters,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF5D1712),
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                ),
+                                child: const Text('Apply Filter'),
+                              ),
+                            ),
+                          ],
+                        ),
                 ),
               ],
             ),
@@ -1050,20 +1153,32 @@ class _PaymentsContentState extends State<PaymentsContent> {
       children: [
         Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey)),
         const SizedBox(height: 4),
-        DropdownButtonFormField<String>(
-          value: value,
-          isExpanded: true,
-          decoration: InputDecoration(
-            prefixIcon: Icon(icon, size: 20, color: Colors.blue),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            isDense: true,
-          ),
-          items: items.map((item) {
+        DropdownSearch<String>(
+          selectedItem: value,
+          items: (filter, loadProps) => items.map((item) {
             String val = isStringList ? (item is String ? item : item['taluk_name'] ?? item['panchayat_name'] ?? item['village_name']) : item['district_name'];
-            return DropdownMenuItem(value: val, child: Text(val, overflow: TextOverflow.ellipsis));
+            return val;
           }).toList(),
-          onChanged: onChanged,
+          decoratorProps: DropDownDecoratorProps(
+            decoration: InputDecoration(
+              prefixIcon: Icon(icon, size: 20, color: const Color(0xFF5D1712)),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+              isDense: true,
+            ),
+          ),
+          popupProps: PopupProps.menu(
+            showSearchBox: true,
+            searchFieldProps: TextFieldProps(
+              decoration: InputDecoration(
+                hintText: 'Search $label...',
+                prefixIcon: const Icon(Icons.search, size: 18),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              ),
+            ),
+          ),
+          onSelected: onChanged,
         ),
       ],
     );
@@ -1077,7 +1192,7 @@ class _PaymentsContentState extends State<PaymentsContent> {
           value: value,
           groupValue: _selectedStatus,
           onChanged: (val) => setState(() => _selectedStatus = val!),
-          activeColor: Colors.blue,
+          activeColor: const Color(0xFF5D1712),
           visualDensity: VisualDensity.compact,
         ),
         Text(label ?? value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
@@ -1085,12 +1200,14 @@ class _PaymentsContentState extends State<PaymentsContent> {
     );
   }
 
+
+
   Widget _buildTableSection() {
     if (_isLoading) return const Center(child: LoadingSpinner(message: 'Loading members...'));
     if (_errorMessage.isNotEmpty) return Center(child: Text(_errorMessage, style: const TextStyle(color: Colors.red)));
 
-    // Total table width (sum of columns + padding)
-    final double totalTableWidth = colSno + colFamilyId + colName + colRole + colMobile + colDistrict + colTaluk + colPanchayat + colVillage + colActions + 40;
+    final double fixedWidth = colSno + colFamilyId + colName + colMobile + 20;
+    final double scrollableWidth = colRole + colDistrict + colTaluk + colPanchayat + colVillage + colActions + 20;
 
     return Container(
       decoration: BoxDecoration(
@@ -1100,60 +1217,141 @@ class _PaymentsContentState extends State<PaymentsContent> {
         boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))],
       ),
       clipBehavior: Clip.antiAlias,
-      child: Scrollbar(
-        controller: _horizontalScrollController,
-        thumbVisibility: true,
-        child: SingleChildScrollView(
-          controller: _horizontalScrollController,
-          scrollDirection: Axis.horizontal,
-          child: SizedBox(
-            width: totalTableWidth,
-            child: Column(
-              children: [
-                // Header
-                Container(
-                  color: const Color(0xFF2D1B18),
-                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 20),
-                  child: Row(
-                    children: [
-                      _buildCell('S.NO', colSno, isHeader: true),
-                      _buildCell('FAMILY ID', colFamilyId, isHeader: true),
-                      _buildCell('NAME', colName, isHeader: true),
-                      _buildCell('ROLE', colRole, isHeader: true, isCentered: true),
-                      _buildCell('MOBILE', colMobile, isHeader: true),
-                      _buildCell('DISTRICT', colDistrict, isHeader: true),
-                      _buildCell('TALUK', colTaluk, isHeader: true),
-                      _buildCell('PANCHAYAT', colPanchayat, isHeader: true),
-                      _buildCell('VILLAGE', colVillage, isHeader: true),
-                      _buildCell('ACTIONS', colActions, isHeader: true, isActions: true),
-                    ],
-                  ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isNarrow = constraints.maxWidth < 600;
+          
+          Widget rightPart = Column(
+            children: [
+              // Header
+              Container(
+                color: const Color(0xFF2D1B18),
+                padding: const EdgeInsets.only(right: 20),
+                child: Row(
+                  children: [
+                    _buildCell('ROLE', colRole, isHeader: true, isCentered: true),
+                    _buildCell('DISTRICT', colDistrict, isHeader: true),
+                    _buildCell('TALUK', colTaluk, isHeader: true),
+                    _buildCell('PANCHAYAT', colPanchayat, isHeader: true),
+                    _buildCell('VILLAGE', colVillage, isHeader: true),
+                    _buildCell('ACTIONS', colActions, isHeader: true, isActions: true),
+                  ],
                 ),
-                // Data
-                _members.isEmpty
-                    ? const Padding(
-                        padding: EdgeInsets.all(32),
-                        child: Center(child: Text('No members found')),
-                      )
-                    : ListView.separated(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        padding: EdgeInsets.zero,
-                        itemCount: _members.length,
-                        separatorBuilder: (context, index) => const Divider(height: 1),
-                        itemBuilder: (context, index) => _buildDataRow(index),
+              ),
+              // Data
+              _members.isEmpty
+                  ? const Padding(
+                      padding: EdgeInsets.all(32),
+                      child: Center(child: Text('No members found')),
+                    )
+                  : ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      padding: EdgeInsets.zero,
+                      itemCount: _members.length,
+                      itemBuilder: (context, index) => _buildScrollableDataRow(index),
+                    ),
+            ],
+          );
+          
+          Widget tableContent = Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Fixed Left Part
+              SizedBox(
+                width: fixedWidth,
+                child: Column(
+                  children: [
+                    // Header
+                    Container(
+                      color: const Color(0xFF2D1B18),
+                      padding: const EdgeInsets.only(left: 20),
+                      child: Row(
+                        children: [
+                          _buildCell('S.NO', colSno, isHeader: true),
+                          _buildCell('FAMILY ID', colFamilyId, isHeader: true),
+                          _buildCell('NAME', colName, isHeader: true),
+                          _buildCell('MOBILE', colMobile, isHeader: true),
+                        ],
                       ),
-              ],
-            ),
-          ),
+                    ),
+                    // Data
+                    _members.isEmpty
+                        ? Container() // The empty state will be shown by the right scrollable side
+                        : ListView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            padding: EdgeInsets.zero,
+                            itemCount: _members.length,
+                            itemBuilder: (context, index) => _buildFixedDataRow(index),
+                          ),
+                  ],
+                ),
+              ),
+              
+              // Scrollable Right Part
+              isNarrow
+                  ? SizedBox(width: scrollableWidth, child: rightPart)
+                  : Expanded(
+                      child: Scrollbar(
+                        controller: _horizontalScrollController,
+                        thumbVisibility: true,
+                        child: SingleChildScrollView(
+                          controller: _horizontalScrollController,
+                          scrollDirection: Axis.horizontal,
+                          child: SizedBox(
+                            width: scrollableWidth,
+                            child: rightPart,
+                          ),
+                        ),
+                      ),
+                    ),
+            ],
+          );
+          
+          if (isNarrow) {
+            return Scrollbar(
+              controller: _horizontalScrollController,
+              thumbVisibility: true,
+              child: SingleChildScrollView(
+                controller: _horizontalScrollController,
+                scrollDirection: Axis.horizontal,
+                child: tableContent,
+              ),
+            );
+          }
+          
+          return tableContent;
+        },
+      ),
+    );
+  }
+
+  Widget _buildFixedDataRow(int index) {
+    final member = _members[index];
+    final sno = (_currentPage - 1) * _itemsPerPage + index + 1;
+
+    return Material(
+      color: index % 2 == 0 ? Colors.white : const Color(0xFFF8FAFC),
+      child: Container(
+        padding: const EdgeInsets.only(left: 20),
+        decoration: const BoxDecoration(
+          border: Border(bottom: BorderSide(color: Colors.black12)),
+        ),
+        child: Row(
+          children: [
+            _buildCell(sno.toString(), colSno),
+            _buildCell(member['Familymembershipid'] ?? '-', colFamilyId),
+            _buildCell(member['Name'] ?? 'N/A', colName),
+            _buildCell(member['Phonenumber']?.toString() ?? '-', colMobile),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildDataRow(int index) {
+  Widget _buildScrollableDataRow(int index) {
     final member = _members[index];
-    final sno = (_currentPage - 1) * _itemsPerPage + index + 1;
     final role = member['Role'] == 2 ? 'Coordinator' : 'Member';
 
     double eventMoney = 0.0;
@@ -1173,40 +1371,39 @@ class _PaymentsContentState extends State<PaymentsContent> {
     return Material(
       color: index % 2 == 0 ? Colors.white : const Color(0xFFF8FAFC),
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 20),
+        padding: const EdgeInsets.only(right: 20),
+        decoration: const BoxDecoration(
+          border: Border(bottom: BorderSide(color: Colors.black12)),
+        ),
         child: Row(
           children: [
-            _buildCell(sno.toString(), colSno),
-            _buildCell(member['Familymembershipid'] ?? '-', colFamilyId),
-            _buildCell(member['Name'] ?? 'N/A', colName),
-              _buildCell('', colRole, isCentered: true, child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade100, 
-                  borderRadius: BorderRadius.circular(4), 
-                  border: Border.all(color: Colors.black12)
-                ),
-                child: Text(role, style: const TextStyle(fontSize: 10), textAlign: TextAlign.center),
-              )),
-              _buildCell(member['Phonenumber']?.toString() ?? '-', colMobile),
-              _buildCell(member['District'] ?? '-', colDistrict),
-              _buildCell(member['Taluk'] ?? '-', colTaluk),
-              _buildCell(member['Panchayat'] ?? '-', colPanchayat),
-              _buildCell(member['Village'] ?? '-', colVillage),
-              _buildCell('', colActions, isActions: true, child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  if (showPayNow)
-                    _buildActionButton('Pay Now', Colors.green, () => _showPaymentDialog(member)),
-                  if (showViewReceipts) ...[
-                    if (showPayNow) const SizedBox(width: 8),
-                    _buildActionButton('View Receipts', Colors.blue, () => _showMemberReceiptsDialog(member)),
-                  ],
+            _buildCell('', colRole, isCentered: true, child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100, 
+                borderRadius: BorderRadius.circular(4), 
+                border: Border.all(color: Colors.black12)
+              ),
+              child: Text(role, style: const TextStyle(fontSize: 10), textAlign: TextAlign.center),
+            )),
+            _buildCell(member['District'] ?? '-', colDistrict),
+            _buildCell(member['Taluk'] ?? '-', colTaluk),
+            _buildCell(member['Panchayat'] ?? '-', colPanchayat),
+            _buildCell(member['Village'] ?? '-', colVillage),
+            _buildCell('', colActions, isActions: true, child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (showPayNow)
+                  _buildActionButton('Pay Now', Colors.green, () => _showPaymentDialog(member)),
+                if (showViewReceipts) ...[
+                  if (showPayNow) const SizedBox(width: 8),
+                  _buildActionButton('View Receipts', const Color(0xFF5D1712), () => _showMemberReceiptsDialog(member)),
                 ],
-              )),
-            ],
-          ),
+              ],
+            )),
+          ],
         ),
+      ),
     );
   }
 
@@ -1355,7 +1552,7 @@ class _PaymentsContentState extends State<PaymentsContent> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
             decoration: const BoxDecoration(
-              color: Color(0xFF2D1B18),
+              color: const Color(0xFF2D1B18),
               borderRadius: BorderRadius.only(topLeft: Radius.circular(12), topRight: Radius.circular(12)),
             ),
             child: isMobile 
@@ -1416,81 +1613,137 @@ class _PaymentsContentState extends State<PaymentsContent> {
           padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
           decoration: BoxDecoration(
             color: const Color(0xFFF1F5F9),
-            border: Border(left: BorderSide(color: Colors.blue.shade700, width: 4)),
+            border: Border(left: BorderSide(color: const Color(0xFF5D1712), width: 4)),
           ),
           child: Text(
             eventName.toUpperCase(),
-            style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: Colors.blue.shade900, letterSpacing: 1),
+            style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: const Color(0xFF5D1712), letterSpacing: 1),
           ),
         ),
-        Scrollbar(
-          thumbVisibility: true,
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: DataTable(
-              columnSpacing: isMobile ? 16 : 24,
-              horizontalMargin: isMobile ? 12 : 24,
-              headingRowColor: WidgetStateProperty.all(const Color(0xFFF8FAFC)),
-              columns: const [
-                DataColumn(label: Text('SNO', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-                DataColumn(label: Text('TOTAL', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-                DataColumn(label: Text('PAID', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-                DataColumn(label: Text('PENDING', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-                DataColumn(label: Text('BANK / DETAILS', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-                DataColumn(label: Text('DATE', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-                DataColumn(label: Text('YEAR', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-                DataColumn(label: Text('DUES', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-                DataColumn(label: Text('STATUS', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-                DataColumn(label: Text('ACTIONS', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-              ],
-              rows: items.map((r) {
-                final status = r['status']?.toString() ?? 'Pending';
-                final isPaid = status.toLowerCase() == 'paid';
-                return DataRow(cells: [
-                  DataCell(Text('${items.indexOf(r) + 1}')),
-                  DataCell(Text('${r['Taxamount'] ?? '-'} Rs')),
-                  DataCell(Text('${r['paidamount'] ?? '-'} Rs', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold))),
-                  DataCell(Text('${r['balanceamount'] ?? '-'} Rs', style: const TextStyle(color: Colors.red))),
-                  DataCell(Text(r['bankname'] ?? '-')),
-                  DataCell(Text(r['paymentdate'] ?? '-')),
-                  DataCell(Text(r['year']?.toString() ?? '-')),
-                  DataCell(Text(r['dues']?.toString() ?? '-')),
-                  DataCell(Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(color: isPaid ? Colors.green.shade100 : Colors.red.shade100, borderRadius: BorderRadius.circular(4)),
-                    child: Text(status.toUpperCase(), style: TextStyle(fontSize: 10, color: isPaid ? Colors.green.shade800 : Colors.red.shade800, fontWeight: FontWeight.bold)),
-                  )),
-                  DataCell(Row(
-                    mainAxisSize: MainAxisSize.min,
+        LayoutBuilder(
+          builder: (context, constraints) {
+            return _HorizontalScrollWrapper(
+              builder: (context, controller) {
+                return Scrollbar(
+                  controller: controller,
+                  thumbVisibility: true,
+                  child: SingleChildScrollView(
+                    controller: controller,
+                    scrollDirection: Axis.horizontal,
+                child: Container(
+                  width: constraints.maxWidth > 990 ? constraints.maxWidth : 990,
+                  color: Colors.white,
+                  child: Column(
                     children: [
-                      _buildActionBtn(
-                        icon: Icons.remove_red_eye_outlined, 
-                        color: Colors.blue, 
-                        tooltip: 'View', 
-                        onTap: () => _viewReceipt(r, memberData)
+                      // Header
+                      Container(
+                        color: const Color(0xFFF8FAFC),
+                        height: 48,
+                        child: Row(
+                          children: [
+                            _buildHistoryHeaderCell('S.NO', 50),
+                            _buildHistoryHeaderCell('TOTAL AMOUNT', 120),
+                            _buildHistoryHeaderCell('PAID', 100),
+                            _buildHistoryHeaderCell('PENDING', 100),
+                            Expanded(child: _buildHistoryHeaderCell('BANK / DETAILS', 150)),
+                            _buildHistoryHeaderCell('DATE', 100),
+                            _buildHistoryHeaderCell('YEAR', 70),
+                            _buildHistoryHeaderCell('DUES', 70),
+                            _buildHistoryHeaderCell('STATUS', 80),
+                            _buildHistoryHeaderCell('ACTIONS', 150, hasDivider: false),
+                          ],
+                        ),
                       ),
-                      const SizedBox(width: 8),
-                      _buildActionBtn(
-                        icon: Icons.print_outlined, 
-                        color: Colors.indigo, 
-                        tooltip: 'Print', 
-                        onTap: () => _printReceiptHighFidelity(r, memberData)
-                      ),
-                      const SizedBox(width: 8),
-                      _buildActionBtn(
-                        icon: Icons.file_download_outlined, 
-                        color: Colors.blueGrey, 
-                        tooltip: 'Download', 
-                        onTap: () => _downloadReceiptHighFidelity(r, memberData)
-                      ),
+                      // Rows
+                      ...items.map((r) {
+                        final status = r['status']?.toString() ?? 'Pending';
+                        final isPaid = status.toLowerCase() == 'paid';
+                        return Container(
+                          height: 48,
+                          decoration: BoxDecoration(
+                            border: Border(bottom: BorderSide(color: Colors.grey.shade100)),
+                          ),
+                          child: Row(
+                            children: [
+                              _buildHistoryDataCell('${items.indexOf(r) + 1}', 50),
+                              _buildHistoryDataCell('${r['TaxAmount'] ?? '-'} Rs', 120),
+                              _buildHistoryDataCell('${r['paidamount'] ?? '-'} Rs', 100, color: Colors.green),
+                              _buildHistoryDataCell('${r['balanceamount'] ?? '-'} Rs', 100, color: Colors.red),
+                              _buildHistoryDataCell(r['bankname'] ?? '-', 150),
+                              _buildHistoryDataCell(r['paymentdate'] ?? '-', 100),
+                              _buildHistoryDataCell(r['year']?.toString() ?? '-', 70),
+                              _buildHistoryDataCell(r['dues']?.toString() ?? '-', 70),
+                              _buildHistoryDataCell('', 80, child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(color: isPaid ? Colors.green.shade100 : Colors.red.shade100, borderRadius: BorderRadius.circular(4)),
+                                child: Text(status.toUpperCase(), style: TextStyle(fontSize: 10, color: isPaid ? Colors.green.shade800 : Colors.red.shade800, fontWeight: FontWeight.bold)),
+                              )),
+                              _buildHistoryDataCell('', 150, hasDivider: false, child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  _buildActionBtn(
+                                    icon: Icons.remove_red_eye_outlined, 
+                                    color: const Color(0xFF5D1712), 
+                                    tooltip: 'View', 
+                                    onTap: () => _viewReceipt(r, memberData)
+                                  ),
+                                  const SizedBox(width: 8),
+                                  _buildActionBtn(
+                                    icon: Icons.print_outlined, 
+                                    color: Colors.indigo, 
+                                    tooltip: 'Print', 
+                                    onTap: () => _printReceiptHighFidelity(r, memberData)
+                                  ),
+                                  const SizedBox(width: 8),
+                                  _buildActionBtn(
+                                    icon: Icons.file_download_outlined, 
+                                    color: Colors.blueGrey, 
+                                    tooltip: 'Download', 
+                                    onTap: () => _downloadReceiptHighFidelity(r, memberData)
+                                  ),
+                                ],
+                              )),
+                            ],
+                          ),
+                        );
+                      }).toList(),
                     ],
-                  )),
-                ]);
-              }).toList(),
-            ),
-          ),
-        ),
-      ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    ),
+  ],
+);
+  }
+
+  Widget _buildHistoryHeaderCell(String label, double width, {bool hasDivider = true}) {
+    return Container(
+      width: width,
+      height: double.infinity,
+      alignment: Alignment.centerLeft,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        border: hasDivider ? Border(right: BorderSide(color: Colors.grey.shade300, width: 1)) : null,
+      ),
+      child: Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Colors.black54)),
+    );
+  }
+
+  Widget _buildHistoryDataCell(String label, double width, {Color? color, Widget? child, bool hasDivider = true}) {
+    return Container(
+      width: width,
+      height: double.infinity,
+      alignment: Alignment.centerLeft,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        border: hasDivider ? Border(right: BorderSide(color: Colors.grey.shade200, width: 1)) : null,
+      ),
+      child: child ?? Text(label, style: TextStyle(fontSize: 12, color: color ?? Colors.black87, fontWeight: color != null ? FontWeight.bold : FontWeight.normal)),
     );
   }
 
@@ -1523,14 +1776,17 @@ class _PaymentsContentState extends State<PaymentsContent> {
   }
 
   Widget _buildCell(String text, double width, {bool isHeader = false, bool isBlue = false, bool isActions = false, bool isCentered = true, Widget? child}) {
-    return SizedBox(
+    return Container(
       width: width,
-      height: 34,
+      height: 48,
+      decoration: BoxDecoration(
+        border: Border(right: BorderSide(color: isHeader ? Colors.white24 : Colors.black12)),
+      ),
       child: Center(
         child: child ?? Text(
           text,
           style: TextStyle(
-            color: isHeader ? Colors.white : (isBlue ? Colors.blue : Colors.black87),
+            color: isHeader ? Colors.white : (isBlue ? const Color(0xFF5D1712) : Colors.black87),
             fontWeight: isHeader || isBlue ? FontWeight.bold : FontWeight.normal,
             fontSize: isHeader ? 12 : 13,
           ),
@@ -1623,7 +1879,7 @@ class _PaymentsContentState extends State<PaymentsContent> {
       child: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(border: Border.all(color: Colors.black12), borderRadius: BorderRadius.circular(8)),
-        child: Icon(icon, size: 16, color: onTap == null ? Colors.grey : Colors.blue),
+        child: Icon(icon, size: 16, color: onTap == null ? Colors.grey : const Color(0xFF5D1712)),
       ),
     );
   }
@@ -1647,3 +1903,27 @@ class _PaymentsContentState extends State<PaymentsContent> {
     );
   }
 }
+
+class _HorizontalScrollWrapper extends StatefulWidget {
+  final Widget Function(BuildContext context, ScrollController controller) builder;
+  const _HorizontalScrollWrapper({Key? key, required this.builder}) : super(key: key);
+
+  @override
+  __HorizontalScrollWrapperState createState() => __HorizontalScrollWrapperState();
+}
+
+class __HorizontalScrollWrapperState extends State<_HorizontalScrollWrapper> {
+  final ScrollController _controller = ScrollController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return widget.builder(context, _controller);
+  }
+}
+

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'dart:html' as html;
+import 'package:url_launcher/url_launcher.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../widgets/loading_spinner.dart';
@@ -7,7 +7,8 @@ import '../../utils/api_config.dart';
 import 'update_details_content.dart';
 import '../widgets/add_family_member_form.dart';
 import '../widgets/update_family_member_form.dart';
-import 'member_id_card_view.dart';
+import '../../utils/notification_helper.dart';
+
 
 class MyDetailsContent extends StatefulWidget {
   final dynamic userId;
@@ -23,7 +24,7 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
   List<dynamic> _familyMembers = [];
   bool _isLoading = true;
   String? _error;
-  bool _showIDCard = false;
+  bool _isTreeView = false;
 
   void _showEventParticipationDialog() async {
     showDialog(
@@ -86,7 +87,7 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                 decoration: BoxDecoration(
-                                  color: isPaid ? const Color(0xFF2E7D32) : const Color(0xFF1976D2),
+                                  color: isPaid ? const Color(0xFF2E7D32) : const Color(0xFF5D1712),
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                                 child: Text(
@@ -165,13 +166,6 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
           return const LoadingSpinner(message: 'Loading your details...');
         }
 
-        if (_showIDCard && _userData != null) {
-          return MemberIDCardView(
-            userData: _userData!, 
-            onBack: () => setState(() => _showIDCard = false)
-          );
-        }
-
         return SingleChildScrollView(
           padding: EdgeInsets.all(isMobile ? 16.0 : 32.0),
           child: Column(
@@ -207,7 +201,7 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
                   ElevatedButton.icon(
                     onPressed: () {
                       final url = '${ApiConfig.baseUrl}/api/download-id-card/${widget.userId}';
-                      html.window.open(url, '_blank');
+                      launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
                     },
                     icon: Icon(Icons.badge_outlined, size: isMobile ? 16 : 20),
                     label: Text(
@@ -215,7 +209,7 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
                       style: TextStyle(fontSize: isMobile ? 12 : 14, fontWeight: FontWeight.w600),
                     ),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF3B82F6),
+                      backgroundColor: const Color(0xFF5D1712),
                       foregroundColor: Colors.white,
                       elevation: 0,
                       padding: EdgeInsets.symmetric(horizontal: isMobile ? 12 : 24, vertical: isMobile ? 10 : 16),
@@ -249,18 +243,41 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
               const SizedBox(height: 60),
 
               // Family Members Section
-              const Row(
+              Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 12,
+                runSpacing: 12,
                 children: [
-                  Icon(Icons.group, color: Color(0xFFE65100), size: 28),
-                  SizedBox(width: 12),
-                  Text(
-                    'Family Members', 
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF2D1B18))
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.group, color: Color(0xFFE65100), size: 28),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Family Members', 
+                        style: TextStyle(fontSize: isMobile ? 20 : 24, fontWeight: FontWeight.bold, color: const Color(0xFF2D1B18))
+                      ),
+                    ],
+                  ),
+                  // Toggle Button
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade200,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _buildToggleButton('Table', Icons.table_chart, !_isTreeView, () => setState(() => _isTreeView = false)),
+                        _buildToggleButton('Tree', Icons.account_tree, _isTreeView, () => setState(() => _isTreeView = true)),
+                      ],
+                    ),
                   ),
                 ],
               ),
               const SizedBox(height: 24),
-              _buildFamilyTable(isMobile),
+              _isTreeView ? _buildFamilyTree(isMobile) : _buildFamilyTable(isMobile),
             ],
           ),
         );
@@ -332,7 +349,7 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
             }
           }),
           const SizedBox(height: 12),
-          _buildActionButton('Add Family Member', Icons.person_add_alt_1, const Color(0xFFE3F2FD), const Color(0xFF1976D2), onTap: () {
+          _buildActionButton('Add Family Member', Icons.person_add_alt_1, const Color(0xFFE3F2FD), const Color(0xFF5D1712), onTap: () {
             if (_userData != null) {
               showDialog(
                 context: context,
@@ -394,8 +411,524 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
     );
   }
 
-  Widget _buildFamilyTable(bool isMobile) {
+  Widget _buildToggleButton(String text, IconData icon, bool isSelected, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFF2D1B18) : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 18, color: isSelected ? Colors.white : Colors.grey.shade600),
+            const SizedBox(width: 6),
+            Text(text, style: TextStyle(
+              color: isSelected ? Colors.white : Colors.grey.shade700,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              fontSize: 14,
+            )),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFamilyTree(bool isMobile) {
     if (_familyMembers.isEmpty) {
+      return Container(
+        height: 100,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
+        ),
+        child: const Center(child: Text('No family members found.', style: TextStyle(color: Colors.grey))),
+      );
+    }
+
+    bool isSubHead(dynamic m) {
+      if (m['MemberRole'] != 'Head') return false;
+      return (m['Existfamilyid']?.toString().trim() ?? '').isNotEmpty;
+    }
+    
+    Set<String> subHeadFmIds = _familyMembers
+        .where((m) => isSubHead(m))
+        .map((m) => m['Familymembershipid']?.toString() ?? '')
+        .where((id) => id.isNotEmpty)
+        .toSet();
+        
+    bool isSubSpouse(dynamic m) {
+      if (!['Wife', 'Husband'].contains(m['MemberRole'])) return false;
+      String existId = m['Existfamilyid']?.toString().trim() ?? '';
+      return subHeadFmIds.contains(existId);
+    }
+
+    final grandparents = _familyMembers.where((m) => m['MemberRole'] == 'Grand Father' || m['MemberRole'] == 'Grand Mother').toList();
+    final parents = _familyMembers.where((m) => m['MemberRole'] == 'Father' || m['MemberRole'] == 'Mother').toList();
+    final headAndSpouse = _familyMembers.where((m) => ['Head', 'Wife', 'Husband'].contains(m['MemberRole']) && !isSubHead(m) && !isSubSpouse(m)).toList();
+    final siblings = _familyMembers.where((m) => ['Brother', 'Sister'].contains(m['MemberRole'])).toList();
+    
+    final grandchildren = _familyMembers.where((m) {
+      String existId = m['Existfamilyid']?.toString().trim() ?? '';
+      return subHeadFmIds.contains(existId) && !['Head', 'Wife', 'Husband'].contains(m['MemberRole']);
+    }).toList();
+
+    final children = _familyMembers.where((m) {
+      if (isSubHead(m) || isSubSpouse(m)) return true;
+      
+      String existId = m['Existfamilyid']?.toString().trim() ?? '';
+      if (subHeadFmIds.contains(existId)) return false; // They belong in grandchildren
+      
+      if (['Son', 'Daughter', 'Son-in-law', 'Daughter-in-law'].contains(m['MemberRole'])) return true;
+      return false;
+    }).toList();
+    
+    final others = _familyMembers.where((m) => !grandparents.contains(m) && !parents.contains(m) && !headAndSpouse.contains(m) && !siblings.contains(m) && !children.contains(m) && !grandchildren.contains(m)).toList();
+
+    Widget buildVerticalLine() {
+      return Container(
+        width: 2,
+        height: 40,
+        color: const Color(0xFF2D1B18).withOpacity(0.3),
+        margin: const EdgeInsets.symmetric(vertical: 8),
+      );
+    }
+
+    Widget buildTreeRow(List<dynamic> members, String layerName) {
+      if (members.isEmpty) return const SizedBox.shrink();
+      
+      List<Widget> groupedWidgets = [];
+      Set<String> processedIds = {};
+      
+      for (var m in members) {
+        String mId = m['Id']?.toString() ?? '';
+        if (mId.isNotEmpty && processedIds.contains(mId)) continue;
+        
+        bool isAnyHead = m['MemberRole'] == 'Head';
+        bool isFather = m['MemberRole'] == 'Father';
+        bool isGrandFather = m['MemberRole'] == 'Grand Father';
+        
+        bool isWife = m['MemberRole'] == 'Wife' || m['MemberRole'] == 'Husband';
+        bool isMother = m['MemberRole'] == 'Mother';
+        bool isGrandMother = m['MemberRole'] == 'Grand Mother';
+        
+        if (isWife) {
+           String mExId = m['Existfamilyid']?.toString() ?? '';
+           bool hasPartner = members.any((s) => s['MemberRole'] == 'Head' && s['Familymembershipid']?.toString() == mExId);
+           if (hasPartner) continue;
+        } else if (isMother) {
+           String mExId = m['Existfamilyid']?.toString() ?? '';
+           bool hasPartner = members.any((s) => s['MemberRole'] == 'Father' && s['Existfamilyid']?.toString() == mExId);
+           if (hasPartner) continue;
+        } else if (isGrandMother) {
+           String mExId = m['Existfamilyid']?.toString() ?? '';
+           bool hasPartner = members.any((s) => s['MemberRole'] == 'Grand Father' && s['Existfamilyid']?.toString() == mExId);
+           if (hasPartner) continue;
+        }
+        
+        List<dynamic> spouse = [];
+        
+        if (isAnyHead) {
+          String mFmId = m['Familymembershipid']?.toString() ?? '';
+          spouse = members.where((s) => ['Wife', 'Husband'].contains(s['MemberRole']) && s['Existfamilyid']?.toString() == mFmId).toList();
+        } else if (isFather) {
+          String mExId = m['Existfamilyid']?.toString() ?? '';
+          spouse = members.where((s) => s['MemberRole'] == 'Mother' && s['Existfamilyid']?.toString() == mExId).toList();
+        } else if (isGrandFather) {
+          String mExId = m['Existfamilyid']?.toString() ?? '';
+          spouse = members.where((s) => s['MemberRole'] == 'Grand Mother' && s['Existfamilyid']?.toString() == mExId).toList();
+        }
+        
+        if (spouse.isNotEmpty) {
+          List<Widget> spouseWidgets = [];
+          for (var s in spouse) {
+              spouseWidgets.add(Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Text('↔', style: TextStyle(fontSize: 32, color: Colors.grey.shade500, fontWeight: FontWeight.w300)),
+              ));
+            spouseWidgets.add(_buildTreeNodeCard(s));
+            processedIds.add(s['Id']?.toString() ?? '');
+          }
+          
+          Widget nodeWidget = Wrap(
+            crossAxisAlignment: WrapCrossAlignment.center,
+            alignment: WrapAlignment.center,
+            children: [
+              _buildTreeNodeCard(m),
+              ...spouseWidgets,
+            ],
+          );
+          
+          if (isSubHead(m)) {
+             String mFmId = m['Familymembershipid']?.toString() ?? '';
+             var myKids = grandchildren.where((c) => c['Existfamilyid']?.toString().trim() == mFmId).toList();
+             if (myKids.isNotEmpty) {
+                nodeWidget = Column(
+                   children: [
+                      nodeWidget,
+                      buildVerticalLine(),
+                      buildTreeRow(myKids, 'SubKids'),
+                   ],
+                );
+             }
+          }
+          
+          groupedWidgets.add(nodeWidget);
+        } else {
+          Widget nodeWidget = _buildTreeNodeCard(m);
+          
+          if (isSubHead(m)) {
+             String mFmId = m['Familymembershipid']?.toString() ?? '';
+             var myKids = grandchildren.where((c) => c['Existfamilyid']?.toString().trim() == mFmId).toList();
+             if (myKids.isNotEmpty) {
+                nodeWidget = Column(
+                   children: [
+                      nodeWidget,
+                      buildVerticalLine(),
+                      buildTreeRow(myKids, 'SubKids'),
+                   ],
+                );
+             }
+          }
+          
+          groupedWidgets.add(nodeWidget);
+        }
+        processedIds.add(mId);
+      }
+      
+      return Column(
+        children: [
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 32,
+            runSpacing: 32,
+            children: groupedWidgets,
+          ),
+        ],
+      );
+    }
+
+
+    List<Widget> treeWidgets = [];
+    
+    if (grandparents.isNotEmpty) {
+      treeWidgets.add(buildTreeRow(grandparents, 'Grandparents'));
+      treeWidgets.add(buildVerticalLine());
+    }
+    if (parents.isNotEmpty) {
+      treeWidgets.add(buildTreeRow(parents, 'Parents'));
+      treeWidgets.add(buildVerticalLine());
+    }
+    
+    List<dynamic> middleLayer = [...headAndSpouse, ...siblings];
+    if (middleLayer.isNotEmpty) {
+      treeWidgets.add(buildTreeRow(middleLayer, 'Head & Siblings'));
+      if (children.isNotEmpty) treeWidgets.add(buildVerticalLine());
+    }
+    
+    if (children.isNotEmpty) {
+      treeWidgets.add(buildTreeRow(children, 'Children'));
+    }
+    
+    // Grandchildren are now rendered recursively under their respective Sub-Head parents
+    
+    if (others.isNotEmpty) {
+      if (treeWidgets.isNotEmpty) {
+        treeWidgets.add(const SizedBox(height: 24));
+        treeWidgets.add(const Divider());
+        treeWidgets.add(const SizedBox(height: 24));
+      }
+      treeWidgets.add(buildTreeRow(others, 'Others'));
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4)),
+        ],
+      ),
+      child: Column(
+        children: treeWidgets,
+      ),
+    );
+  }
+
+  void _showFullScreenImage(String imageUrl) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(16),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            InteractiveViewer(
+              panEnabled: true,
+              boundaryMargin: const EdgeInsets.all(20),
+              minScale: 0.5,
+              maxScale: 4,
+              child: Image.network(
+                imageUrl,
+                fit: BoxFit.contain,
+              ),
+            ),
+            Positioned(
+              top: 10,
+              right: 10,
+              child: IconButton(
+                icon: const Icon(Icons.close, color: Colors.white, size: 30),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  String _getDisplayRole(dynamic member) {
+    String role = member['MemberRole']?.toString() ?? 'Unknown';
+    String memberFmId = member['Familymembershipid']?.toString() ?? '';
+    String memberExId = member['Existfamilyid']?.toString() ?? '';
+    String gender = member['Gender']?.toString().toLowerCase() ?? '';
+    
+    String currentFmId = _userData?['Familymembershipid']?.toString() ?? '';
+    String currentExistId = _userData?['Existfamilyid']?.toString() ?? '';
+    
+    bool amISubHead = currentFmId.isNotEmpty && currentExistId.isNotEmpty;
+    
+    if (amISubHead) {
+      if (memberFmId == currentExistId && memberFmId.isNotEmpty) {
+        if (role == 'Head') return gender == 'female' ? 'Mother' : 'Father';
+      }
+      if (memberExId == currentExistId && memberExId.isNotEmpty) {
+        if (memberFmId == currentFmId && currentFmId.isNotEmpty) {
+          return 'Head';
+        }
+        if (role == 'Head') return gender == 'female' ? 'Sister' : 'Brother'; // Sibling Sub-Head
+        if (role == 'Wife' || role == 'Husband') return gender == 'male' ? 'Father' : 'Mother';
+        if (['Son', 'Daughter'].contains(role)) return gender == 'female' ? 'Sister' : 'Brother';
+        if (['Brother', 'Sister'].contains(role)) return gender == 'female' ? 'Aunt' : 'Uncle';
+        if (['Father', 'Mother'].contains(role)) return gender == 'female' ? 'Grand Mother' : 'Grand Father';
+        if (['Grand Father', 'Grand Mother'].contains(role)) return gender == 'female' ? 'Great Grand Mother' : 'Great Grand Father';
+      }
+      
+      if (memberExId.isNotEmpty && memberExId != currentExistId && memberExId != currentFmId) {
+        if (role == 'Wife') return 'Sister-in-law';
+        if (role == 'Husband') return 'Brother-in-law';
+        if (['Son', 'Daughter'].contains(role)) return gender == 'female' ? 'Niece' : 'Nephew';
+      }
+    } else {
+      String topLevelId = currentFmId.isNotEmpty ? currentFmId : currentExistId;
+      bool isFmSubHead = role == 'Head' && memberExId.isNotEmpty;
+      if (isFmSubHead && memberExId == topLevelId) {
+        return gender == 'female' ? 'Daughter' : 'Son';
+      }
+      
+      bool belongsToSubHead = memberExId.isNotEmpty && memberExId != topLevelId;
+      if (belongsToSubHead) {
+        if (role == 'Wife') return 'Daughter-in-law';
+        if (role == 'Husband') return 'Son-in-law';
+        if (['Son', 'Daughter'].contains(role)) return gender == 'female' ? 'Grand Daughter' : 'Grand Son';
+      }
+    }
+    
+    return role;
+  }
+
+  Widget _buildTreeNodeCard(dynamic member) {
+    IconData icon = Icons.person;
+    Color iconBgColor = Colors.grey.shade200;
+    Color iconColor = Colors.grey.shade700;
+
+    final gender = member['Gender']?.toString().toLowerCase() ?? '';
+    if (gender == 'male') {
+      icon = Icons.man;
+      iconBgColor = Colors.blue.shade50;
+      iconColor = Colors.blue.shade700;
+    } else if (gender == 'female') {
+      icon = Icons.woman;
+      iconBgColor = Colors.pink.shade50;
+      iconColor = Colors.pink.shade700;
+    }
+
+    final displayRole = _getDisplayRole(member);
+    final isHead = displayRole == 'Head';
+    final hasImage = member['Memberimage'] != null && member['Memberimage'].toString().isNotEmpty;
+
+    String ageStr = 'N/A';
+    if (member['Dob'] != null && member['Dob'].toString().isNotEmpty) {
+      try {
+        DateTime dob = DateTime.parse(member['Dob'].toString());
+        DateTime now = DateTime.now();
+        int age = now.year - dob.year;
+        if (now.month < dob.month || (now.month == dob.month && now.day < dob.day)) {
+          age--;
+        }
+        ageStr = age.toString();
+      } catch (e) {
+        ageStr = 'N/A';
+      }
+    }
+
+    String mFmId = member['Familymembershipid']?.toString() ?? '';
+    String mExId = member['Existfamilyid']?.toString() ?? '';
+    String currentFmId = _userData?['Familymembershipid']?.toString() ?? '';
+    
+    bool canEdit = false;
+    if (currentFmId.isNotEmpty) {
+      if (mFmId == currentFmId) {
+        canEdit = true;
+      } else if (mExId == currentFmId) {
+        bool isMemberSubHead = member['MemberRole'] == 'Head' && mExId.isNotEmpty;
+        if (!isMemberSubHead) {
+          canEdit = true;
+        }
+      }
+    }
+
+    bool isHovered = false;
+
+    return StatefulBuilder(
+      builder: (context, setState) {
+        return MouseRegion(
+          onEnter: canEdit ? (_) => setState(() => isHovered = true) : null,
+          onExit: canEdit ? (_) => setState(() => isHovered = false) : null,
+          cursor: canEdit ? SystemMouseCursors.click : SystemMouseCursors.basic,
+          child: GestureDetector(
+            onTap: canEdit ? () {
+              showDialog(
+                context: context,
+                builder: (context) => UpdateFamilyMemberForm(
+                  memberData: member,
+                  submitterRole: widget.userRole,
+                  onUpdate: _fetchDetails,
+                ),
+              );
+            } : () {
+              NotificationHelper.showError(context, 'You do not have permission to edit this member. They belong to a separate family unit.');
+            },
+            child: AnimatedScale(
+              scale: isHovered ? 1.05 : 1.0,
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeInOut,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                width: 180,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isHead ? const Color(0xFFE65100) : const Color(0xFFE2E8F0),
+                    width: isHead ? 2 : 1,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(isHovered ? 0.15 : 0.04),
+                      blurRadius: isHovered ? 15 : 8,
+                      offset: Offset(0, isHovered ? 8 : 4),
+                    ),
+                  ],
+                ),
+      child: Column(
+        children: [
+          GestureDetector(
+            onTap: hasImage ? () => _showFullScreenImage('${ApiConfig.baseUrl}/assets/uploads/${member['Memberimage']}') : null,
+            child: MouseRegion(
+              cursor: hasImage ? SystemMouseCursors.click : SystemMouseCursors.basic,
+              child: Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  color: hasImage ? Colors.grey.shade200 : iconBgColor,
+                  shape: BoxShape.circle,
+                  image: hasImage 
+                      ? DecorationImage(
+                          image: NetworkImage('${ApiConfig.baseUrl}/assets/uploads/${member['Memberimage']}'),
+                          fit: BoxFit.cover,
+                        )
+                      : null,
+                ),
+                child: !hasImage ? Icon(icon, color: iconColor, size: 28) : null,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            member['Name'] ?? 'Unknown',
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF1E293B)),
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 4),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: isHead ? const Color(0xFFFFF3E0) : Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Text(
+              displayRole,
+              style: TextStyle(
+                fontSize: 12, 
+                fontWeight: isHead ? FontWeight.bold : FontWeight.w600,
+                color: isHead ? const Color(0xFFE65100) : Colors.grey.shade600,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Age: $ageStr',
+            style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+          ),
+        ],
+      ),
+    ),
+    ),
+    ),
+    );
+    },
+    );
+  }
+
+  Widget _buildFamilyTable(bool isMobile) {
+    String currentFmId = _userData?['Familymembershipid']?.toString() ?? '';
+    String currentExistId = _userData?['Existfamilyid']?.toString() ?? '';
+    bool amITopHeadFamily = currentExistId.isEmpty;
+    bool amISubHead = _userData?['MemberRole'] == 'Head' && currentExistId.isNotEmpty;
+
+    final tableMembers = _familyMembers.where((fm) {
+      bool isMarried = fm['Married']?.toString().toLowerCase() == 'yes';
+      bool isChild = ['Son', 'Daughter', 'Son-in-law', 'Daughter-in-law'].contains(fm['MemberRole']);
+      
+      if (amISubHead) {
+        if (fm['Familymembershipid']?.toString() == currentFmId && currentFmId.isNotEmpty) return true;
+        if (fm['Existfamilyid']?.toString() == currentFmId && currentFmId.isNotEmpty) return true;
+        return false;
+      } else {
+        String topLevelId = amITopHeadFamily ? currentFmId : currentExistId;
+        if (fm['Familymembershipid']?.toString() == topLevelId && topLevelId.isNotEmpty) return true;
+        if (fm['Existfamilyid']?.toString() == topLevelId && topLevelId.isNotEmpty) {
+          bool isFmSubHead = fm['MemberRole'] == 'Head' && (fm['Existfamilyid']?.toString() ?? '').isNotEmpty;
+          if (isFmSubHead) return false;
+          if (isMarried && isChild) return false;
+          return true;
+        }
+        return false;
+      }
+    }).toList();
+
+    if (tableMembers.isEmpty) {
       return Container(
         height: 100,
         decoration: BoxDecoration(
@@ -429,6 +962,7 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
                   showCheckboxColumn: false,
                   headingRowHeight: 50,
                   columnSpacing: 24,
+                  border: const TableBorder(verticalInside: BorderSide(color: Colors.black12, width: 1)),
                   headingRowColor: MaterialStateProperty.all(const Color(0xFF2D1B18)),
                   columns: const [
                     DataColumn(label: Text('S.No', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
@@ -438,7 +972,7 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
                     DataColumn(label: Text('Age', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
                     DataColumn(label: Text('Action', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
                   ],
-                  rows: _familyMembers.asMap().entries.map((entry) {
+                  rows: tableMembers.asMap().entries.map((entry) {
                     final index = entry.key;
                     final fm = entry.value;
                     
@@ -487,7 +1021,7 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
                             ],
                           ),
                         ),
-                        DataCell(Text(fm['MemberRole'] ?? 'N/A')),
+                        DataCell(Text(_getDisplayRole(fm))),
                         DataCell(Text(fm['Gender'] ?? 'N/A')),
                         DataCell(Text(ageStr)),
                         DataCell(
@@ -502,8 +1036,8 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
                                 ),
                               );
                             },
-                            icon: const Icon(Icons.edit, size: 16, color: Color(0xFF3B82F6)),
-                            label: const Text('Edit', style: TextStyle(color: Color(0xFF3B82F6))),
+                            icon: const Icon(Icons.edit, size: 16, color: const Color(0xFF5D1712)),
+                            label: const Text('Edit', style: TextStyle(color: const Color(0xFF5D1712))),
                           ),
                         ),
                       ],
@@ -525,11 +1059,11 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
       height: 48,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: hasImage ? const Color(0xFF3B82F6).withOpacity(0.1) : Colors.transparent,
-        border: Border.all(color: hasImage ? const Color(0xFF3B82F6) : const Color(0xFF3B82F6).withOpacity(0.3)),
+        color: hasImage ? const Color(0xFF5D1712).withOpacity(0.1) : Colors.transparent,
+        border: Border.all(color: hasImage ? const Color(0xFF5D1712) : const Color(0xFF5D1712).withOpacity(0.3)),
       ),
       child: IconButton(
-        icon: Icon(icon, color: const Color(0xFF3B82F6), size: 20),
+        icon: Icon(icon, color: const Color(0xFF5D1712), size: 20),
         onPressed: hasImage ? () => _showImageDialog(tooltip, imgPath) : () {},
         tooltip: tooltip,
       ),
@@ -595,7 +1129,7 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
     final valueWidget = isPill
         ? Container(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-            decoration: BoxDecoration(color: const Color(0xFF3B82F6), borderRadius: BorderRadius.circular(20)),
+            decoration: BoxDecoration(color: const Color(0xFF5D1712), borderRadius: BorderRadius.circular(20)),
             child: Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
           )
         : Text(
@@ -603,7 +1137,7 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
             style: TextStyle(
               fontSize: 18,
               fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
-              color: isBlue ? const Color(0xFF3B82F6) : Colors.black87,
+              color: isBlue ? const Color(0xFF5D1712) : Colors.black87,
             ),
           );
 
@@ -659,7 +1193,7 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
       children: [
         Padding(
           padding: const EdgeInsets.only(top: 2.0),
-          child: Icon(icon, color: const Color(0xFF3B82F6), size: 18),
+          child: Icon(icon, color: const Color(0xFF5D1712), size: 18),
         ),
         const SizedBox(width: 12),
         Expanded(

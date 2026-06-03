@@ -8,7 +8,10 @@ import '../../utils/notification_helper.dart';
 class UpdateRequestsContent extends StatefulWidget {
   final VoidCallback? onBackToDashboard;
   final Function(int)? onCountUpdated;
-  const UpdateRequestsContent({super.key, this.onBackToDashboard, this.onCountUpdated});
+  final String? globalSearchQuery;
+  final dynamic userId;
+  final int userRole;
+  const UpdateRequestsContent({super.key, this.onBackToDashboard, this.onCountUpdated, this.globalSearchQuery, this.userId, this.userRole = 3});
 
   @override
   State<UpdateRequestsContent> createState() => _UpdateRequestsContentState();
@@ -36,7 +39,7 @@ class _UpdateRequestsContentState extends State<UpdateRequestsContent> {
   Future<void> _fetchRequests() async {
     setState(() => _isLoading = true);
     try {
-      final response = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/update-requests'));
+      final response = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/update-requests?user_id=${widget.userId}&role=${widget.userRole}'));
       if (response.statusCode == 200) {
         final result = json.decode(response.body);
         if (result['status'] == 'success') {
@@ -79,7 +82,7 @@ class _UpdateRequestsContentState extends State<UpdateRequestsContent> {
             children: [
               InkWell(
                 onTap: widget.onBackToDashboard,
-                child: Text('Dashboard', style: TextStyle(color: Colors.blue.shade700, fontSize: 14, fontWeight: FontWeight.w500)),
+                child: Text('Dashboard', style: TextStyle(color: const Color(0xFF5D1712), fontSize: 14, fontWeight: FontWeight.w500)),
               ),
               const Text(' / Member Update Requests', style: TextStyle(color: Colors.black45, fontSize: 14)),
             ],
@@ -99,59 +102,95 @@ class _UpdateRequestsContentState extends State<UpdateRequestsContent> {
               borderRadius: BorderRadius.circular(8),
               child: Column(
                 children: [
-                  Scrollbar(
-                    controller: _horizontalScrollController,
-                    thumbVisibility: true,
-                    child: SingleChildScrollView(
-                      controller: _horizontalScrollController,
-                          scrollDirection: Axis.horizontal,
-                          child: SizedBox(
-                            width: 1000,
-                            child: Column(
-                              children: [
-                                // Header
-                                Container(
-                                  color: const Color(0xFF2D1B18),
-                                  height: 48,
-                                  child: Row(
-                                    children: [
-                                      _buildHeaderCell('S.NO', 60),
-                                      _buildHeaderCell('MEMBER NAME', 180),
-                                      _buildHeaderCell('MEMBER ID', 140),
-                                      _buildHeaderCell('DISTRICT', 130),
-                                      _buildHeaderCell('TALUK', 130),
-                                      _buildHeaderCell('PANCHAYAT', 130),
-                                      _buildHeaderCell('VILLAGE', 130),
-                                      _buildHeaderCell('REQUEST', 100, hasDivider: false),
-                                    ],
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Fixed Left Part
+                      SizedBox(
+                        width: 380, // 60+180+140
+                        child: Column(
+                          children: [
+                            Container(
+                              color: const Color(0xFF2D1B18),
+                              height: 48,
+                              child: Row(
+                                children: [
+                                  _buildHeaderCell('S.NO', 60),
+                                  _buildHeaderCell('MEMBER NAME', 180),
+                                  _buildHeaderCell('MEMBER ID', 140),
+                                ],
+                              ),
+                            ),
+                            _isLoading
+                                ? const SizedBox.shrink()
+                                : _requests.isEmpty
+                                    ? const SizedBox.shrink()
+                                    : ListView.separated(
+                                        shrinkWrap: true,
+                                        physics: const NeverScrollableScrollPhysics(),
+                                        itemCount: currentPageData.length,
+                                        separatorBuilder: (_, __) => const Divider(height: 1),
+                                        itemBuilder: (context, index) {
+                                          final req = currentPageData[index];
+                                          return _buildFixedDataRow(index, req, startIndex);
+                                        },
+                                      ),
+                          ],
+                        ),
+                      ),
+                      // Scrollable Right Part
+                      Expanded(
+                        child: Scrollbar(
+                          controller: _horizontalScrollController,
+                          thumbVisibility: true,
+                          child: SingleChildScrollView(
+                            controller: _horizontalScrollController,
+                            scrollDirection: Axis.horizontal,
+                            child: SizedBox(
+                              width: 620, // 130+130+130+130+100
+                              child: Column(
+                                children: [
+                                  Container(
+                                    color: const Color(0xFF2D1B18),
+                                    height: 48,
+                                    child: Row(
+                                      children: [
+                                        _buildHeaderCell('DISTRICT', 130),
+                                        _buildHeaderCell('TALUK', 130),
+                                        _buildHeaderCell('PANCHAYAT', 130),
+                                        _buildHeaderCell('VILLAGE', 130),
+                                        _buildHeaderCell('REQUEST', 100, hasDivider: false),
+                                      ],
+                                    ),
                                   ),
-                                ),
-                                // Body
-                                _isLoading
-                                    ? const Padding(
-                                        padding: EdgeInsets.all(48.0),
-                                        child: Center(child: LoadingSpinner(message: 'Loading requests...')),
-                                      )
-                                    : _requests.isEmpty
-                                        ? const Padding(
-                                            padding: EdgeInsets.all(48.0),
-                                            child: Center(child: Text('No pending update requests.', style: TextStyle(color: Colors.black54))),
-                                          )
-                                        : ListView.separated(
-                                            shrinkWrap: true,
-                                            physics: const NeverScrollableScrollPhysics(),
-                                            itemCount: currentPageData.length,
-                                            separatorBuilder: (_, __) => const Divider(height: 1),
-                                            itemBuilder: (context, index) {
-                                              final req = currentPageData[index];
-                                              return _buildDataRow(index, req, startIndex);
-                                            },
-                                          ),
-                              ],
+                                  _isLoading
+                                      ? const Padding(
+                                          padding: EdgeInsets.all(48.0),
+                                          child: Center(child: LoadingSpinner(message: 'Loading requests...')),
+                                        )
+                                      : _requests.isEmpty
+                                          ? const Padding(
+                                              padding: EdgeInsets.all(48.0),
+                                              child: Center(child: Text('No pending update requests.', style: TextStyle(color: Colors.black54))),
+                                            )
+                                          : ListView.separated(
+                                              shrinkWrap: true,
+                                              physics: const NeverScrollableScrollPhysics(),
+                                              itemCount: currentPageData.length,
+                                              separatorBuilder: (_, __) => const Divider(height: 1),
+                                              itemBuilder: (context, index) {
+                                                final req = currentPageData[index];
+                                                return _buildScrollableDataRow(index, req);
+                                              },
+                                            ),
+                                ],
+                              ),
                             ),
                           ),
                         ),
-                    ),
+                      ),
+                    ],
+                  ),
                   ],
                 ),
               ),
@@ -173,7 +212,7 @@ class _UpdateRequestsContentState extends State<UpdateRequestsContent> {
                       IconButton(
                         icon: const Icon(Icons.chevron_left),
                         onPressed: _currentPage > 1 ? () => setState(() => _currentPage--) : null,
-                        color: Colors.blue,
+                        color: const Color(0xFF5D1712),
                       ),
                       ...List.generate(totalPages, (i) {
                         final page = i + 1;
@@ -199,7 +238,7 @@ class _UpdateRequestsContentState extends State<UpdateRequestsContent> {
                       IconButton(
                         icon: const Icon(Icons.chevron_right),
                         onPressed: _currentPage < totalPages ? () => setState(() => _currentPage++) : null,
-                        color: Colors.blue,
+                        color: const Color(0xFF5D1712),
                       ),
                     ],
                   ),
@@ -227,7 +266,7 @@ class _UpdateRequestsContentState extends State<UpdateRequestsContent> {
     );
   }
 
-  Widget _buildDataRow(int index, dynamic req, int startIndex) {
+  Widget _buildFixedDataRow(int index, dynamic req, int startIndex) {
     return Container(
       height: 46,
       color: index % 2 == 0 ? Colors.white : const Color(0xFFF8FAFC),
@@ -236,6 +275,17 @@ class _UpdateRequestsContentState extends State<UpdateRequestsContent> {
           _buildDataCell((startIndex + index + 1).toString(), 60),
           _buildDataCell(req['Name'] ?? '-', 180, isBold: true),
           _buildDataCell(req['Familymembershipid'] ?? '-', 140, isBlue: true),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildScrollableDataRow(int index, dynamic req) {
+    return Container(
+      height: 46,
+      color: index % 2 == 0 ? Colors.white : const Color(0xFFF8FAFC),
+      child: Row(
+        children: [
           _buildDataCell(req['District'] ?? '-', 130),
           _buildDataCell(req['Taluk'] ?? '-', 130),
           _buildDataCell(req['Panchayat'] ?? '-', 130),
@@ -244,8 +294,8 @@ class _UpdateRequestsContentState extends State<UpdateRequestsContent> {
             onPressed: () {
               _showRequestDetails(req);
             },
-            icon: const Icon(Icons.visibility),
-            color: Colors.blue,
+            icon: Icon(Icons.visibility),
+            color: const Color(0xFF5D1712),
             tooltip: 'View Details',
           )),
         ],
@@ -343,7 +393,7 @@ class _UpdateRequestsContentState extends State<UpdateRequestsContent> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                   decoration: const BoxDecoration(
-                    color: Color(0xFF2D1B18),
+                    color: const Color(0xFF2D1B18),
                     borderRadius: BorderRadius.only(topLeft: Radius.circular(12), topRight: Radius.circular(12)),
                   ),
                   child: Row(
@@ -365,7 +415,7 @@ class _UpdateRequestsContentState extends State<UpdateRequestsContent> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Member Info', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.blue)),
+                        const Text('Member Info', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF5D1712))),
                         const SizedBox(height: 16),
                         ...data.entries.map((e) {
                           final formattedKey = e.key.replaceAll(RegExp(r'(?<=[a-z])[A-Z]'), r' $0').toUpperCase();
@@ -427,23 +477,53 @@ class _UpdateRequestsContentState extends State<UpdateRequestsContent> {
                                         border: Border.all(color: Colors.orange, width: 2),
                                         borderRadius: BorderRadius.circular(8),
                                       ),
-                                      child: ClipRRect(
-                                        borderRadius: BorderRadius.circular(6),
-                                        child: Image.network(
-                                          imageUrl,
-                                          height: 160,
-                                          fit: BoxFit.contain,
-                                          errorBuilder: (ctx, err, st) => Container(
-                                            height: 80,
-                                            color: Colors.grey.shade100,
-                                            child: Center(
-                                              child: Text('Image: ${e.value}', style: const TextStyle(color: Colors.orange, fontSize: 12)),
+                                      child: GestureDetector(
+                                        onTap: () {
+                                          showDialog(
+                                            context: context,
+                                            builder: (context) => Dialog(
+                                              backgroundColor: Colors.transparent,
+                                              insetPadding: const EdgeInsets.all(16),
+                                              child: Stack(
+                                                alignment: Alignment.center,
+                                                children: [
+                                                  InteractiveViewer(
+                                                    panEnabled: true,
+                                                    minScale: 0.5,
+                                                    maxScale: 4,
+                                                    child: Image.network(imageUrl, fit: BoxFit.contain),
+                                                  ),
+                                                  Positioned(
+                                                    top: 0,
+                                                    right: 0,
+                                                    child: IconButton(
+                                                      icon: const Icon(Icons.close, color: Colors.white, size: 32),
+                                                      onPressed: () => Navigator.pop(context),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
                                             ),
+                                          );
+                                        },
+                                        child: ClipRRect(
+                                          borderRadius: BorderRadius.circular(6),
+                                          child: Image.network(
+                                            imageUrl,
+                                            height: 160,
+                                            fit: BoxFit.contain,
+                                            errorBuilder: (ctx, err, st) => Container(
+                                              height: 80,
+                                              color: Colors.grey.shade100,
+                                              child: Center(
+                                                child: Text('Image: ${e.value}', style: const TextStyle(color: Colors.orange, fontSize: 12)),
+                                              ),
+                                            ),
+                                            loadingBuilder: (ctx, child, progress) {
+                                              if (progress == null) return child;
+                                              return const SizedBox(height: 80, child: Center(child: CircularProgressIndicator()));
+                                            },
                                           ),
-                                          loadingBuilder: (ctx, child, progress) {
-                                            if (progress == null) return child;
-                                            return const SizedBox(height: 80, child: Center(child: CircularProgressIndicator()));
-                                          },
                                         ),
                                       ),
                                     ),
@@ -529,7 +609,7 @@ class _UpdateRequestsContentState extends State<UpdateRequestsContent> {
                       ElevatedButton(
                         onPressed: () => Navigator.pop(context),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue,
+                          backgroundColor: const Color(0xFF5D1712),
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
@@ -558,7 +638,7 @@ class _UpdateRequestsContentState extends State<UpdateRequestsContent> {
       child: child ?? Text(
         text,
         style: TextStyle(
-          color: isBlue ? Colors.blue : Colors.black87,
+          color: isBlue ? const Color(0xFF5D1712) : Colors.black87,
           fontWeight: isBlue || isBold ? FontWeight.bold : FontWeight.normal,
           fontSize: 12,
         ),

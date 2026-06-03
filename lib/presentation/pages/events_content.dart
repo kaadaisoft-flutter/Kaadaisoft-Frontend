@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:file_picker/file_picker.dart';
@@ -8,7 +9,9 @@ import '../../utils/api_config.dart';
 
 class EventsContent extends StatefulWidget {
   final int? role;
-  const EventsContent({super.key, this.role = 3});
+  final String? globalSearchQuery;
+  
+  const EventsContent({super.key, this.role = 3, this.globalSearchQuery});
 
   @override
   State<EventsContent> createState() => _EventsContentState();
@@ -19,6 +22,18 @@ class _EventsContentState extends State<EventsContent> {
   bool _isLoading = true;
   String? _error;
   final ScrollController _scrollController = ScrollController();
+
+  List<dynamic> get _filteredEvents {
+    if (widget.globalSearchQuery == null || widget.globalSearchQuery!.isEmpty) {
+      return _events;
+    }
+    final query = widget.globalSearchQuery!.toLowerCase();
+    return _events.where((event) {
+      final name = (event['EventName']?.toString() ?? '').toLowerCase();
+      final tax = (event['TaxAmount']?.toString() ?? '').toLowerCase();
+      return name.contains(query) || tax.contains(query);
+    }).toList();
+  }
 
   @override
   void initState() {
@@ -132,7 +147,7 @@ class _EventsContentState extends State<EventsContent> {
                       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey[200]!)),
                       enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey[200]!)),
-                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFF3B82F6), width: 1.5)),
+                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: const Color(0xFF5D1712), width: 1.5)),
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -184,7 +199,16 @@ class _EventsContentState extends State<EventsContent> {
                   const SizedBox(height: 8),
                   TextField(
                     controller: taxController,
-                    keyboardType: TextInputType.number,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+           inputFormatters: [
+             FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+           ],
+           onTap: () {
+             taxController.selection = TextSelection(
+               baseOffset: 0,
+               extentOffset: taxController.text.length,
+             );
+           },
                     decoration: InputDecoration(
                       hintText: 'Enter tax amount',
                       filled: true,
@@ -192,7 +216,7 @@ class _EventsContentState extends State<EventsContent> {
                       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey[200]!)),
                       enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey[200]!)),
-                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFF3B82F6), width: 1.5)),
+                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: const Color(0xFF5D1712), width: 1.5)),
                     ),
                   ),
                   const SizedBox(height: 32),
@@ -226,7 +250,7 @@ class _EventsContentState extends State<EventsContent> {
                         }
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF3B82F6),
+                        backgroundColor: const Color(0xFF5D1712),
                         foregroundColor: Colors.white,
                         elevation: 0,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -276,7 +300,7 @@ class _EventsContentState extends State<EventsContent> {
                     children: [
                       const Text('CURRENT EVENT', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black54)),
                       const SizedBox(height: 8),
-                      Text(event['EventName'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blue)),
+                      Text(event['EventName'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold, color: const Color(0xFF5D1712))),
                     ],
                   ),
                 ),
@@ -299,23 +323,23 @@ class _EventsContentState extends State<EventsContent> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                     decoration: BoxDecoration(
-                      color: selectedFile != null ? Colors.blue.withOpacity(0.05) : Colors.white,
+                      color: selectedFile != null ? const Color(0xFF5D1712).withOpacity(0.05) : Colors.white,
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: selectedFile != null ? Colors.blue : Colors.grey[300]!, width: 1.5),
+                      border: Border.all(color: selectedFile != null ? const Color(0xFF5D1712) : Colors.grey[300]!, width: 1.5),
                     ),
                     child: Row(
                       children: [
                         Icon(
                           selectedFile != null ? Icons.check_circle : Icons.cloud_upload_outlined,
                           size: 20,
-                          color: selectedFile != null ? Colors.blue : Colors.grey[500],
+                          color: selectedFile != null ? const Color(0xFF5D1712) : Colors.grey[500],
                         ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
                             selectedFile?.name ?? 'Click to choose an image file...',
                             style: TextStyle(
-                              color: selectedFile != null ? Colors.blue[800] : Colors.grey[600],
+                              color: selectedFile != null ? const Color(0xFF5D1712) : Colors.grey[600],
                               fontSize: 13,
                               fontWeight: selectedFile != null ? FontWeight.w600 : FontWeight.normal,
                             ),
@@ -330,9 +354,9 @@ class _EventsContentState extends State<EventsContent> {
                 const Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.info_outline, size: 14, color: Colors.blue),
+                    Icon(Icons.info_outline, size: 14, color: const Color(0xFF5D1712)),
                     SizedBox(width: 4),
-                    Expanded(child: Text('Choose a high-quality JPG or PNG.', style: TextStyle(fontSize: 12, color: Colors.blue))),
+                    Expanded(child: Text('Choose a high-quality JPG or PNG.', style: TextStyle(fontSize: 12, color: const Color(0xFF5D1712)))),
                   ],
                 ),
                 const SizedBox(height: 24),
@@ -358,7 +382,7 @@ class _EventsContentState extends State<EventsContent> {
                         setDialogState(() => isSaving = false);
                       }
                     },
-                    style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF3B82F6), foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+                    style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF5D1712), foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
                     child: isSaving ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : const Text('Update Banner', style: TextStyle(fontWeight: FontWeight.bold)),
                   ),
                 ),
@@ -510,12 +534,12 @@ class _EventsContentState extends State<EventsContent> {
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      const Icon(Icons.info_outline, size: 14, color: Colors.blue),
+                      const Icon(Icons.info_outline, size: 14, color: const Color(0xFF5D1712)),
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text(
                           'Note: Year should be at the end of the event name (e.g. Event_2026).',
-                          style: TextStyle(fontSize: 11, color: Colors.blue[700]),
+                          style: TextStyle(fontSize: 11, color: const Color(0xFF5D1712)),
                         ),
                       ),
                     ],
@@ -571,12 +595,12 @@ class _EventsContentState extends State<EventsContent> {
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      const Icon(Icons.info_outline, size: 14, color: Colors.blue),
+                      const Icon(Icons.info_outline, size: 14, color: const Color(0xFF5D1712)),
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text(
                           'Note: Max file size 2MB (JPG, PNG).',
-                          style: TextStyle(fontSize: 11, color: Colors.blue[700]),
+                          style: TextStyle(fontSize: 11, color: const Color(0xFF5D1712)),
                         ),
                       ),
                     ],
@@ -632,7 +656,16 @@ class _EventsContentState extends State<EventsContent> {
                   const SizedBox(height: 8),
                   TextField(
                     controller: taxController,
-                    keyboardType: TextInputType.number,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                    ],
+                    onTap: () {
+                      taxController.selection = TextSelection(
+                        baseOffset: 0,
+                        extentOffset: taxController.text.length,
+                      );
+                    },
                     decoration: InputDecoration(
                       filled: true,
                       fillColor: Colors.grey[50],
@@ -690,7 +723,7 @@ class _EventsContentState extends State<EventsContent> {
                         }
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF3B82F6),
+                        backgroundColor: const Color(0xFF5D1712),
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                       ),
@@ -728,7 +761,7 @@ class _EventsContentState extends State<EventsContent> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Events Management', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF2D1B18))),
+                  const Text('Events Management', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: const Color(0xFF2D1B18))),
                   const SizedBox(height: 16),
                   if (widget.role == 1)
                     SizedBox(
@@ -751,7 +784,7 @@ class _EventsContentState extends State<EventsContent> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('Events Management', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF2D1B18))),
+                  const Text('Events Management', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: const Color(0xFF2D1B18))),
                   if (widget.role == 1)
                     ElevatedButton.icon(
                       onPressed: _showAddEventDialog,
@@ -820,10 +853,10 @@ class _EventsContentState extends State<EventsContent> {
                                   shrinkWrap: true,
                                   physics: const NeverScrollableScrollPhysics(),
                                   padding: EdgeInsets.zero,
-                                  itemCount: _events.length,
+                                  itemCount: _filteredEvents.length,
                                   separatorBuilder: (context, index) => const Divider(height: 1, color: Colors.black12),
                                   itemBuilder: (context, index) {
-                                    final event = _events[index];
+                                    final event = _filteredEvents[index];
                                     return Container(
                                       height: 60,
                                       color: index % 2 == 0 ? Colors.white : const Color(0xFFF8FAFC),
@@ -886,13 +919,13 @@ class _EventsContentState extends State<EventsContent> {
                                             child: Container(
                                               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                                               decoration: BoxDecoration(
-                                                color: Colors.blue.withOpacity(0.1),
+                                                color: const Color(0xFF5D1712).withOpacity(0.1),
                                                 borderRadius: BorderRadius.circular(4),
-                                                border: Border.all(color: Colors.blue.withOpacity(0.2)),
+                                                border: Border.all(color: const Color(0xFF5D1712).withOpacity(0.2)),
                                               ),
                                               child: Text(
                                                 '₹ ${event['TaxAmount'] ?? '0'}',
-                                                style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold, fontSize: 13),
+                                                style: const TextStyle(color: const Color(0xFF5D1712), fontWeight: FontWeight.bold, fontSize: 13),
                                               ),
                                             ),
                                           )),
@@ -901,9 +934,9 @@ class _EventsContentState extends State<EventsContent> {
                                             _buildDataCell('', 150, hasDivider: false, child: Row(
                                               mainAxisAlignment: MainAxisAlignment.center,
                                               children: [
-                                                _buildIconButton(Icons.edit_outlined, Colors.blue, () => _showUpdateEventDialog(event)),
+                                                _buildIconButton(Icons.edit_outlined, const Color(0xFF5D1712), () => _showUpdateEventDialog(event), tooltip: 'Edit'),
                                                 const SizedBox(width: 8),
-                                                _buildIconButton(Icons.delete_outline, Colors.red, () => _showDeleteConfirmationDialog(event)),
+                                                _buildIconButton(Icons.delete_outline, Colors.red, () => _showDeleteConfirmationDialog(event), tooltip: 'Delete'),
                                               ],
                                             )),
                                         ],
@@ -923,12 +956,12 @@ class _EventsContentState extends State<EventsContent> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(_isLoading ? '' : 'Total Events: ${_events.length}', style: const TextStyle(color: Colors.black54, fontWeight: FontWeight.w500)),
+                        Text(_isLoading ? '' : 'Total Events: ${_filteredEvents.length}', style: const TextStyle(color: Colors.black54, fontWeight: FontWeight.w500)),
                         const Row(
                           children: [
                             Icon(Icons.chevron_left, color: Colors.black26),
                             SizedBox(width: 16),
-                            CircleAvatar(radius: 14, backgroundColor: Color(0xFF3B82F6), child: Text('1', style: TextStyle(color: Colors.white, fontSize: 12))),
+                            CircleAvatar(radius: 14, backgroundColor: const Color(0xFF5D1712), child: Text('1', style: TextStyle(color: Colors.white, fontSize: 12))),
                             SizedBox(width: 16),
                             Icon(Icons.chevron_right, color: Colors.black26),
                           ],
@@ -960,12 +993,12 @@ class _EventsContentState extends State<EventsContent> {
                 color: Colors.red.withOpacity(0.1),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.delete_outline, color: Color(0xFFD81B60), size: 40),
+              child: Icon(Icons.delete_outline, color: const Color(0xFFD81B60), size: 40),
             ),
             const SizedBox(height: 24),
             const Text(
               'Move to Trash?',
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF2D1B18)),
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: const Color(0xFF2D1B18)),
             ),
             const SizedBox(height: 12),
             Text(
@@ -1056,18 +1089,24 @@ class _EventsContentState extends State<EventsContent> {
     );
   }
 
-  Widget _buildIconButton(IconData icon, Color color, VoidCallback onPressed) {
+  Widget _buildIconButton(IconData icon, Color color, VoidCallback onPressed, {String? tooltip}) {
+    Widget iconWidget = Container(
+      padding: const EdgeInsets.all(6),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Icon(icon, color: color, size: 18),
+    );
+
+    if (tooltip != null) {
+      iconWidget = Tooltip(message: tooltip, child: iconWidget);
+    }
+
     return InkWell(
       onTap: onPressed,
       borderRadius: BorderRadius.circular(8),
-      child: Container(
-        padding: const EdgeInsets.all(6),
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Icon(icon, color: color, size: 18),
-      ),
+      child: iconWidget,
     );
   }
 
@@ -1098,7 +1137,7 @@ class _EventsContentState extends State<EventsContent> {
       child: child ?? Text(
         text,
         style: TextStyle(
-          color: isBlue ? Colors.blue : Colors.black87,
+          color: isBlue ? const Color(0xFF5D1712) : Colors.black87,
           fontWeight: isBlue || isBold ? FontWeight.bold : FontWeight.normal,
           fontSize: 12,
         ),

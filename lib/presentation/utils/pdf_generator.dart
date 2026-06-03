@@ -68,7 +68,7 @@ class PdfGenerator {
           return pw.Container(
             padding: const pw.EdgeInsets.all(30),
             decoration: pw.BoxDecoration(
-              border: pw.Border.all(color: PdfColors.blueAccent, width: 1),
+              border: pw.Border.all(color: PdfColor.fromInt(0xFF5D1712), width: 1),
             ),
             child: pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -85,7 +85,7 @@ class PdfGenerator {
                           font: boldFont,
                           fontSize: 22,
                           fontWeight: pw.FontWeight.bold,
-                          color: PdfColors.blue900,
+                          color: PdfColor.fromInt(0xFF5D1712),
                         ),
                       ),
                       pw.Text(
@@ -167,7 +167,7 @@ class PdfGenerator {
     bool isBlue = false,
     bool isRed = false,
   }) {
-    final textColor = isBlue ? PdfColors.blue700 : (isRed ? PdfColors.red700 : PdfColors.black);
+    final textColor = isBlue ? PdfColor.fromInt(0xFF5D1712) : (isRed ? PdfColors.red700 : PdfColors.black);
     final textFont = isBold || isBlue || isRed ? boldFont : font;
     
     return pw.Padding(

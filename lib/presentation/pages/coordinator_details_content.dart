@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'dart:html' as html;
+import 'package:url_launcher/url_launcher.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../widgets/loading_spinner.dart';
@@ -63,7 +63,7 @@ class _CoordinatorDetailsContentState extends State<CoordinatorDetailsContent> {
           _userData = userData;
           _userData!['AssignedVillages'] = villageNames.isEmpty ? 'None' : villageNames;
           _familyMembers = familyData;
-          _assignedMembers = assignedData;
+          _assignedMembers = assignedData.where((m) => m['MemberRole'] == 'Head').toList();
           _isLoading = false;
         });
       } else {
@@ -81,6 +81,7 @@ class _CoordinatorDetailsContentState extends State<CoordinatorDetailsContent> {
   }
 
   void _showEventParticipationDialog() async {
+    final ScrollController horizontalScrollController = ScrollController();
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -109,9 +110,13 @@ class _CoordinatorDetailsContentState extends State<CoordinatorDetailsContent> {
                 return const SizedBox(height: 100, child: Center(child: Text('No event participation found.')));
               }
 
-              return SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: DataTable(
+              return Scrollbar(
+                controller: horizontalScrollController,
+                thumbVisibility: true,
+                child: SingleChildScrollView(
+                  controller: horizontalScrollController,
+                  scrollDirection: Axis.horizontal,
+                  child: DataTable(
                   headingRowColor: MaterialStateProperty.all(Colors.grey[50]),
                   columns: const [
                     DataColumn(label: Text('SNo', style: TextStyle(fontWeight: FontWeight.bold))),
@@ -119,6 +124,7 @@ class _CoordinatorDetailsContentState extends State<CoordinatorDetailsContent> {
                     DataColumn(label: Text('Tax Amount', style: TextStyle(fontWeight: FontWeight.bold))),
                     DataColumn(label: Text('Paid Amount', style: TextStyle(fontWeight: FontWeight.bold))),
                     DataColumn(label: Text('Balance Amount', style: TextStyle(fontWeight: FontWeight.bold))),
+                    DataColumn(label: Text('Status', style: TextStyle(fontWeight: FontWeight.bold))),
                     DataColumn(label: Text('Payment Date', style: TextStyle(fontWeight: FontWeight.bold))),
                   ],
                   rows: data.asMap().entries.map((entry) {
@@ -131,29 +137,24 @@ class _CoordinatorDetailsContentState extends State<CoordinatorDetailsContent> {
                       DataCell(Text(row['EventName'] ?? '-')),
                       DataCell(Text(row['TaxAmount']?.toString() ?? '0')),
                       DataCell(Text(row['PaidAmount']?.toString() ?? '0')),
+                      DataCell(Text(row['BalanceAmount']?.toString() ?? '0')),
                       DataCell(
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(row['BalanceAmount']?.toString() ?? '0'),
-                            const SizedBox(width: 12),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: isPaid ? const Color(0xFF2E7D32) : const Color(0xFF1976D2),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Text(
-                                row['status'],
-                                style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                          ],
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: isPaid ? const Color(0xFF2E7D32) : const Color(0xFF5D1712),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            row['status'] ?? 'UNKNOWN',
+                            style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                          ),
                         ),
                       ),
                       DataCell(Text(row['PaymentDate'] ?? '-')),
                     ]);
                   }).toList(),
+                ),
                 ),
               );
             },
@@ -268,20 +269,20 @@ class _CoordinatorDetailsContentState extends State<CoordinatorDetailsContent> {
             children: [
               const Row(
                 children: [
-                  Icon(Icons.person, color: Color(0xFF1976D2), size: 28),
+                  Icon(Icons.person, color: const Color(0xFF5D1712), size: 28),
                   SizedBox(width: 12),
-                  Text('Coordinator Details:', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF2D1B18))),
+                  Text('Coordinator Details:', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: const Color(0xFF2D1B18))),
                 ],
               ),
               ElevatedButton.icon(
                 onPressed: () {
                   final url = '${ApiConfig.baseUrl}/api/download-id-card/${widget.numericId}';
-                  html.window.open(url, '_blank');
+                  launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
                 },
                 icon: const Icon(Icons.badge_outlined, size: 18),
                 label: const Text('Download ID Card'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF1976D2),
+                  backgroundColor: const Color(0xFF5D1712),
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
@@ -297,25 +298,16 @@ class _CoordinatorDetailsContentState extends State<CoordinatorDetailsContent> {
           // Family Members Section
           const Row(
             children: [
-              Icon(Icons.group, color: Color(0xFF1976D2), size: 24),
+              Icon(Icons.group, color: const Color(0xFF5D1712), size: 24),
               SizedBox(width: 12),
-              Text('Family Members', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF2D1B18))),
+              Text('Family Members', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: const Color(0xFF2D1B18))),
             ],
           ),
           const SizedBox(height: 16),
           _buildFamilyTable(),
           const SizedBox(height: 48),
 
-          // Assigned Members Section
-          Row(
-            children: [
-              const Icon(Icons.location_city, color: Color(0xFF1976D2), size: 24),
-              const SizedBox(width: 12),
-              Text('Total Members: ${_assignedMembers.length}', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF2D1B18))),
-            ],
-          ),
-          const SizedBox(height: 16),
-          _buildAssignedMembersTable(),
+
         ],
       ),
     );
@@ -330,6 +322,7 @@ class _CoordinatorDetailsContentState extends State<CoordinatorDetailsContent> {
         border: Border.all(color: Colors.grey.shade200),
       ),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Avatar & Quick Actions
@@ -374,9 +367,10 @@ class _CoordinatorDetailsContentState extends State<CoordinatorDetailsContent> {
           ),
           const SizedBox(width: 60),
           // Details
-          Expanded(
-            child: Column(
-              children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
                 _detailItem('Name:', _userData!['Name'] ?? 'N/A', isBlue: true, isBold: true),
                 const SizedBox(height: 24),
                 _detailItem('Family Membership ID:', _userData!['Familymembershipid'] ?? 'N/A', isPill: true),
@@ -384,11 +378,8 @@ class _CoordinatorDetailsContentState extends State<CoordinatorDetailsContent> {
                 _detailItem('Phone Number:', _userData!['Phonenumber']?.toString() ?? 'N/A'),
                 const SizedBox(height: 24),
                 _addressItem('Address:', _userData!),
-                const SizedBox(height: 24),
-                _detailItem('Assigned Villages:', _userData!['AssignedVillages'] ?? 'None', isBold: true),
               ],
             ),
-          ),
         ],
       ),
     );
@@ -396,12 +387,13 @@ class _CoordinatorDetailsContentState extends State<CoordinatorDetailsContent> {
 
   Widget _detailItem(String label, String value, {bool isBlue = false, bool isBold = false, bool isPill = false}) {
     return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
         SizedBox(width: 200, child: Text(label, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black54))),
         isPill
             ? Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                decoration: BoxDecoration(color: const Color(0xFF1976D2), borderRadius: BorderRadius.circular(20)),
+                decoration: BoxDecoration(color: const Color(0xFF5D1712), borderRadius: BorderRadius.circular(20)),
                 child: Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
               )
             : Text(
@@ -409,7 +401,7 @@ class _CoordinatorDetailsContentState extends State<CoordinatorDetailsContent> {
                 style: TextStyle(
                   fontSize: 17,
                   fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
-                  color: isBlue ? const Color(0xFF1976D2) : Colors.black87,
+                  color: isBlue ? const Color(0xFF5D1712) : Colors.black87,
                 ),
               ),
       ],
@@ -418,13 +410,13 @@ class _CoordinatorDetailsContentState extends State<CoordinatorDetailsContent> {
 
   Widget _addressItem(String label, Map<String, dynamic> data) {
     return Row(
+      mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SizedBox(width: 200, child: Text(label, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black54))),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
               _addressLine(Icons.home_outlined, '${data['Street'] ?? ''}'),
               const SizedBox(height: 6),
               _addressLine(Icons.location_on_outlined, '${data['Village'] ?? ''}, ${data['Taluk'] ?? ''}'),
@@ -434,7 +426,6 @@ class _CoordinatorDetailsContentState extends State<CoordinatorDetailsContent> {
               _addressLine(Icons.map_outlined, data['State'] ?? 'Tamil Nadu'),
             ],
           ),
-        ),
       ],
     );
   }
@@ -443,7 +434,7 @@ class _CoordinatorDetailsContentState extends State<CoordinatorDetailsContent> {
     if (text.trim().isEmpty || text == 'null' || text == ', ') return const SizedBox.shrink();
     return Row(
       children: [
-        Icon(icon, color: const Color(0xFF1976D2), size: 18),
+        Icon(icon, color: const Color(0xFF5D1712), size: 18),
         const SizedBox(width: 12),
         Text(text, style: const TextStyle(fontSize: 16, color: Colors.black87)),
       ],
@@ -452,9 +443,9 @@ class _CoordinatorDetailsContentState extends State<CoordinatorDetailsContent> {
 
   Widget _roundIcon(IconData icon, String tooltip, {VoidCallback? onTap}) {
     return Container(
-      decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: const Color(0xFF1976D2).withOpacity(0.5))),
+      decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: const Color(0xFF5D1712).withOpacity(0.5))),
       child: IconButton(
-        icon: Icon(icon, color: const Color(0xFF1976D2), size: 20),
+        icon: Icon(icon, color: const Color(0xFF5D1712), size: 20),
         onPressed: onTap ?? () {},
         tooltip: tooltip,
       ),
@@ -477,8 +468,83 @@ class _CoordinatorDetailsContentState extends State<CoordinatorDetailsContent> {
       ),
     );
   }
+  String _getDisplayRole(dynamic member) {
+    String role = member['MemberRole']?.toString() ?? 'Unknown';
+    String memberFmId = member['Familymembershipid']?.toString() ?? '';
+    String memberExId = member['Existfamilyid']?.toString() ?? '';
+    String gender = member['Gender']?.toString().toLowerCase() ?? '';
+    
+    String currentFmId = _userData?['Familymembershipid']?.toString() ?? '';
+    String currentExistId = _userData?['Existfamilyid']?.toString() ?? '';
+    
+    bool amISubHead = currentFmId.isNotEmpty && currentExistId.isNotEmpty;
+    
+    if (amISubHead) {
+      if (memberFmId == currentExistId && memberFmId.isNotEmpty) {
+        if (role == 'Head') return gender == 'female' ? 'Mother' : 'Father';
+      }
+      if (memberExId == currentExistId && memberExId.isNotEmpty) {
+        if (memberFmId == currentFmId && currentFmId.isNotEmpty) {
+          return 'Head';
+        }
+        if (role == 'Head') return gender == 'female' ? 'Sister' : 'Brother';
+        if (role == 'Wife' || role == 'Husband') return gender == 'male' ? 'Father' : 'Mother';
+        if (['Son', 'Daughter'].contains(role)) return gender == 'female' ? 'Sister' : 'Brother';
+        if (['Brother', 'Sister'].contains(role)) return gender == 'female' ? 'Aunt' : 'Uncle';
+        if (['Father', 'Mother'].contains(role)) return gender == 'female' ? 'Grand Mother' : 'Grand Father';
+        if (['Grand Father', 'Grand Mother'].contains(role)) return gender == 'female' ? 'Great Grand Mother' : 'Great Grand Father';
+      }
+      
+      if (memberExId.isNotEmpty && memberExId != currentExistId && memberExId != currentFmId) {
+        if (role == 'Wife') return 'Sister-in-law';
+        if (role == 'Husband') return 'Brother-in-law';
+        if (['Son', 'Daughter'].contains(role)) return gender == 'female' ? 'Niece' : 'Nephew';
+      }
+    } else {
+      String topLevelId = currentFmId.isNotEmpty ? currentFmId : currentExistId;
+      bool isFmSubHead = role == 'Head' && memberExId.isNotEmpty;
+      if (isFmSubHead && memberExId == topLevelId) {
+        return gender == 'female' ? 'Daughter' : 'Son';
+      }
+      
+      bool belongsToSubHead = memberExId.isNotEmpty && memberExId != topLevelId;
+      if (belongsToSubHead) {
+        if (role == 'Wife') return 'Daughter-in-law';
+        if (role == 'Husband') return 'Son-in-law';
+        if (['Son', 'Daughter'].contains(role)) return gender == 'female' ? 'Grand Daughter' : 'Grand Son';
+      }
+    }
+    
+    return role;
+  }
 
   Widget _buildFamilyTable() {
+    String currentFmId = _userData?['Familymembershipid']?.toString() ?? '';
+    String currentExistId = _userData?['Existfamilyid']?.toString() ?? '';
+    bool amITopHeadFamily = currentExistId.isEmpty;
+    bool amISubHead = _userData?['MemberRole'] == 'Head' && currentExistId.isNotEmpty;
+
+    final tableMembers = _familyMembers.where((fm) {
+      bool isMarried = fm['Married']?.toString().toLowerCase() == 'yes';
+      bool isChild = ['Son', 'Daughter', 'Son-in-law', 'Daughter-in-law'].contains(fm['MemberRole']);
+      
+      if (amISubHead) {
+        if (fm['Familymembershipid']?.toString() == currentFmId && currentFmId.isNotEmpty) return true;
+        if (fm['Existfamilyid']?.toString() == currentFmId && currentFmId.isNotEmpty) return true;
+        return false;
+      } else {
+        String topLevelId = amITopHeadFamily ? currentFmId : currentExistId;
+        if (fm['Familymembershipid']?.toString() == topLevelId && topLevelId.isNotEmpty) return true;
+        if (fm['Existfamilyid']?.toString() == topLevelId && topLevelId.isNotEmpty) {
+          bool isFmSubHead = fm['MemberRole'] == 'Head' && (fm['Existfamilyid']?.toString() ?? '').isNotEmpty;
+          if (isFmSubHead) return false;
+          if (isMarried && isChild) return false;
+          return true;
+        }
+        return false;
+      }
+    }).toList();
+
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
@@ -489,6 +555,7 @@ class _CoordinatorDetailsContentState extends State<CoordinatorDetailsContent> {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(12),
         child: DataTable(
+          border: TableBorder(verticalInside: BorderSide(color: Colors.grey.shade300, width: 1)),
           headingRowHeight: 50,
           headingRowColor: MaterialStateProperty.all(const Color(0xFF2D1B18)),
           columns: const [
@@ -498,7 +565,7 @@ class _CoordinatorDetailsContentState extends State<CoordinatorDetailsContent> {
             DataColumn(label: Text('GENDER', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
             DataColumn(label: Text('AGE', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
           ],
-          rows: _familyMembers.asMap().entries.map((entry) {
+          rows: tableMembers.asMap().entries.map((entry) {
             final i = entry.key;
             final m = entry.value;
             return DataRow(cells: [
@@ -510,20 +577,20 @@ class _CoordinatorDetailsContentState extends State<CoordinatorDetailsContent> {
                   Text(m['Name'] ?? 'N/A', style: const TextStyle(fontWeight: FontWeight.w600)),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(color: Colors.blue.shade50, borderRadius: BorderRadius.circular(4)),
-                    child: Text(m['Familymembershipid'] ?? '', style: const TextStyle(fontSize: 10, color: Colors.blue, fontWeight: FontWeight.bold)),
+                    decoration: BoxDecoration(color: const Color(0xFFFDECEB), borderRadius: BorderRadius.circular(4)),
+                    child: Text(m['Familymembershipid'] ?? '', style: const TextStyle(fontSize: 10, color: const Color(0xFF5D1712), fontWeight: FontWeight.bold)),
                   ),
                 ],
               )),
-              DataCell(Center(child: Container(
+              DataCell(Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(4), border: Border.all(color: Colors.grey.shade300)),
-                child: Text(m['MemberRole'] ?? 'Member', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-              ))),
+                child: Text(_getDisplayRole(m), style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+              )),
               DataCell(Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(m['Gender'] == 'Male' ? Icons.male : Icons.female, size: 16, color: Colors.blue),
+                  Icon(m['Gender'] == 'Male' ? Icons.male : Icons.female, size: 16, color: const Color(0xFF5D1712)),
                   const SizedBox(width: 4),
                   Text(m['Gender'] ?? 'N/A'),
                 ],
@@ -547,11 +614,13 @@ class _CoordinatorDetailsContentState extends State<CoordinatorDetailsContent> {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(12),
         child: DataTable(
+          border: TableBorder(verticalInside: BorderSide(color: Colors.grey.shade300, width: 1)),
           headingRowHeight: 50,
           headingRowColor: MaterialStateProperty.all(const Color(0xFF2D1B18)),
           columns: const [
             DataColumn(label: Text('S.NO', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
-            DataColumn(label: Text('MEMBER DETAILS', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
+            DataColumn(label: Text('NAME', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
+            DataColumn(label: Text('GENDER', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
             DataColumn(label: Text('MOBILE', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
             DataColumn(label: Text('LOCATION', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
           ],
@@ -565,11 +634,19 @@ class _CoordinatorDetailsContentState extends State<CoordinatorDetailsContent> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(m['Name'] ?? 'N/A', style: const TextStyle(fontWeight: FontWeight.w600)),
-                  Text(m['Familymembershipid'] ?? '', style: const TextStyle(fontSize: 11, color: Colors.blue)),
+                  Text(m['Familymembershipid'] ?? '', style: const TextStyle(fontSize: 11, color: const Color(0xFF5D1712))),
+                ],
+              )),
+              DataCell(Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(m['Gender'] == 'Male' ? Icons.male : Icons.female, size: 16, color: const Color(0xFF5D1712)),
+                  const SizedBox(width: 4),
+                  Text(m['Gender'] ?? 'N/A'),
                 ],
               )),
               DataCell(Text(m['Phonenumber']?.toString() ?? 'N/A')),
-              DataCell(Text('${m['Village'] ?? ''}, ${m['Panchayat'] ?? ''}')),
+              DataCell(Text(m['Village'] ?? '-')),
             ]);
           }).toList(),
         ),

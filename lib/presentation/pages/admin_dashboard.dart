@@ -52,10 +52,10 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
   bool _showMobileSearchBar = false;
   String _paymentFilter = 'UNPAID';
   final ScrollController _dashboardScrollController = ScrollController();
+  final TextEditingController _globalSearchController = TextEditingController();
   Timer? _statsTimer;
 
   void _navigateTo(String item) {
-    if (_activeItem == item) return;
     setState(() {
       if (_activeItem != '') {
         _navigationHistory.add(_activeItem);
@@ -106,8 +106,9 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
 
   @override
   void dispose() {
-    _dashboardScrollController.dispose();
+    _globalSearchController.dispose();
     _statsTimer?.cancel();
+    _dashboardScrollController.dispose();
     _blinkController?.dispose();
     super.dispose();
   }
@@ -115,6 +116,9 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
   @override
   void initState() {
     super.initState();
+    _globalSearchController.addListener(() {
+      setState(() {});
+    });
     _blinkController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 800),
@@ -158,7 +162,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
       }
 
       // Fetch actual update requests count to ensure accuracy
-      final updateReqResponse = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/update-requests'));
+      final updateReqResponse = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/update-requests?user_id=${widget.userId}&role=${widget.userRole}'));
       if (updateReqResponse.statusCode == 200) {
         final updateData = jsonDecode(updateReqResponse.body);
         if (mounted && updateData['status'] == 'success') {
@@ -268,7 +272,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
         final receipts = data['receipts'] as List;
         
         final eventReceipt = receipts.firstWhere(
-          (r) => r['eventid'].toString() == eventId.toString(),
+          (r) => (r['Eventid'] ?? r['eventid']).toString() == eventId.toString(),
           orElse: () => null,
         );
 
@@ -442,7 +446,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
                         }
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF3B82F6),
+                        backgroundColor: const Color(0xFF5D1712),
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
                       ),
@@ -525,7 +529,8 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
         padding: contentPadding,
         child: EventsContent(
           key: ValueKey('Events'),
-          role: widget.userRole
+          role: widget.userRole,
+          globalSearchQuery: _globalSearchController.text,
         ),
       );
     }
@@ -537,6 +542,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
           key: ValueKey('Members'),
           userId: widget.userId, 
           role: widget.userRole,
+          globalSearchQuery: _globalSearchController.text,
           onAssignPressed: () {
             _navigateTo('Coordinators');
           },
@@ -551,7 +557,8 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
         padding: contentPadding,
         child: CoordinatorsContent(
           key: ValueKey('Coordinators'),
-          initialShowAssign: showAssign
+          initialShowAssign: showAssign,
+          globalSearchQuery: _globalSearchController.text,
         ),
       );
     }
@@ -560,7 +567,8 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
       return PaymentsContent(
         key: ValueKey('Payments'),
         userId: widget.userId, 
-        role: widget.userRole
+        role: widget.userRole,
+        globalSearchQuery: _globalSearchController.text,
       );
     }
     
@@ -568,7 +576,8 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
       return ReportsContent(
         key: ValueKey('Reports'),
         userId: widget.userId, 
-        role: widget.userRole
+        role: widget.userRole,
+        globalSearchQuery: _globalSearchController.text,
       );
     }
 
@@ -592,6 +601,9 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
     if (_activeItem == 'Update Requests') {
       return UpdateRequestsContent(
           key: ValueKey('Update Requests'),
+          globalSearchQuery: _globalSearchController.text,
+          userId: widget.userId,
+          userRole: widget.userRole,
           onBackToDashboard: () {
             _fetchStats();
             _fetchPaymentDetails();
@@ -638,7 +650,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFF2D1B18),
+                color: const Color(0xFF2D1B18),
               ),
             ),
           ),
@@ -916,10 +928,11 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
                               borderRadius: BorderRadius.circular(4),
                             ),
                             padding: const EdgeInsets.symmetric(horizontal: 16),
-                            child: const Row(
+                            child: Row(
                               children: [
                                 Expanded(
                                   child: TextField(
+                                    controller: _globalSearchController,
                                     style: TextStyle(color: Colors.white),
                                     decoration: InputDecoration(
                                       hintText: 'Search ...',
@@ -945,7 +958,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
         return Container(
           height: 85, // Matches sidebar header (20 + 44 + 20 = 84) + Divider (1)
           decoration: const BoxDecoration(
-            color: Color(0xFF2D1B18),
+            color: const Color(0xFF2D1B18),
             border: Border(
               bottom: BorderSide(
                 color: Colors.white24,
@@ -968,12 +981,13 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
                       borderRadius: BorderRadius.circular(4),
                     ),
                     padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: const Row(
+                    child: Row(
                       children: [
                         Expanded(
                           child: TextField(
-                            style: TextStyle(color: Colors.white),
-                            decoration: InputDecoration(
+                            controller: _globalSearchController,
+                            style: const TextStyle(color: Colors.white),
+                            decoration: const InputDecoration(
                               hintText: 'Search ...',
                               hintStyle: TextStyle(color: Colors.white54),
                               border: InputBorder.none,
@@ -981,7 +995,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
                             ),
                           ),
                         ),
-                        Icon(Icons.search, color: Colors.white54, size: 20),
+                        const Icon(Icons.search, color: Colors.white54, size: 20),
                       ],
                     ),
                   ),
@@ -1020,6 +1034,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
       child: IconButton(
         icon: Icon(icon, color: color, size: 30),
         onPressed: () => _navigateTo(targetPage),
+        tooltip: targetPage,
       ),
     );
   }
@@ -1048,7 +1063,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
           value: 'change_password',
           child: Row(
             children: [
-              Icon(Icons.key, size: 18, color: Colors.blue),
+              Icon(Icons.key, size: 18, color: const Color(0xFF5D1712)),
               SizedBox(width: 12),
               Text('Change Password', style: TextStyle(fontSize: 14)),
             ],
@@ -1076,7 +1091,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
               children: [
                 const CircleAvatar(
                   radius: 20,
-                  backgroundColor: Colors.blue,
+                  backgroundColor: const Color(0xFF5D1712),
                   child: Icon(Icons.person, color: Colors.white, size: 24),
                 ),
                 const SizedBox(width: 12),
@@ -1119,7 +1134,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
               const SizedBox(width: 12),
               const CircleAvatar(
                 radius: 20,
-                backgroundColor: Colors.blue,
+                backgroundColor: const Color(0xFF5D1712),
                 child: Icon(Icons.person, color: Colors.white, size: 24),
               ),
               const Icon(Icons.keyboard_arrow_down, color: Colors.white54, size: 20),
@@ -1137,9 +1152,11 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
         final visibleCards = widget.userRole == 2 ? 2 : 3;
         final cardWidth = isMobile
             ? (constraints.maxWidth - (12 * (visibleCards - 1))) / visibleCards
-            : (constraints.maxWidth - (24 * (visibleCards - 1))) / visibleCards;
+            : ((constraints.maxWidth - (24 * (visibleCards - 1))) / visibleCards).clamp(0.0, 300.0);
 
-        return Wrap(
+        return Center(
+          child: Wrap(
+            alignment: WrapAlignment.center,
           spacing: isMobile ? 12 : 24,
           runSpacing: isMobile ? 12 : 24,
           children: [
@@ -1147,7 +1164,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
               _StatCard(
                 title: 'COORDINATORS',
                 value: _isLoadingStats ? '...' : _coordinatorsCount.toString(),
-                color: const Color(0xFF3B82F6),
+                color: const Color(0xFF5D1712),
                 width: cardWidth,
                 icon: Icons.shopping_cart_outlined,
                 onTap: () => _navigateTo('Coordinators'),
@@ -1171,7 +1188,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
               },
             ),
           ],
-        );
+        ));
       },
     );
   }
@@ -1219,7 +1236,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
         decoration: BoxDecoration(
           gradient: isSelected 
               ? const LinearGradient(
-                  colors: [Color(0xFF3B82F6), Color(0xFF2563EB)],
+                  colors: [const Color(0xFF5D1712), const Color(0xFF2563EB)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 )
@@ -1229,7 +1246,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: const Color(0xFF3B82F6).withOpacity(0.3),
+                    color: const Color(0xFF5D1712).withOpacity(0.3),
                     blurRadius: 8,
                     offset: const Offset(0, 4),
                   ),
@@ -1275,18 +1292,35 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
     final totalPaid = _pendingPayments
         .where((payment) => (payment['balanceamount'] ?? 0.0) <= 0)
         .fold(0.0, (sum, item) {
-          final double tax = double.tryParse(item['Taxamount']?.toString() ?? '0.0') ?? 0.0;
+          final double tax = double.tryParse(item['TaxAmount']?.toString() ?? '0.0') ?? 0.0;
           return sum + tax;
         });
 
     final filteredPayments = _pendingPayments.where((payment) {
       final balance = payment['balanceamount'] ?? 0.0;
       final isPaid = balance <= 0;
+      
+      bool matchesFilter = false;
       if (_paymentFilter == 'PAID') {
-        return isPaid;
+        matchesFilter = isPaid;
       } else {
-        return !isPaid;
+        matchesFilter = !isPaid;
       }
+
+      if (matchesFilter && _globalSearchController.text.isNotEmpty) {
+        final query = _globalSearchController.text.toLowerCase();
+        final eventName = (payment['EventName']?.toString() ?? '').toLowerCase();
+        final year = (payment['year']?.toString() ?? '').toLowerCase();
+        final fid = (payment['Fid']?.toString() ?? '').toLowerCase();
+        final familyHead = (payment['FamilyHeadName']?.toString() ?? '').toLowerCase();
+        
+        matchesFilter = eventName.contains(query) || 
+                        year.contains(query) || 
+                        fid.contains(query) ||
+                        familyHead.contains(query);
+      }
+
+      return matchesFilter;
     }).toList();
 
     return LayoutBuilder(
@@ -1359,7 +1393,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF2D1B18), Color(0xFF2D1B18)],
+          colors: [const Color(0xFF2D1B18), const Color(0xFF2D1B18)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -1435,7 +1469,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
   Widget _buildPaymentCard(Map<String, dynamic> payment, int index, double width) {
     final balance = payment['balanceamount'] ?? 0.0;
     final isPaid = balance <= 0;
-    final isPartial = balance > 0 && balance < (payment['Taxamount'] ?? 0.0);
+    final isPartial = balance > 0 && balance < (payment['TaxAmount'] ?? 0.0);
     final eventId = payment['Id'];
     final year = payment['year'];
 
@@ -1502,11 +1536,11 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
                             const SizedBox(width: 12),
                             Expanded(
                               child: Text(
-                                payment['eventname'] ?? 'N/A',
+                                payment['EventName'] ?? 'N/A',
                                 style: const TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
-                                  color: Color(0xFF2D1B18),
+                                  color: const Color(0xFF2D1B18),
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
@@ -1540,7 +1574,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
                       ),
                     ),
                   ),
-                  const Divider(height: 24, color: Color(0xFFE2E8F0)),
+                  const Divider(height: 24, color: const Color(0xFFE2E8F0)),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -1558,7 +1592,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            '₹${payment['Taxamount'] ?? '0.00'}',
+                            '₹${payment['TaxAmount'] ?? '0.00'}',
                             style: const TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.bold,
@@ -1642,7 +1676,7 @@ class _StatCardState extends State<_StatCard> {
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeInOut,
           width: widget.width,
-          constraints: BoxConstraints(minHeight: isCompact ? 90 : 140),
+          constraints: BoxConstraints(minHeight: isCompact ? 70 : 100),
           decoration: BoxDecoration(
             color: widget.color,
             borderRadius: BorderRadius.circular(16),
@@ -1674,7 +1708,7 @@ class _StatCardState extends State<_StatCard> {
                         duration: const Duration(milliseconds: 300),
                         child: Icon(
                           widget.icon,
-                          size: isCompact ? 50 : 100,
+                          size: isCompact ? 40 : 70,
                           color: Colors.white.withOpacity(0.15),
                         ),
                       ),
@@ -1682,7 +1716,7 @@ class _StatCardState extends State<_StatCard> {
                   ),
                   // Content
                   Padding(
-                    padding: EdgeInsets.all(isCompact ? 12 : 24),
+                    padding: EdgeInsets.all(isCompact ? 10 : 16),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -1699,12 +1733,12 @@ class _StatCardState extends State<_StatCard> {
                             ),
                           ),
                         ),
-                        SizedBox(height: isCompact ? 4 : 8),
+                        SizedBox(height: isCompact ? 2 : 6),
                         Text(
                           widget.value,
                           style: TextStyle(
                             color: Colors.white,
-                            fontSize: isCompact ? 24 : 42,
+                            fontSize: isCompact ? 20 : 32,
                             fontWeight: FontWeight.bold,
                           ),
                         ),

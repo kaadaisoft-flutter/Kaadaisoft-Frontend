@@ -25,7 +25,7 @@ class ReceiptContent extends StatelessWidget {
         children: [
           _buildHeader(),
           const SizedBox(height: 20),
-          const Divider(color: Colors.blueAccent, thickness: 1),
+          Divider(color: const Color(0xFF5D1712), thickness: 1),
           const SizedBox(height: 16),
           
           _buildBillInfo(),
@@ -34,7 +34,7 @@ class ReceiptContent extends StatelessWidget {
           _buildDetailRow('பெயர் / Name', memberData['Name'] ?? '-'),
           _buildDetailRow('உறுப்பினர் எண் / ID', memberData['Familymembershipid'] ?? '-'),
           _buildDetailRow('முகவரி / Address', memberData['Village'] ?? '-'),
-          _buildDetailRow('நிகழ்ச்சி / Event', receiptData['eventname'] ?? '-'),
+          _buildDetailRow('நிகழ்ச்சி / Event', receiptData['eventname'] ?? receiptData['EventName'] ?? '-'),
           _buildDetailRow('வகை / Type', receiptData['paymenttype'] ?? receiptData['cashtype'] ?? '-'),
           _buildDetailRow('வங்கி / Bank', receiptData['bankname'] ?? receiptData['banknameforcheckque'] ?? '-'),
           _buildDetailRow('பரிவர்த்தனை ID / Ref', (receiptData['transactionid'] ?? receiptData['upitransactionid'] ?? receiptData['checkqueno'] ?? receiptData['bankrefid'] ?? '-').toString()),
@@ -43,7 +43,7 @@ class ReceiptContent extends StatelessWidget {
           const Divider(color: Colors.black12),
           const SizedBox(height: 16),
           
-          _buildDetailRow('மொத்த தொகை / Total', '₹${receiptData['Taxamount'] ?? receiptData['taxamount'] ?? '0.00'}', isBold: true),
+          _buildDetailRow('மொத்த தொகை / Total Amount', '₹${receiptData['TaxAmount'] ?? receiptData['Taxamount'] ?? receiptData['taxamount'] ?? '0.00'}', isBold: true),
           _buildDetailRow('தற்போதைய கட்டணம் / Current Paid', '₹${receiptData['paidamount'] ?? receiptData['paid_amount'] ?? '0.00'}', isBlue: true),
           _buildDetailRow('மொத்தமாக செலுத்தியது / Total Collected', '₹${receiptData['Collectedamount'] ?? receiptData['collected_amount'] ?? receiptData['paidamount'] ?? '0.00'}', isBold: true),
           _buildDetailRow('இருப்பு தொகை / Balance', '₹${receiptData['balanceamount'] ?? receiptData['balance_amount'] ?? '0.00'}', isBold: true, isRed: true),
@@ -90,7 +90,7 @@ class ReceiptContent extends StatelessWidget {
   }
 
   Widget _buildBillInfo() {
-    final billNo = receiptData['id']?.toString() ?? '-';
+    final billNo = (receiptData['id'] ?? receiptData['Id'])?.toString() ?? '-';
     final date = receiptData['paymentdate'] ?? '-';
 
     return Container(
@@ -158,7 +158,7 @@ class ReceiptContent extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: isBold || isBlue || isRed ? FontWeight.bold : FontWeight.w600,
-                    color: isBlue ? Colors.blue.shade700 : (isRed ? Colors.red.shade700 : Colors.black87),
+                    color: isBlue ? const Color(0xFF5D1712) : (isRed ? Colors.red.shade700 : Colors.black87),
                   ),
                 ),
               ),
@@ -184,7 +184,7 @@ class ReceiptContent extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: isBold || isBlue || isRed ? FontWeight.bold : FontWeight.w600,
-                    color: isBlue ? Colors.blue.shade700 : (isRed ? Colors.red.shade700 : Colors.black87),
+                    color: isBlue ? const Color(0xFF5D1712) : (isRed ? Colors.red.shade700 : Colors.black87),
                   ),
                 ),
               ),

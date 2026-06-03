@@ -18,7 +18,7 @@ class PrivacyPolicyPage extends StatelessWidget {
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [Color(0xFF2D1B18), Color(0xFF2D1B18)],
+                  colors: [const Color(0xFF2D1B18), const Color(0xFF2D1B18)],
                 ),
               ),
               child: Column(
@@ -91,7 +91,7 @@ class PrivacyPolicyPage extends StatelessWidget {
                     const Text(
                       'LAST UPDATED: MAY 07, 2026',
                       style: TextStyle(
-                        color: Color(0xFFE65100),
+                        color: const Color(0xFFE65100),
                         fontWeight: FontWeight.w600,
                         fontSize: 13,
                         letterSpacing: 1,
@@ -103,7 +103,7 @@ class PrivacyPolicyPage extends StatelessWidget {
                       'At **Poondurai Kaadai Kulam**, we are committed to protecting your personal data and ensuring that your privacy is respected. This policy explains how we collect, use, and safeguard your information.',
                       style: TextStyle(
                         fontSize: 16.5,
-                        color: Color(0xFF475569),
+                        color: const Color(0xFF475569),
                         height: 1.7,
                       ),
                     ),
@@ -125,7 +125,7 @@ class PrivacyPolicyPage extends StatelessWidget {
                             'We collect information you provide directly to us when you register for an account, including:',
                             style: TextStyle(
                               fontSize: 16.5,
-                              color: Color(0xFF475569),
+                              color: const Color(0xFF475569),
                               height: 1.7,
                             ),
                           ),
@@ -206,7 +206,7 @@ class PrivacyPolicyPage extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFF2D1B18),
+                color: const Color(0xFF2D1B18),
               ),
             ),
           ),
@@ -220,7 +220,7 @@ class PrivacyPolicyPage extends StatelessWidget {
       text,
       style: const TextStyle(
         fontSize: 16.5,
-        color: Color(0xFF475569),
+        color: const Color(0xFF475569),
         height: 1.7,
       ),
     );
@@ -234,13 +234,13 @@ class PrivacyPolicyPage extends StatelessWidget {
         children: [
           const Padding(
             padding: EdgeInsets.only(top: 10),
-            child: Icon(Icons.circle, size: 6, color: Color(0xFF475569)),
+            child: Icon(Icons.circle, size: 6, color: const Color(0xFF475569)),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: RichText(
               text: TextSpan(
-                style: const TextStyle(fontSize: 16.5, color: Color(0xFF475569), height: 1.7),
+                style: const TextStyle(fontSize: 16.5, color: const Color(0xFF475569), height: 1.7),
                 children: [
                   TextSpan(text: '$title: ', style: const TextStyle(fontWeight: FontWeight.bold)),
                   TextSpan(text: description),
@@ -261,7 +261,7 @@ class PrivacyPolicyPage extends StatelessWidget {
         children: [
           const Padding(
             padding: EdgeInsets.only(top: 10),
-            child: Icon(Icons.circle, size: 6, color: Color(0xFF475569)),
+            child: Icon(Icons.circle, size: 6, color: const Color(0xFF475569)),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -269,7 +269,7 @@ class PrivacyPolicyPage extends StatelessWidget {
               text,
               style: const TextStyle(
                 fontSize: 16.5,
-                color: Color(0xFF475569),
+                color: const Color(0xFF475569),
                 height: 1.7,
               ),
             ),

@@ -33,8 +33,7 @@ class _ReceiptDialogState extends State<ReceiptDialog> {
     
     try {
       final image = await _screenshotController.capture(
-        delay: const Duration(milliseconds: 100),
-        pixelRatio: 3.0,
+        pixelRatio: 1.5,
       );
 
       if (image != null) {

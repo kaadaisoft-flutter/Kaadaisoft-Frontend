@@ -6,11 +6,13 @@ class LoadingSpinner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
+    return Material(
+      color: Colors.transparent,
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
               color: Colors.white,
@@ -25,7 +27,7 @@ class LoadingSpinner extends StatelessWidget {
             ),
             child: const CircularProgressIndicator(
               strokeWidth: 3,
-              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF3B82F6)),
+              valueColor: AlwaysStoppedAnimation<Color>(const Color(0xFF5D1712)),
             ),
           ),
           if (message != null) ...[
@@ -33,7 +35,7 @@ class LoadingSpinner extends StatelessWidget {
             Text(
               message!,
               style: const TextStyle(
-                color: Color(0xFF2D1B18),
+                color: const Color(0xFF2D1B18),
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
               ),
@@ -41,6 +43,6 @@ class LoadingSpinner extends StatelessWidget {
           ],
         ],
       ),
-    );
+    ));
   }
 }

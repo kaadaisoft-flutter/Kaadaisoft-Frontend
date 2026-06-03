@@ -227,7 +227,7 @@ class _PaymentFormState extends State<PaymentForm> {
                   children: [
                     Row(
                       children: [
-                        const Icon(Icons.account_balance, color: Color(0xFF3B82F6)),
+                        Icon(Icons.account_balance, color: const Color(0xFF5D1712)),
                         const SizedBox(width: 12),
                         const Text('Choose bank', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                         const Spacer(),
@@ -308,7 +308,7 @@ class _PaymentFormState extends State<PaymentForm> {
               // Header
               Row(
                 children: [
-                  const Icon(Icons.receipt_long, color: Color(0xFF3B82F6), size: 28),
+                  Icon(Icons.receipt_long, color: const Color(0xFF5D1712), size: 28),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
@@ -361,7 +361,7 @@ class _PaymentFormState extends State<PaymentForm> {
                     icon: _isLoading ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Icon(Icons.check_circle_outline),
                     label: Text(_isLoading ? 'Saving...' : 'Save Receipt', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF3B82F6),
+                      backgroundColor: const Color(0xFF5D1712),
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       elevation: 0,
@@ -390,9 +390,9 @@ class _PaymentFormState extends State<PaymentForm> {
         children: [
           Row(
             children: [
-              Icon(icon, size: 20, color: const Color(0xFF3B82F6)),
+              Icon(icon, size: 20, color: const Color(0xFF5D1712)),
               const SizedBox(width: 10),
-              Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF3B82F6))),
+              Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF5D1712))),
             ],
           ),
           const SizedBox(height: 20),
@@ -406,26 +406,26 @@ class _PaymentFormState extends State<PaymentForm> {
     final address = "${widget.memberData['Street'] ?? ''}, ${widget.memberData['Village'] ?? ''}, ${widget.memberData['Taluk'] ?? ''}, ${widget.memberData['District'] ?? ''}, Tamil Nadu - ${widget.memberData['Pincode'] ?? ''}";
     
     return _buildCard(
-      title: 'Member Info',
+      title: 'My Info',
       icon: Icons.person_outline,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _infoRow('Name:', widget.memberData['Name'] ?? 'N/A', isBold: true),
           const SizedBox(height: 12),
-          _infoRow('ID:', widget.memberData['Familymembershipid'] ?? 'N/A', color: const Color(0xFF3B82F6), isBold: true),
+          _infoRow('ID:', widget.memberData['Familymembershipid'] ?? 'N/A', color: const Color(0xFF5D1712), isBold: true),
           const SizedBox(height: 12),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Address:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF64748B))),
+              const Text('Address:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: const Color(0xFF64748B))),
               const SizedBox(height: 4),
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.location_on, size: 14, color: Color(0xFF94A3B8)),
+                  const Icon(Icons.location_on, size: 14, color: const Color(0xFF94A3B8)),
                   const SizedBox(width: 4),
-                  Expanded(child: Text(address, style: const TextStyle(fontSize: 12, color: Color(0xFF2D1B18), height: 1.4))),
+                  Expanded(child: Text(address, style: const TextStyle(fontSize: 12, color: const Color(0xFF2D1B18), height: 1.4))),
                 ],
               ),
             ],
@@ -438,7 +438,7 @@ class _PaymentFormState extends State<PaymentForm> {
   Widget _infoRow(String label, String value, {Color? color, bool isBold = false}) {
     return Row(
       children: [
-        Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF64748B))),
+        Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: const Color(0xFF64748B))),
         const SizedBox(width: 12),
         Expanded(child: Text(value, style: TextStyle(fontSize: 14, fontWeight: isBold ? FontWeight.bold : FontWeight.normal, color: color ?? const Color(0xFF2D1B18)), overflow: TextOverflow.ellipsis)),
       ],
@@ -452,7 +452,7 @@ class _PaymentFormState extends State<PaymentForm> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Event Year', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF64748B))),
+          const Text('Event Year', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF64748B))),
           const SizedBox(height: 6),
           DropdownButtonFormField<int?>(
             value: _selectedYear,
@@ -482,7 +482,7 @@ class _PaymentFormState extends State<PaymentForm> {
             },
           ),
           const SizedBox(height: 16),
-          const Text('Event', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF64748B))),
+          const Text('Event', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF64748B))),
           const SizedBox(height: 6),
           DropdownButtonFormField<int>(
             value: _selectedEventId,
@@ -501,7 +501,7 @@ class _PaymentFormState extends State<PaymentForm> {
             validator: (v) => v == null ? 'Required' : null,
           ),
           const SizedBox(height: 16),
-          const Text('Pay Amount *', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF64748B))),
+          const Text('Pay Amount *', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF64748B))),
           const SizedBox(height: 6),
           TextFormField(
             controller: _amountController,
@@ -535,9 +535,9 @@ class _PaymentFormState extends State<PaymentForm> {
             decoration: BoxDecoration(color: const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(8), border: Border.all(color: const Color(0xFFE2E8F0))),
             child: Row(
               children: [
-                const Icon(Icons.calendar_today, size: 14, color: Color(0xFF64748B)),
+                const Icon(Icons.calendar_today, size: 14, color: const Color(0xFF64748B)),
                 const SizedBox(width: 10),
-                Text('Date: ${DateFormat('dd MMM yyyy').format(DateTime.now())}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF2D1B18))),
+                Text('Date: ${DateFormat('dd MMM yyyy').format(DateTime.now())}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF2D1B18))),
               ],
             ),
           ),
@@ -570,7 +570,7 @@ class _PaymentFormState extends State<PaymentForm> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Color(0xFF64748B))),
+        Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: const Color(0xFF64748B))),
         const SizedBox(height: 4),
         Container(
           width: double.infinity,
@@ -615,7 +615,7 @@ class _PaymentFormState extends State<PaymentForm> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Choose Bank *', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF64748B))),
+                  const Text('Choose Bank *', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF64748B))),
                   const SizedBox(height: 6),
                   InkWell(
                     onTap: _showBankSearchDialog,
@@ -670,12 +670,12 @@ class _PaymentFormState extends State<PaymentForm> {
                     const SizedBox(height: 16),
                     const Text(
                       'UPI ID:',
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF64748B)),
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF64748B)),
                     ),
                     const SizedBox(height: 4),
                     const Text(
                       'KADAIKULANARPANIMANDRAM@iob',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF3B82F6)),
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF5D1712)),
                     ),
                     const SizedBox(height: 24),
                     Container(
@@ -713,9 +713,9 @@ class _PaymentFormState extends State<PaymentForm> {
             value: value,
             groupValue: _paymentMethod,
             onChanged: (v) => setState(() => _paymentMethod = v!),
-            activeColor: const Color(0xFF3B82F6),
+            activeColor: const Color(0xFF5D1712),
           ),
-          Icon(icon, size: 20, color: isSelected ? const Color(0xFF3B82F6) : const Color(0xFF64748B)),
+          Icon(icon, size: 20, color: isSelected ? const Color(0xFF5D1712) : const Color(0xFF64748B)),
           const SizedBox(width: 8),
           Text(value, style: TextStyle(fontSize: 14, fontWeight: isSelected ? FontWeight.bold : FontWeight.w500, color: isSelected ? const Color(0xFF2D1B18) : const Color(0xFF64748B))),
         ],
@@ -727,7 +727,7 @@ class _PaymentFormState extends State<PaymentForm> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF64748B))),
+        Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF64748B))),
         const SizedBox(height: 6),
         TextFormField(
           controller: controller,
@@ -750,7 +750,7 @@ class _PaymentFormState extends State<PaymentForm> {
         ? Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Person Received the Money *', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF64748B))),
+              const Text('Person Received the Money *', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF64748B))),
               const SizedBox(height: 6),
               TextFormField(
                 controller: _receiverController,
@@ -776,7 +776,7 @@ class _PaymentFormState extends State<PaymentForm> {
                       onChanged: (v) => setState(() => _isConfirmed = v!),
                       activeColor: Colors.green,
                     ),
-                    const Expanded(child: Text('Confirm Details', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF059669)))),
+                    const Expanded(child: Text('Confirm Details', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFF059669)))),
                   ],
                 ),
               ),
@@ -790,7 +790,7 @@ class _PaymentFormState extends State<PaymentForm> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Person Received the Money *', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF64748B))),
+                    const Text('Person Received the Money *', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF64748B))),
                     const SizedBox(height: 6),
                     TextFormField(
                       controller: _receiverController,
@@ -821,7 +821,7 @@ class _PaymentFormState extends State<PaymentForm> {
                         onChanged: (v) => setState(() => _isConfirmed = v!),
                         activeColor: Colors.green,
                       ),
-                      const Expanded(child: Text('Confirm Details', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF059669)))),
+                      const Expanded(child: Text('Confirm Details', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFF059669)))),
                     ],
                   ),
                 ),

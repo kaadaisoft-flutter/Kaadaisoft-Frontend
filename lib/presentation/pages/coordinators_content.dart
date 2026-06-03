@@ -7,11 +7,13 @@ import '../widgets/custom_dialog.dart';
 import '../../utils/api_config.dart';
 import 'update_details_content.dart';
 import 'coordinator_details_content.dart';
-import 'member_id_card_view.dart';
+import 'coordinator_responsibilities_content.dart';
+
 
 class CoordinatorsContent extends StatefulWidget {
   final bool initialShowAssign;
-  const CoordinatorsContent({super.key, this.initialShowAssign = false});
+  final String? globalSearchQuery;
+  const CoordinatorsContent({super.key, this.initialShowAssign = false, this.globalSearchQuery});
 
 
   @override
@@ -22,8 +24,6 @@ class _CoordinatorsContentState extends State<CoordinatorsContent> {
   List<dynamic> _coordinators = [];
   bool _isLoading = true;
   String _errorMessage = '';
-  bool _showIDCard = false;
-  Map<String, dynamic>? _selectedCoordinatorData;
 
   int _currentPage = 1;
   final int _itemsPerPage = 10;
@@ -46,8 +46,20 @@ class _CoordinatorsContentState extends State<CoordinatorsContent> {
   void initState() {
     super.initState();
     _showAssignView = widget.initialShowAssign;
+    if (widget.globalSearchQuery != null) {
+      _searchController.text = widget.globalSearchQuery!;
+    }
     _fetchDistricts();
     _fetchCoordinators();
+  }
+
+  @override
+  void didUpdateWidget(covariant CoordinatorsContent oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.globalSearchQuery != oldWidget.globalSearchQuery) {
+      _searchController.text = widget.globalSearchQuery ?? '';
+      _fetchCoordinators();
+    }
   }
 
 
@@ -189,6 +201,26 @@ class _CoordinatorsContentState extends State<CoordinatorsContent> {
     );
   }
 
+  void _showCoordinatorResponsibilitiesDialog(String numericId, String familyId) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+        child: Container(
+          width: 1000,
+          constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.9),
+          child: CoordinatorResponsibilitiesContent(
+            numericId: numericId,
+            familyId: familyId,
+            onBack: () => Navigator.pop(context),
+          ),
+        ),
+      ),
+    );
+  }
+
   void _showEditCoordinatorDialog(String memberId) async {
     // Show a loading dialog while fetching details
     showDialog(
@@ -284,13 +316,6 @@ class _CoordinatorsContentState extends State<CoordinatorsContent> {
       );
     }
 
-    if (_showIDCard && _selectedCoordinatorData != null) {
-      return MemberIDCardView(
-        userData: _selectedCoordinatorData!,
-        onBack: () => setState(() => _showIDCard = false),
-      );
-    }
-
     if (_isLoading) {
       return const LoadingSpinner(message: 'Loading coordinators...');
     }
@@ -319,7 +344,7 @@ class _CoordinatorsContentState extends State<CoordinatorsContent> {
                   style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF2D1B18),
+                    color: const Color(0xFF2D1B18),
                   ),
                 ),
                 Row(
@@ -334,9 +359,9 @@ class _CoordinatorsContentState extends State<CoordinatorsContent> {
                       icon: const Icon(Icons.filter_alt_outlined, size: 18),
                       label: const Text('Filter', style: TextStyle(fontWeight: FontWeight.bold)),
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: _showFilters ? Colors.white : Colors.blue,
-                        backgroundColor: _showFilters ? Colors.blue : Colors.transparent,
-                        side: const BorderSide(color: Colors.blue),
+                        foregroundColor: _showFilters ? Colors.white : const Color(0xFF5D1712),
+                        backgroundColor: _showFilters ? const Color(0xFF5D1712) : Colors.transparent,
+                        side: const BorderSide(color: const Color(0xFF5D1712)),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                       ),
@@ -373,12 +398,12 @@ class _CoordinatorsContentState extends State<CoordinatorsContent> {
           children: [
             const Text(
               'Total Coordinators: ',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF2D1B18)),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF2D1B18)),
             ),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
-                color: Colors.blue,
+                color: const Color(0xFF5D1712),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
@@ -402,72 +427,136 @@ class _CoordinatorsContentState extends State<CoordinatorsContent> {
             borderRadius: BorderRadius.circular(8),
             child: Column(
               children: [
-                Scrollbar(
-                  controller: _horizontalScrollController,
-                  thumbVisibility: true,
-                  trackVisibility: true,
-                  child: SingleChildScrollView(
-                    controller: _horizontalScrollController,
-                    scrollDirection: Axis.horizontal,
-                    child: SizedBox(
-                      width: 1170,
-                      child: Column(
-                        children: [
-                          // Header
-                          Container(
-                            color: const Color(0xFF2D1B18),
-                            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
-                            child: const Row(
-                              children: [
-                                SizedBox(width: 50, child: Text('S.NO', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12))),
-                                SizedBox(width: 110, child: Text('USER ID', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12), textAlign: TextAlign.center)),
-                                SizedBox(width: 110, child: Text('NAME', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12), textAlign: TextAlign.center)),
-                                SizedBox(width: 120, child: Text('MOBILE', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12), textAlign: TextAlign.center)),
-                                SizedBox(width: 100, child: Text('DISTRICT', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12), textAlign: TextAlign.center)),
-                                SizedBox(width: 100, child: Text('TALUK', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12), textAlign: TextAlign.center)),
-                                SizedBox(width: 130, child: Text('PANCHAYAT', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12), textAlign: TextAlign.center)),
-                                SizedBox(width: 130, child: Text('VILLAGE', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12), textAlign: TextAlign.center)),
-                                SizedBox(width: 140, child: Text('ASSIGNED\nVILLAGES', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11), textAlign: TextAlign.center)),
-                                SizedBox(width: 110, child: Text('ACTIONS', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12), textAlign: TextAlign.center)),
-                              ],
-                            ),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final isNarrow = constraints.maxWidth < 600;
+                    
+                    Widget rightPart = Column(
+                      children: [
+                        Container(
+                          color: const Color(0xFF2D1B18),
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          child: Row(
+                            children: [
+                              _buildHeaderCell('DISTRICT', 100),
+                              _buildHeaderCell('TALUK', 100),
+                              _buildHeaderCell('PANCHAYAT', 130),
+                              _buildHeaderCell('VILLAGE', 130),
+                              _buildHeaderCell('ACTIONS', 120, isLast: true),
+                            ],
                           ),
-                          // Rows
-                          _errorMessage.isNotEmpty
-                              ? Padding(
-                                  padding: const EdgeInsets.all(32.0),
-                                  child: Center(child: Text(_errorMessage, style: const TextStyle(color: Colors.red))),
-                                )
-                              : _coordinators.isEmpty && !_isLoading
-                                  ? const Padding(
-                                      padding: EdgeInsets.all(32.0),
-                                      child: Center(child: Text('No coordinators found.', style: TextStyle(color: Colors.black54))),
+                        ),
+                        _errorMessage.isNotEmpty
+                            ? const SizedBox(height: 64) // Placeholder height to match left side error
+                            : _coordinators.isEmpty && !_isLoading
+                                ? const SizedBox(height: 64) // Placeholder height
+                                : ListView.separated(
+                                    padding: EdgeInsets.zero,
+                                    shrinkWrap: true,
+                                    physics: const NeverScrollableScrollPhysics(),
+                                    itemCount: currentPage.length,
+                                    separatorBuilder: (_, __) => const Divider(height: 1),
+                                    itemBuilder: (context, index) {
+                                      final c = currentPage[index];
+                                      return _buildScrollableRow(
+                                        c['Id']?.toString() ?? '0',
+                                        c['Familymembershipid'] ?? 'N/A',
+                                        c['District'] ?? '-',
+                                        c['Taluk'] ?? '-',
+                                        c['Panchayat'] ?? '-',
+                                        c['Village'] ?? '-',
+                                      );
+                                    },
+                                  ),
+                      ],
+                    );
+                    
+                    Widget tableContent = Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Fixed Left Part
+                        SizedBox(
+                          width: 390, // 50+110+110+120
+                          child: Column(
+                            children: [
+                              Container(
+                                color: const Color(0xFF2D1B18),
+                                padding: const EdgeInsets.symmetric(vertical: 8),
+                                child: Row(
+                                  children: [
+                                    _buildHeaderCell('S.NO', 50),
+                                    _buildHeaderCell('USER ID', 110),
+                                    _buildHeaderCell('NAME', 110),
+                                    _buildHeaderCell('MOBILE', 120),
+                                  ],
+                                ),
+                              ),
+                              _errorMessage.isNotEmpty
+                                  ? Padding(
+                                      padding: const EdgeInsets.all(32.0),
+                                      child: Center(child: Text(_errorMessage, style: const TextStyle(color: Colors.red))),
                                     )
-                                  : ListView.separated(padding: EdgeInsets.zero,
-                                      shrinkWrap: true,
-                                      physics: const NeverScrollableScrollPhysics(),
-                                      itemCount: currentPage.length,
-                                      separatorBuilder: (_, __) => const Divider(height: 1),
-                                        itemBuilder: (context, index) {
-                                          final c = currentPage[index];
-                                          return _buildRow(
-                                            (startIndex + index + 1).toString(),
-                                            c['Id']?.toString() ?? '0',
-                                            c['Familymembershipid'] ?? 'N/A',
-                                            c['Name'] ?? '-',
-                                            c['Phonenumber']?.toString() ?? '-',
-                                            c['District'] ?? '-',
-                                            c['Taluk'] ?? '-',
-                                            c['Panchayat'] ?? '-',
-                                            c['Village'] ?? '-',
-                                            c['VillageNames'] ?? '-',
-                                          );
-                                        },
+                                  : _coordinators.isEmpty && !_isLoading
+                                      ? const Padding(
+                                          padding: EdgeInsets.all(32.0),
+                                          child: Center(child: Text('No coordinators found.', style: TextStyle(color: Colors.black54))),
+                                        )
+                                      : ListView.separated(
+                                          padding: EdgeInsets.zero,
+                                          shrinkWrap: true,
+                                          physics: const NeverScrollableScrollPhysics(),
+                                          itemCount: currentPage.length,
+                                          separatorBuilder: (_, __) => const Divider(height: 1),
+                                          itemBuilder: (context, index) {
+                                            final c = currentPage[index];
+                                            return _buildFixedRow(
+                                              (startIndex + index + 1).toString(),
+                                              c['Id']?.toString() ?? '0',
+                                              c['Familymembershipid'] ?? 'N/A',
+                                              c['Name'] ?? '-',
+                                              c['Phonenumber']?.toString() ?? '-',
+                                            );
+                                          },
+                                        ),
+                            ],
+                          ),
+                        ),
+                        // Scrollable Right Part
+                        isNarrow 
+                            ? SizedBox(width: 580, child: rightPart)
+                            : Expanded(
+                                child: Scrollbar(
+                                  controller: _horizontalScrollController,
+                                  thumbVisibility: true,
+                                  trackVisibility: true,
+                                  child: SingleChildScrollView(
+                                    controller: _horizontalScrollController,
+                                    scrollDirection: Axis.horizontal,
+                                    child: SizedBox(
+                                      width: 580, // 100+100+130+130+120
+                                      child: rightPart,
                                     ),
-                        ],
-                      ),
-                    ),
-                  ),
+                                  ),
+                                ),
+                              ),
+                      ],
+                    );
+                    
+                    if (isNarrow) {
+                      return Scrollbar(
+                        controller: _horizontalScrollController,
+                        thumbVisibility: true,
+                        trackVisibility: true,
+                        child: SingleChildScrollView(
+                          controller: _horizontalScrollController,
+                          scrollDirection: Axis.horizontal,
+                          child: tableContent,
+                        ),
+                      );
+                    }
+                    
+                    return tableContent;
+                  },
                 ),
                 // Pagination
                 if (!_isLoading && _coordinators.isNotEmpty)
@@ -489,7 +578,7 @@ class _CoordinatorsContentState extends State<CoordinatorsContent> {
                             IconButton(
                               icon: const Icon(Icons.chevron_left),
                               onPressed: _currentPage > 1 ? () => setState(() => _currentPage--) : null,
-                              color: Colors.blue,
+                              color: const Color(0xFF5D1712),
                               splashRadius: 20,
                             ),
                             ...List.generate(totalPages, (i) {
@@ -516,7 +605,7 @@ class _CoordinatorsContentState extends State<CoordinatorsContent> {
                             IconButton(
                               icon: const Icon(Icons.chevron_right),
                               onPressed: _currentPage < totalPages ? () => setState(() => _currentPage++) : null,
-                              color: Colors.blue,
+                              color: const Color(0xFF5D1712),
                               splashRadius: 20,
                             ),
                           ],
@@ -535,77 +624,57 @@ class _CoordinatorsContentState extends State<CoordinatorsContent> {
   );
 }
 
-  Widget _buildRow(String sno, String numericId, String id, String name, String mobile,
-      String district, String taluk, String panchayat, String village,
-      String villageNames) {
-    final villages = villageNames == '-' ? <String>[] : villageNames.split(', ');
+  Widget _buildFixedRow(String sno, String numericId, String id, String name, String mobile) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: () => _showEditCoordinatorDialog(numericId),
-        hoverColor: Colors.blue.shade50.withOpacity(0.5),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
+        hoverColor: const Color(0xFFFDECEB).withOpacity(0.5),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          decoration: BoxDecoration(
+            border: Border(bottom: BorderSide(color: Colors.grey.shade100)),
+          ),
           child: Row(
             children: [
-              SizedBox(width: 50, child: Text(sno, style: const TextStyle(color: Colors.black54))),
-              SizedBox(width: 110, child: Text(id, style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold), textAlign: TextAlign.center)),
-              SizedBox(width: 110, child: Text(name, style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.w600), textAlign: TextAlign.center)),
-              SizedBox(width: 120, child: Text(mobile, style: const TextStyle(color: Colors.black54), textAlign: TextAlign.center)),
-              SizedBox(width: 100, child: Text(district, style: const TextStyle(color: Colors.black54), textAlign: TextAlign.center)),
-              SizedBox(width: 100, child: Text(taluk, style: const TextStyle(color: Colors.black54), textAlign: TextAlign.center)),
-              SizedBox(width: 130, child: Text(panchayat, style: const TextStyle(color: Colors.black54), textAlign: TextAlign.center)),
-              SizedBox(width: 130, child: Text(village, style: const TextStyle(color: Colors.black54), textAlign: TextAlign.center)),
-              // Assigned Villages - show all clearly
-              SizedBox(
-                width: 140,
-                child: Center(
-                  child: villages.isEmpty
-                      ? Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade100,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.grey.shade300),
-                          ),
-                          child: const Text('None', style: TextStyle(color: Colors.grey, fontSize: 11), textAlign: TextAlign.center),
-                        )
-                      : Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.teal.shade50,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.teal.shade200),
-                          ),
-                          child: Text(
-                            villages.join(', '),
-                            style: const TextStyle(color: Colors.teal, fontSize: 11, fontWeight: FontWeight.w600),
-                            textAlign: TextAlign.center,
-                            softWrap: true,
-                          ),
-                        ),
-                ),
-              ),
-              // Action Icons
-              SizedBox(
-                width: 110,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    _actionIcon(Icons.edit_outlined, Colors.blue, () => _showEditCoordinatorDialog(numericId)),
-                    const SizedBox(width: 6),
-                    _actionIcon(Icons.visibility_outlined, Colors.green, () => _showCoordinatorDetailsDialog(numericId, id)),
-                    const SizedBox(width: 6),
-                    _actionIcon(Icons.badge_outlined, Colors.teal, () {
-                      final coordData = _coordinators.firstWhere((element) => element['Id'].toString() == numericId);
-                      setState(() {
-                        _selectedCoordinatorData = coordData;
-                        _showIDCard = true;
-                      });
-                    }),
-                  ],
-                ),
-              ),
+              _buildDataCell(sno, 50),
+              _buildDataCell(id, 110, isBlue: true),
+              _buildDataCell(name, 110, isBold: true),
+              _buildDataCell(mobile, 120),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildScrollableRow(String numericId, String id, String district, String taluk, String panchayat, String village) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => _showEditCoordinatorDialog(numericId),
+        hoverColor: const Color(0xFFFDECEB).withOpacity(0.5),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          decoration: BoxDecoration(
+            border: Border(bottom: BorderSide(color: Colors.grey.shade100)),
+          ),
+          child: Row(
+            children: [
+              _buildDataCell(district, 100),
+              _buildDataCell(taluk, 100),
+              _buildDataCell(panchayat, 130),
+              _buildDataCell(village, 130),
+              _buildDataCell('', 120, isLast: true, child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _actionIcon(Icons.edit_outlined, const Color(0xFF5D1712), () => _showEditCoordinatorDialog(numericId), tooltip: 'Edit'),
+                  const SizedBox(width: 8),
+                  _actionIcon(Icons.assignment_ind_outlined, Colors.orange, () => _showCoordinatorResponsibilitiesDialog(numericId, id), tooltip: 'Responsibilities'),
+                  const SizedBox(width: 8),
+                  _actionIcon(Icons.visibility_outlined, Colors.green, () => _showCoordinatorDetailsDialog(numericId, id), tooltip: 'View'),
+                ],
+              )),
             ],
           ),
         ),
@@ -614,20 +683,64 @@ class _CoordinatorsContentState extends State<CoordinatorsContent> {
   }
 
 
-  Widget _actionIcon(IconData icon, Color color, VoidCallback onTap) {
+  Widget _buildHeaderCell(String label, double width, {bool isLast = false}) {
+    return Container(
+      width: width,
+      decoration: BoxDecoration(
+        border: isLast ? null : const Border(right: BorderSide(color: Colors.white24, width: 1)),
+      ),
+      child: Center(
+        child: Text(
+          label,
+          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+          textAlign: TextAlign.center,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDataCell(String text, double width, {bool isBlue = false, bool isBold = false, Widget? child, bool isLast = false}) {
+    return Container(
+      width: width,
+      height: 34,
+      decoration: BoxDecoration(
+        border: isLast ? null : Border(right: BorderSide(color: Colors.grey.shade200, width: 1)),
+      ),
+      child: Center(
+        child: child ?? Text(
+          text,
+          style: TextStyle(
+            color: isBlue ? const Color(0xFF5D1712) : Colors.black87,
+            fontWeight: isBlue || isBold ? FontWeight.bold : FontWeight.normal,
+            fontSize: 12,
+          ),
+          textAlign: TextAlign.center,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ),
+    );
+  }
+
+  Widget _actionIcon(IconData icon, Color color, VoidCallback onTap, {String? tooltip}) {
+    Widget iconWidget = Container(
+      padding: const EdgeInsets.all(6),
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(color: color.withOpacity(0.4)),
+      ),
+      child: Icon(icon, color: color, size: 16),
+    );
+
+    if (tooltip != null) {
+      iconWidget = Tooltip(message: tooltip, child: iconWidget);
+    }
+
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(20),
-        child: Container(
-          padding: const EdgeInsets.all(6),
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: color.withOpacity(0.4)),
-          ),
-          child: Icon(icon, color: color, size: 16),
-        ),
+        child: iconWidget,
       ),
     );
   }
@@ -720,7 +833,7 @@ class _CoordinatorsContentState extends State<CoordinatorsContent> {
                         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: Colors.grey.shade300)),
                         enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: Colors.grey.shade300)),
-                        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: const BorderSide(color: Colors.blue)),
+                        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: const BorderSide(color: const Color(0xFF5D1712))),
                       ),
                     ),
                   ),

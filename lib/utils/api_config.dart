@@ -8,7 +8,7 @@ class ApiConfig {
       return 'http://localhost:8000';
     } else {
       // Laptop local IP for physical/wireless mobile debugging access
-      return 'http://192.168.68.116:8000';
+      return 'http://192.168.68.105:8000';
     }
   }
 

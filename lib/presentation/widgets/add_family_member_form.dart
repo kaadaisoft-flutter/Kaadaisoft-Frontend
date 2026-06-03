@@ -5,7 +5,10 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:file_picker/file_picker.dart' as fp_pkg;
 import 'package:cross_file/cross_file.dart';
+import 'package:flutter/services.dart';
 import 'package:dropdown_search/dropdown_search.dart';
+import 'package:intl_phone_field/intl_phone_field.dart';
+import 'custom_phone_field.dart';
 import 'custom_dialog.dart';
 import '../../utils/api_config.dart';
 import '../../services/geo_data_service.dart';
@@ -26,11 +29,11 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
   bool _isSaving = false;
   
   // Design Colors
-  static const Color primaryBrown = Color(0xFF2D1B18);
-  static const Color mediumBrown = Color(0xFF3E2723);
-  static const Color accentGold = Color(0xFFC5A028);
+  static const Color primaryBrown = const Color(0xFF2D1B18);
+  static const Color mediumBrown = const Color(0xFF3E2723);
+  static const Color accentGold = const Color(0xFFC5A028);
   static const Color glassWhite = Color(0xA6FFFFFF);
-  static const Color borderColor = Color(0xFFE0E0E0);
+  static const Color borderColor = const Color(0xFFE0E0E0);
 
   // Controllers
   final ScrollController _scrollController = ScrollController();
@@ -379,15 +382,12 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
                               }
                             });
                           }),
-                          _buildInputField('Name *', _nameController, isMobile),
-                          _buildInputField('Phone Number *', _phoneController, isMobile, 
-                            keyboardType: TextInputType.phone, 
-                            maxLength: 10,
+                          _buildInputField('Name *', _nameController, isMobile, maxLength: 254),
+                          _buildIntlPhoneField('Phone Number *', _phoneController, isMobile, 
                             fieldKey: _phoneFieldKey,
-                            autovalidateMode: AutovalidateMode.onUserInteraction,
                             validator: (v) {
-                              if (v == null || v.isEmpty) return 'Required';
-                              if (v.length != 10) return 'Invalid phone number';
+                              final val = _phoneController.text;
+                              if (val.isEmpty) return 'Required';
                               if (_phoneExists) return 'Phone number already registered';
                               return null;
                             }
@@ -407,8 +407,8 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
                         ]),
 
                         _buildResponsiveRow(isMobile, [
-                          _buildInputField('Valuvu', _valuvuController, isMobile),
-                          _buildInputField('Thottam', _thottamController, isMobile),
+                          _buildInputField('Valuvu', _valuvuController, isMobile, maxLength: 254),
+                          _buildInputField('Thottam', _thottamController, isMobile, maxLength: 254),
                           _buildInputField('Kulam *', TextEditingController(text: 'Poondurai Kaadai'), isMobile, readOnly: true),
                         ]),
 
@@ -440,7 +440,7 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
                         ]),
                         _buildResponsiveRow(isMobile, [
                            _buildDropdownField('Village Name *', _villages, isMobile, value: _selectedVillage, onChanged: (v) => setState(() => _selectedVillage = v)),
-                           _buildInputField('Door No & Street Name *', _streetController, isMobile),
+                           _buildInputField('Door No & Street Name *', _streetController, isMobile, maxLength: 254),
                            _buildInputField('Pin Code *', _pinCodeController, isMobile, keyboardType: TextInputType.number, maxLength: 6),
                         ]),
 
@@ -451,8 +451,8 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
                             if (_selectedCurrentAddressType == 'Tamil Nadu')
                               TextButton.icon(
                                 onPressed: _copyNativeToCurrent,
-                                icon: const Icon(Icons.copy_all, size: 16, color: Color(0xFFC5A028)),
-                                label: const Text('Same as Native', style: TextStyle(color: Color(0xFFC5A028), fontSize: 12, fontWeight: FontWeight.bold)),
+                                icon: const Icon(Icons.copy_all, size: 16, color: const Color(0xFFC5A028)),
+                                label: const Text('Same as Native', style: TextStyle(color: const Color(0xFFC5A028), fontSize: 12, fontWeight: FontWeight.bold)),
                               ),
                           ],
                         ),
@@ -497,7 +497,8 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
                             }),
                           ]),
                           _buildResponsiveRow(isMobile, [
-                            _buildInputField('Door No & Street Name *', _currStreetController, isMobile),
+                            _buildDropdownField('Village *', _currVillages, isMobile, value: _selectedCurrVillage, onChanged: (v) => setState(() => _selectedCurrVillage = v)),
+                            _buildInputField('Door No & Street Name *', _currStreetController, isMobile, maxLength: 254),
                             _buildInputField('Pin Code *', _currPinCodeController, isMobile, keyboardType: TextInputType.number, maxLength: 6),
                           ]),
                         ] else if (_selectedCurrentAddressType == 'Other State') ...[
@@ -593,7 +594,7 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black87)),
+        _buildLabelText(label, fontSize: 14),
         const SizedBox(height: 8),
         TextFormField(
           key: fieldKey,
@@ -601,8 +602,19 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
           keyboardType: keyboardType,
           readOnly: readOnly,
           maxLength: maxLength,
-          autovalidateMode: autovalidateMode,
-          validator: validator ?? ((v) => (label.contains('*') && (v == null || v.isEmpty)) ? 'Required' : null),
+          autovalidateMode: autovalidateMode ?? AutovalidateMode.onUserInteraction,
+          inputFormatters: (keyboardType == TextInputType.phone || keyboardType == TextInputType.number)
+              ? [FilteringTextInputFormatter.digitsOnly]
+              : ((label.contains('Name') && !label.contains('Street') && !label.contains('Village')) ? [FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z\s\.]'))] : null),
+          validator: validator ?? ((v) {
+            final val = v ?? '';
+            if (label.contains('Name') && !label.contains('Street') && !label.contains('Village')) {
+              if (label.contains('*') && val.trim().isEmpty) return 'Required';
+              if (val.trim().isNotEmpty && val.trim().length < 3) return 'Name must be at least 3 characters';
+              if (val.trim().isNotEmpty && !RegExp(r'^[a-zA-Z\s\.]+$').hasMatch(val.trim())) return 'Only letters, spaces, and dots allowed';
+            }
+            return (label.contains('*') && val.isEmpty) ? 'Required' : null;
+          }),
           decoration: InputDecoration(
             fillColor: Colors.white, filled: true,
             contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -616,11 +628,27 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
     );
   }
 
+  Widget _buildIntlPhoneField(String label, TextEditingController controller, bool isMobile, {Key? fieldKey, String? Function(String?)? validator}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildLabelText(label, fontSize: 14),
+        const SizedBox(height: 8),
+        CustomPhoneField(
+          fieldKey: fieldKey,
+          label: '',
+          controller: controller,
+          validator: (v) => validator?.call(controller.text),
+        ),
+      ],
+    );
+  }
+
   Widget _buildDropdownField(String label, List<String> options, bool isMobile, {String? value, ValueChanged<String?>? onChanged}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black87)),
+        _buildLabelText(label, fontSize: 14),
         const SizedBox(height: 8),
         DropdownSearch<String>(
           items: (filter, loadProps) => options,
@@ -650,7 +678,7 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black87)),
+        _buildLabelText(label, fontSize: 14),
         const SizedBox(height: 8),
         TextFormField(
           controller: controller,
@@ -675,7 +703,7 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Gender *', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black87)),
+        _buildLabelText('Gender *', fontSize: 14),
         Wrap(
           spacing: 12,
           runSpacing: 8,
@@ -709,7 +737,7 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
   }
 
   Widget _buildEmailField(bool isMobile) {
-    return _buildInputField('Email', _emailController, isMobile, keyboardType: TextInputType.emailAddress);
+    return _buildInputField('Email', _emailController, isMobile, keyboardType: TextInputType.emailAddress, maxLength: 254);
   }
 
   Widget _buildWhatsAppField(bool isMobile) {
@@ -722,7 +750,7 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
           alignment: WrapAlignment.start,
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
-            const Text('WhatsApp Number *', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black87)),
+            _buildLabelText('WhatsApp Number *', fontSize: 14),
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -740,16 +768,12 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
             ),
           ],
         ),
-        TextFormField(
+        CustomPhoneField(
+          label: '',
           controller: _whatsappController,
-          keyboardType: TextInputType.phone,
-          maxLength: 10,
-          decoration: InputDecoration(
-            fillColor: Colors.white, filled: true,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: borderColor)),
-            counterText: "",
-          ),
+          validator: (value) {
+            return null;
+          },
         ),
       ],
     );
@@ -759,7 +783,7 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black87)),
+        _buildLabelText(label, fontSize: 14),
         const SizedBox(height: 8),
         TextFormField(
           controller: controller,
@@ -778,7 +802,7 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black87)),
+        _buildLabelText(label, fontSize: 14),
         Wrap(
           spacing: 12,
           runSpacing: 8,
@@ -804,7 +828,7 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+        _buildLabelText(label, fontSize: 12),
         const SizedBox(height: 8),
         InkWell(
           onTap: () async {
@@ -841,13 +865,19 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
   }
 
   Widget _buildSubmitButton() {
-    return SizedBox(
-      width: double.infinity,
-      height: 50,
-      child: ElevatedButton(
-        onPressed: (_isSaving || !_isAgreed) ? null : _submit,
-        style: ElevatedButton.styleFrom(backgroundColor: mediumBrown, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-        child: _isSaving ? const CircularProgressIndicator(color: Colors.white) : const Text('ADD FAMILY MEMBER', style: TextStyle(fontWeight: FontWeight.bold)),
+    return Center(
+      child: SizedBox(
+        height: 50,
+        child: ElevatedButton(
+          onPressed: (_isSaving || !_isAgreed) ? null : _submit,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: mediumBrown, 
+            foregroundColor: Colors.white, 
+            padding: const EdgeInsets.symmetric(horizontal: 48),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))
+          ),
+          child: _isSaving ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5)) : const Text('ADD FAMILY MEMBER', style: TextStyle(fontWeight: FontWeight.bold)),
+        ),
       ),
     );
   }
@@ -937,7 +967,7 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
       final response = await http.Response.fromStream(await request.send());
       if (response.statusCode == 200) {
         if (mounted) {
-           showStatusDialog(context, title: 'Success', message: 'Family member added successfully.', type: DialogType.success).then((_) => Navigator.pop(context));
+           showStatusDialog(context, title: 'Success', message: 'Family member added successfully and sent for approval.', type: DialogType.success).then((_) => Navigator.pop(context));
         }
       } else {
          String errorMsg = 'Failed to add member';
@@ -962,5 +992,21 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
+  }
+  Widget _buildLabelText(String label, {double fontSize = 14}) {
+    if (label.contains('*')) {
+      final parts = label.split('*');
+      return Text.rich(
+        TextSpan(
+          text: parts[0],
+          children: [
+            const TextSpan(text: '*', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+            if (parts.length > 1) TextSpan(text: parts.sublist(1).join('*')),
+          ],
+        ),
+        style: TextStyle(fontSize: fontSize, fontWeight: FontWeight.bold, color: Colors.black87),
+      );
+    }
+    return Text(label, style: TextStyle(fontSize: fontSize, fontWeight: FontWeight.bold, color: Colors.black87));
   }
 }

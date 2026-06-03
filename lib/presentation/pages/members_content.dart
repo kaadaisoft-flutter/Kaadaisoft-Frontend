@@ -10,7 +10,6 @@ import '../widgets/custom_dialog.dart';
 import '../../utils/api_config.dart';
 import 'update_details_content.dart';
 import 'member_details_content.dart';
-import 'member_id_card_view.dart';
 import '../widgets/registration_form.dart';
 import 'package:dropdown_search/dropdown_search.dart';
 
@@ -24,7 +23,8 @@ class MembersContent extends StatefulWidget {
   final dynamic userId;
   final int? role;
   final VoidCallback? onAssignPressed;
-  const MembersContent({super.key, this.userId, this.role, this.onAssignPressed});
+  final String? globalSearchQuery;
+  const MembersContent({super.key, this.userId, this.role, this.onAssignPressed, this.globalSearchQuery});
 
   @override
   State<MembersContent> createState() => _MembersContentState();
@@ -34,8 +34,6 @@ class _MembersContentState extends State<MembersContent> {
   List<dynamic> _members = [];
   bool _isLoading = true;
   String _errorMessage = '';
-  bool _showIDCard = false;
-  Map<String, dynamic>? _selectedMemberData;
   
   // Bulk Upload State
   bool _showBulkUpload = false;
@@ -84,15 +82,27 @@ class _MembersContentState extends State<MembersContent> {
   @override
   void initState() {
     super.initState();
+    if (widget.globalSearchQuery != null) {
+      _searchController.text = widget.globalSearchQuery!;
+    }
     _fetchMembers();
     _fetchDistricts();
+  }
+
+  @override
+  void didUpdateWidget(covariant MembersContent oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.globalSearchQuery != oldWidget.globalSearchQuery) {
+      _searchController.text = widget.globalSearchQuery ?? '';
+      _fetchMembers();
+    }
   }
 
   void _showAddMemberDialog() {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const RegistrationForm(),
+      builder: (context) => RegistrationForm(submitterRole: widget.role),
     ).then((_) => _fetchMembers());
   }
 
@@ -154,13 +164,6 @@ class _MembersContentState extends State<MembersContent> {
         ? _members.sublist(startIndex, endIndex) 
         : [];
 
-    if (_showIDCard && _selectedMemberData != null) {
-      return MemberIDCardView(
-        userData: _selectedMemberData!,
-        onBack: () => setState(() => _showIDCard = false),
-      );
-    }
-
     if (_isLoading) {
       return const LoadingSpinner(message: 'Fetching members...');
     }
@@ -189,13 +192,13 @@ class _MembersContentState extends State<MembersContent> {
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
-                              color: Color(0xFF2D1B18),
+                              color: const Color(0xFF2D1B18),
                             ),
                           ),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                             decoration: BoxDecoration(
-                              color: Colors.blue,
+                              color: const Color(0xFF5D1712),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
@@ -248,73 +251,139 @@ class _MembersContentState extends State<MembersContent> {
             borderRadius: BorderRadius.circular(8),
             child: Column(
               children: [
-                Scrollbar(
-                  controller: _horizontalScrollController,
-                  thumbVisibility: true,
-                  trackVisibility: true,
-                  child: SingleChildScrollView(
-                    controller: _horizontalScrollController,
-                    scrollDirection: Axis.horizontal,
-                    child: SizedBox(
-                      width: 1150,
-                      child: Column(
-                        children: [
-                          // Table Header
-                          Container(
-                            color: const Color(0xFF2D1B18),
-                            padding: const EdgeInsets.symmetric(vertical: 8),
-                            child: Row(
-                              children: [
-                                _buildHeaderCell('S.NO', 50),
-                                _buildHeaderCell('FAMILY ID', 120),
-                                _buildHeaderCell('NAME', 140),
-                                _buildHeaderCell('ROLE', 80),
-                                _buildHeaderCell('MOBILE', 120),
-                                _buildHeaderCell('DISTRICT', 110),
-                                _buildHeaderCell('TALUK', 110),
-                                _buildHeaderCell('PANCHAYAT', 130),
-                                _buildHeaderCell('VILLAGE', 130),
-                                _buildHeaderCell('ACTIONS', 160),
-                              ],
-                            ),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final isNarrow = constraints.maxWidth < 600;
+
+                    Widget rightPart = Column(
+                      children: [
+                        Container(
+                          color: const Color(0xFF2D1B18),
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          child: Row(
+                            children: [
+                              _buildHeaderCell('ROLE', 80),
+                              _buildHeaderCell('DISTRICT', 110),
+                              _buildHeaderCell('TALUK', 110),
+                              _buildHeaderCell('PANCHAYAT', 130),
+                              _buildHeaderCell('VILLAGE', 130),
+                              _buildHeaderCell('ACTIONS', 160),
+                            ],
                           ),
-                          // Table Rows
-                          _isLoading
-                              ? const Padding(
-                                  padding: EdgeInsets.all(32),
-                                  child: Center(child: LoadingSpinner(message: 'Loading members...')),
-                                )
-                              : _members.isEmpty
-                                  ? const Padding(
-                                      padding: EdgeInsets.all(32),
-                                      child: Center(child: Text('No members found.', style: TextStyle(color: Colors.black54))),
-                                    )
-                                  : ListView.separated(padding: EdgeInsets.zero,
-                                      shrinkWrap: true,
-                                      physics: const NeverScrollableScrollPhysics(),
-                                      itemCount: currentPageMembers.length,
-                                      separatorBuilder: (_, __) => const Divider(height: 1),
-                                      itemBuilder: (context, index) {
-                                        final member = currentPageMembers[index];
-                                            return _buildTableRow(
+                        ),
+                        _isLoading
+                            ? const Padding(
+                                padding: EdgeInsets.all(32),
+                                child: Center(child: LoadingSpinner(message: 'Loading members...')),
+                              )
+                            : _members.isEmpty
+                                ? const Padding(
+                                    padding: EdgeInsets.all(32),
+                                    child: Center(child: Text('No members found.', style: TextStyle(color: Colors.black54))),
+                                  )
+                                : ListView.separated(
+                                    padding: EdgeInsets.zero,
+                                    shrinkWrap: true,
+                                    physics: const NeverScrollableScrollPhysics(),
+                                    itemCount: currentPageMembers.length,
+                                    separatorBuilder: (_, __) => const Divider(height: 1),
+                                    itemBuilder: (context, index) {
+                                      final member = currentPageMembers[index];
+                                      return _buildScrollableTableRow(
+                                        member['Role']?.toString() ?? '3',
+                                        member['District'] ?? '-',
+                                        member['Taluk'] ?? '-',
+                                        member['Panchayat'] ?? '-',
+                                        member['Village'] ?? '-',
+                                        member['Id'].toString(),
+                                        member['Name'] ?? '-',
+                                        member['Familymembershipid'] ?? 'N/A',
+                                      );
+                                    },
+                                  ),
+                      ],
+                    );
+
+                    Widget tableContent = Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Fixed Left Part
+                        SizedBox(
+                          width: 430, // 50+120+140+120
+                          child: Column(
+                            children: [
+                              Container(
+                                color: const Color(0xFF2D1B18),
+                                padding: const EdgeInsets.symmetric(vertical: 8),
+                                child: Row(
+                                  children: [
+                                    _buildHeaderCell('S.NO', 50),
+                                    _buildHeaderCell('FAMILY ID', 120),
+                                    _buildHeaderCell('NAME', 140),
+                                    _buildHeaderCell('MOBILE', 120),
+                                  ],
+                                ),
+                              ),
+                              _isLoading
+                                  ? const SizedBox.shrink()
+                                  : _members.isEmpty
+                                      ? const SizedBox.shrink()
+                                      : ListView.separated(
+                                          padding: EdgeInsets.zero,
+                                          shrinkWrap: true,
+                                          physics: const NeverScrollableScrollPhysics(),
+                                          itemCount: currentPageMembers.length,
+                                          separatorBuilder: (_, __) => const Divider(height: 1),
+                                          itemBuilder: (context, index) {
+                                            final member = currentPageMembers[index];
+                                            return _buildFixedTableRow(
                                               (startIndex + index + 1).toString(),
                                               member['Familymembershipid'] ?? 'N/A',
                                               member['Name'] ?? '-',
-                                              member['Role']?.toString() ?? '3',
                                               member['Phonenumber']?.toString() ?? '-',
-                                              member['District'] ?? '-',
-                                              member['Taluk'] ?? '-',
-                                              member['Panchayat'] ?? '-',
-                                              member['Village'] ?? '-',
                                               member['Id'].toString(),
-                                              member,
                                             );
-                                      },
+                                          },
+                                        ),
+                            ],
+                          ),
+                        ),
+                        // Scrollable Right Part
+                        isNarrow
+                            ? SizedBox(width: 720, child: rightPart)
+                            : Expanded(
+                                child: Scrollbar(
+                                  controller: _horizontalScrollController,
+                                  thumbVisibility: true,
+                                  trackVisibility: true,
+                                  child: SingleChildScrollView(
+                                    controller: _horizontalScrollController,
+                                    scrollDirection: Axis.horizontal,
+                                    child: SizedBox(
+                                      width: 720, // 80+110+110+130+130+160
+                                      child: rightPart,
                                     ),
-                        ],
-                      ),
-                    ),
-                  ),
+                                  ),
+                                ),
+                              ),
+                      ],
+                    );
+
+                    if (isNarrow) {
+                      return Scrollbar(
+                        controller: _horizontalScrollController,
+                        thumbVisibility: true,
+                        trackVisibility: true,
+                        child: SingleChildScrollView(
+                          controller: _horizontalScrollController,
+                          scrollDirection: Axis.horizontal,
+                          child: tableContent,
+                        ),
+                      );
+                    }
+
+                    return tableContent;
+                  },
                 ),
                 // Pagination
                 if (!_isLoading && _members.isNotEmpty)
@@ -337,7 +406,7 @@ class _MembersContentState extends State<MembersContent> {
                           IconButton(
                             icon: const Icon(Icons.chevron_left),
                             onPressed: _currentPage > 1 ? () => setState(() => _currentPage--) : null,
-                            color: Colors.blue,
+                            color: const Color(0xFF5D1712),
                             splashRadius: 20,
                           ),
                           ...List.generate(totalPages, (i) {
@@ -364,7 +433,7 @@ class _MembersContentState extends State<MembersContent> {
                           IconButton(
                             icon: const Icon(Icons.chevron_right),
                             onPressed: _currentPage < totalPages ? () => setState(() => _currentPage++) : null,
-                            color: Colors.blue,
+                            color: const Color(0xFF5D1712),
                             splashRadius: 20,
                           ),
                         ],
@@ -600,21 +669,21 @@ class _MembersContentState extends State<MembersContent> {
       spacing: 12,
       runSpacing: 12,
       children: [
-        _buildOutlinedButton('Upload Bulk Data', Icons.file_upload_outlined, Colors.cyan, onPressed: () => setState(() {
+        _buildOutlinedButton('Upload Bulk Data', Icons.file_upload_outlined, const Color(0xFF5D1712), onPressed: () => setState(() {
           _showBulkUpload = !_showBulkUpload;
           if (_showBulkUpload) _showFilters = false;
         })),
-        _buildOutlinedButton('Filter', Icons.filter_alt_outlined, Colors.blue, onPressed: () => setState(() {
+        _buildOutlinedButton('Filter', Icons.filter_alt_outlined, const Color(0xFF5D1712), onPressed: () => setState(() {
           _showFilters = !_showFilters;
           if (_showFilters) _showBulkUpload = false;
         })),
 
-        _buildOutlinedButton('Download', Icons.download_outlined, Colors.amber, onPressed: _downloadMembersData),
+        _buildOutlinedButton('Download', Icons.download_outlined, const Color(0xFF5D1712), onPressed: _downloadMembersData),
 
         if (widget.role == 1)
-          _buildSolidButton('Assign', Icons.person_add_alt_1, Colors.blue.shade700, onPressed: widget.onAssignPressed),
+          _buildSolidButton('Assign', Icons.person_add_alt_1, const Color(0xFF5D1712), onPressed: widget.onAssignPressed),
 
-        _buildSolidButton('Add', Icons.add, Colors.blue.shade600, onPressed: _showAddMemberDialog),
+        _buildSolidButton('Add', Icons.add, const Color(0xFF5D1712), onPressed: _showAddMemberDialog),
 
 
       ],
@@ -665,12 +734,12 @@ class _MembersContentState extends State<MembersContent> {
     );
   }
 
-  Widget _buildTableRow(String sno, String id, String name, String role, String mobile, String district, String taluk, String panchayat, String village, String memberId, dynamic fullMemberData) {
+  Widget _buildFixedTableRow(String sno, String id, String name, String mobile, String memberId) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: () => _showEditMemberDialog(memberId),
-        hoverColor: Colors.blue.shade50.withOpacity(0.5),
+        hoverColor: const Color(0xFFFDECEB).withOpacity(0.5),
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 4),
           decoration: BoxDecoration(
@@ -681,19 +750,39 @@ class _MembersContentState extends State<MembersContent> {
               _buildDataCell(sno, 50),
               _buildDataCell(id, 120, isBlue: true),
               _buildDataCell(name, 140, isBold: true),
+              _buildDataCell(mobile, 120),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildScrollableTableRow(String role, String district, String taluk, String panchayat, String village, String memberId, String name, String familyId) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => _showEditMemberDialog(memberId),
+        hoverColor: const Color(0xFFFDECEB).withOpacity(0.5),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          decoration: BoxDecoration(
+            border: Border(bottom: BorderSide(color: Colors.grey.shade100)),
+          ),
+          child: Row(
+            children: [
               _buildDataCell('', 80, child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: role == '2' ? Colors.orange.shade50 : Colors.blue.shade50,
+                  color: role == '2' ? Colors.orange.shade50 : const Color(0xFFFDECEB),
                   borderRadius: BorderRadius.circular(4),
-                  border: Border.all(color: role == '2' ? Colors.orange.shade200 : Colors.blue.shade200),
+                  border: Border.all(color: role == '2' ? Colors.orange.shade200 : const Color(0xFFE5A09D)),
                 ),
                 child: Text(
                   role == '2' ? 'COORDINATOR' : 'MEMBER',
-                  style: TextStyle(color: role == '2' ? Colors.orange.shade700 : Colors.blue.shade700, fontSize: 10, fontWeight: FontWeight.bold),
+                  style: TextStyle(color: role == '2' ? Colors.orange.shade700 : const Color(0xFF5D1712), fontSize: 10, fontWeight: FontWeight.bold),
                 ),
               )),
-              _buildDataCell(mobile, 120),
               _buildDataCell(district, 110),
               _buildDataCell(taluk, 110),
               _buildDataCell(panchayat.isEmpty ? '-' : panchayat, 130),
@@ -701,18 +790,11 @@ class _MembersContentState extends State<MembersContent> {
               _buildDataCell('', 160, child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  _actionIcon(Icons.edit_outlined, Colors.blue, onTap: () => _showEditMemberDialog(memberId)),
+                  _actionIcon(Icons.edit_outlined, const Color(0xFF5D1712), onTap: () => _showEditMemberDialog(memberId), tooltip: 'Edit'),
                   const SizedBox(width: 8),
-                  _actionIcon(Icons.person_remove_outlined, Colors.red, onTap: () => _rejectMember(memberId, name)),
+                  _actionIcon(Icons.person_remove_outlined, Colors.red, onTap: () => _rejectMember(memberId, name), tooltip: 'Reject'),
                   const SizedBox(width: 8),
-                  _actionIcon(Icons.visibility_outlined, Colors.grey, onTap: () => _showViewMemberDialog(memberId, id)),
-                  const SizedBox(width: 8),
-                  _actionIcon(Icons.badge_outlined, Colors.teal, onTap: () {
-                    setState(() {
-                      _selectedMemberData = fullMemberData;
-                      _showIDCard = true;
-                    });
-                  }),
+                  _actionIcon(Icons.visibility_outlined, Colors.grey, onTap: () => _showViewMemberDialog(memberId, familyId), tooltip: 'View'),
                 ],
               )),
             ],
@@ -733,7 +815,7 @@ class _MembersContentState extends State<MembersContent> {
         child: child ?? Text(
           text,
           style: TextStyle(
-            color: isBlue ? Colors.blue : Colors.black87,
+            color: isBlue ? const Color(0xFF5D1712) : Colors.black87,
             fontWeight: isBlue || isBold ? FontWeight.bold : FontWeight.normal,
             fontSize: 12,
           ),
@@ -744,20 +826,26 @@ class _MembersContentState extends State<MembersContent> {
     );
   }
 
-  Widget _actionIcon(IconData icon, Color color, {VoidCallback? onTap}) {
+  Widget _actionIcon(IconData icon, Color color, {VoidCallback? onTap, String? tooltip}) {
+    Widget iconWidget = Container(
+      padding: const EdgeInsets.all(6),
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: color.withOpacity(0.05),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Icon(icon, color: color, size: 16),
+    );
+
+    if (tooltip != null) {
+      iconWidget = Tooltip(message: tooltip, child: iconWidget);
+    }
+
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
         onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.all(6),
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: color.withOpacity(0.05),
-            border: Border.all(color: color.withOpacity(0.3)),
-          ),
-          child: Icon(icon, color: color, size: 16),
-        ),
+        child: iconWidget,
       ),
     );
   }
@@ -843,7 +931,7 @@ class _MembersContentState extends State<MembersContent> {
                           icon: _isUploadingBulk ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Icon(Icons.cloud_upload, size: 18),
                           label: Text(_isUploadingBulk ? 'Uploading...' : 'Upload Data'),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF3B82F6),
+                            backgroundColor: const Color(0xFF5D1712),
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -885,7 +973,7 @@ class _MembersContentState extends State<MembersContent> {
                             icon: _isUploadingBulk ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Icon(Icons.cloud_upload, size: 18),
                             label: Text(_isUploadingBulk ? 'Uploading...' : 'Upload Data'),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF3B82F6),
+                              backgroundColor: const Color(0xFF5D1712),
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -907,9 +995,9 @@ class _MembersContentState extends State<MembersContent> {
                           child: const Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.download, color: Color(0xFF3B82F6), size: 16),
+                              Icon(Icons.download, color: const Color(0xFF5D1712), size: 16),
                               const SizedBox(width: 4),
-                              Text('Download Sample Format', style: TextStyle(color: Color(0xFF3B82F6), fontWeight: FontWeight.bold, fontSize: 13)),
+                              Text('Download Sample Format', style: TextStyle(color: const Color(0xFF5D1712), fontWeight: FontWeight.bold, fontSize: 13)),
                             ],
                           ),
                         ),
@@ -1221,7 +1309,7 @@ class _MembersContentState extends State<MembersContent> {
               children: [
                 Icon(Icons.search_rounded, color: Colors.amber.shade700, size: 24),
                 const SizedBox(width: 12),
-                const Text('Advanced Search Filters', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF2D1B18))),
+                const Text('Advanced Search Filters', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: const Color(0xFF2D1B18))),
               ],
             ),
           ),
@@ -1391,7 +1479,7 @@ class _MembersContentState extends State<MembersContent> {
                     contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade300)),
                     enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade300)),
-                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Colors.blue, width: 1)),
+                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: const Color(0xFF5D1712), width: 1)),
                   ),
                 ),
                 popupProps: PopupProps.menu(

@@ -56,7 +56,7 @@ class _MyAppState extends State<MyApp> {
         title: 'Poondurai Kaadai Kulam',
         theme: ThemeData(
           useMaterial3: true,
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.orange),
+          colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF5D1712)),
         ),
         home: _isLoggedIn!
             ? AdminDashboard(

@@ -6,6 +6,8 @@ import 'dart:convert';
 import 'package:file_picker/file_picker.dart' as fp_pkg;
 import 'package:cross_file/cross_file.dart';
 import 'package:dropdown_search/dropdown_search.dart';
+import 'package:intl_phone_field/intl_phone_field.dart';
+import 'custom_phone_field.dart';
 import 'custom_dialog.dart';
 import '../../utils/api_config.dart';
 import '../../services/geo_data_service.dart';
@@ -26,11 +28,11 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
   bool _isSaving = false;
   
   // Design Colors
-  static const Color primaryBrown = Color(0xFF2D1B18);
-  static const Color mediumBrown = Color(0xFF3E2723);
-  static const Color accentGold = Color(0xFFC5A028);
+  static const Color primaryBrown = const Color(0xFF2D1B18);
+  static const Color mediumBrown = const Color(0xFF3E2723);
+  static const Color accentGold = const Color(0xFFC5A028);
   static const Color glassWhite = Color(0xA6FFFFFF);
-  static const Color borderColor = Color(0xFFE0E0E0);
+  static const Color borderColor = const Color(0xFFE0E0E0);
 
   // Controllers
   final _nameController = TextEditingController();
@@ -179,6 +181,7 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
     _selectedDistrict = d['District'];
     _selectedTaluk = d['Taluk'];
     _selectedPanchayat = d['Panchayat'];
+    _selectedVillage = d['Village'];
     final street = d['Street'] ?? '';
     final doorNo = d['Doornumber']?.toString() ?? '';
     _streetController.text = doorNo.isNotEmpty ? "$doorNo, $street" : street;
@@ -190,6 +193,7 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
     _selectedCurrDistrict = d['Curdistrict'];
     _selectedCurrTaluk = d['Curtaluk'];
     _selectedCurrPanchayat = d['Curpanchayat'];
+    _selectedCurrVillage = d['Curvillage'];
     final curStreet = d['Curstreet'] ?? '';
     final curDoorNo = d['Curdoorno']?.toString() ?? '';
     _currStreetController.text = curDoorNo.isNotEmpty ? "$curDoorNo, $curStreet" : curStreet;
@@ -331,7 +335,7 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
       backgroundColor: Colors.transparent,
       insetPadding: EdgeInsets.symmetric(horizontal: isMobile ? 12 : 24, vertical: 24),
       child: Container(
-        width: isMobile ? MediaQuery.of(context).size.width * 0.95 : 800,
+        width: isMobile ? MediaQuery.of(context).size.width * 0.95 : 1000,
         constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.9),
         decoration: BoxDecoration(color: const Color(0xFFF8F9FA), borderRadius: BorderRadius.circular(20)),
         child: Column(
@@ -350,16 +354,12 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
                       const SizedBox(height: 16),
                       _buildResponsiveRow(isMobile, [
                         _buildDropdownField('Relationship *', _relationships, _selectedRelationship, (v) => setState(() => _selectedRelationship = v)),
-                        _buildInputField('Name *', _nameController),
-                        _buildInputField('Phone Number', _phoneController, 
-                          keyboardType: TextInputType.phone, 
-                          maxLength: 10,
+                        _buildInputField('Name *', _nameController, maxLength: 254),
+                        _buildIntlPhoneField('Phone Number *', _phoneController, 
                           fieldKey: _phoneFieldKey,
-                          autovalidateMode: AutovalidateMode.onUserInteraction,
                           validator: (v) {
                             if (v == null || v.isEmpty) return null;
                             final phone = v.trim();
-                            if (phone.length != 10) return 'Invalid phone number';
                             if (_phoneExists && phone != _initialPhone) return 'Phone number already registered';
                             return null;
                           }
@@ -368,20 +368,20 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
                       _buildResponsiveRow(isMobile, [
                         _buildDatePickerField('Date Of Birth *', _dobController),
                         _buildGenderSelector(),
-                        _buildDropdownField('Blood Group', _bloodGroups, _selectedBloodGroup, (v) => setState(() => _selectedBloodGroup = v)),
+                        _buildDropdownField('Blood Group *', _bloodGroups, _selectedBloodGroup, (v) => setState(() => _selectedBloodGroup = v)),
                       ]),
                       _buildResponsiveRow(isMobile, [
-                        _buildInputField('Email', _emailController),
-                        _buildInputField('WhatsApp', _whatsappController),
-                        _buildRadioField('Married', ['Yes', 'No'], _selectedMarried, (v) => setState(() => _selectedMarried = v)),
+                        _buildInputField('Email', _emailController, maxLength: 254),
+                        _buildIntlPhoneField('WhatsApp', _whatsappController),
+                        _buildRadioField('Married *', ['Yes', 'No'], _selectedMarried, (v) => setState(() => _selectedMarried = v)),
                       ]),
                       _buildResponsiveRow(isMobile, [
                         _buildRadioField('Alive Status', ['Alive', 'Dead'], _selectedAliveStatus, (v) => setState(() => _selectedAliveStatus = v!)),
-                        _buildInputField('Valuvu', _valuvuController),
-                        _buildInputField('Thottam', _thottamController),
+                        _buildInputField('Valuvu', _valuvuController, maxLength: 254),
+                        _buildInputField('Thottam', _thottamController, maxLength: 254),
                       ]),
                       _buildResponsiveRow(isMobile, [
-                        _buildInputField('Kulam', TextEditingController(text: 'Poondurai Kaadai'), readOnly: true),
+                        _buildInputField('Kulam *', TextEditingController(text: 'Poondurai Kaadai'), readOnly: true),
                         if (!isMobile) const Spacer(),
                         if (!isMobile) const Spacer(),
                       ]),
@@ -389,8 +389,8 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
                       _buildSectionTitle(Icons.work_outline, 'Education & Career'),
                       const SizedBox(height: 16),
                       _buildResponsiveRow(isMobile, [
-                        _buildDropdownField('Education', _educations, _selectedEducation, (v) => setState(() => _selectedEducation = v)),
-                        _buildDropdownField('Profession', _professions, _selectedProfession, (v) => setState(() => _selectedProfession = v)),
+                        _buildDropdownField('Education *', _educations, _selectedEducation, (v) => setState(() => _selectedEducation = v)),
+                        _buildDropdownField('Profession *', _professions, _selectedProfession, (v) => setState(() => _selectedProfession = v)),
                         if (!isMobile) const Spacer(),
                       ]),
                       const SizedBox(height: 32),
@@ -403,7 +403,7 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
                       ]),
                       _buildResponsiveRow(isMobile, [
                         _buildDropdownField('Village Name *', _villages, _selectedVillage, (v) => setState(() => _selectedVillage = v)),
-                        _buildInputField('Door No & Street Name *', _streetController),
+                        _buildInputField('Door No & Street Name *', _streetController, maxLength: 254),
                         _buildInputField('Pin Code *', _pinCodeController, keyboardType: TextInputType.number, maxLength: 6),
                       ]),
                       const SizedBox(height: 32),
@@ -421,7 +421,7 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
                         ],
                       ),
                       const SizedBox(height: 16),
-                      _buildRadioField('Current Address Type', ['Tamil Nadu', 'Other State', 'NRI'], _selectedCurrentAddressType, (v) {
+                      _buildRadioField('Current Address Type *', ['Tamil Nadu', 'Other State', 'NRI'], _selectedCurrentAddressType, (v) {
                         setState(() {
                           _selectedCurrentAddressType = v;
                           if (v == 'Tamil Nadu') _fetchCurrDistricts();
@@ -437,7 +437,7 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
                         ]),
                         _buildResponsiveRow(isMobile, [
                           _buildDropdownField('Village Name *', _currVillages, _selectedCurrVillage, (v) => setState(() => _selectedCurrVillage = v)),
-                          _buildInputField('Door No & Street Name *', _currStreetController),
+                          _buildInputField('Door No & Street Name *', _currStreetController, maxLength: 254),
                           _buildInputField('Pin Code *', _currPinCodeController, keyboardType: TextInputType.number, maxLength: 6),
                         ]),
                       ] else if (_selectedCurrentAddressType == 'Other State') ...[
@@ -499,10 +499,12 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
   }
 
   Widget _buildHeader() {
+    final memberId = widget.memberData['Familymembershipid'] ?? '';
+    final titleText = memberId.isNotEmpty ? 'Update Family Member  ($memberId)' : 'Update Family Member';
     return Container(
       padding: const EdgeInsets.all(20),
       child: Row(children: [
-        const Expanded(child: Text('Update Family Member', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: primaryBrown))),
+        Expanded(child: Text(titleText, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: primaryBrown))),
         IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close)),
       ]),
     );
@@ -528,7 +530,7 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
 
   Widget _buildInputField(String label, TextEditingController controller, {TextInputType? keyboardType, bool readOnly = false, int? maxLength, Key? fieldKey, String? Function(String?)? validator, AutovalidateMode? autovalidateMode}) {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black87)),
+      _buildLabelText(label, fontSize: 14),
       const SizedBox(height: 8),
       TextFormField(
         key: fieldKey,
@@ -536,8 +538,19 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
         keyboardType: keyboardType,
         readOnly: readOnly,
         maxLength: maxLength,
-        autovalidateMode: autovalidateMode,
-        validator: validator ?? ((v) => (label.contains('*') && (v == null || v.isEmpty)) ? 'Required' : null),
+        autovalidateMode: autovalidateMode ?? AutovalidateMode.onUserInteraction,
+        inputFormatters: (keyboardType == TextInputType.phone || keyboardType == TextInputType.number)
+            ? [FilteringTextInputFormatter.digitsOnly]
+            : ((label.contains('Name') && !label.contains('Street') && !label.contains('Village')) ? [FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z\s\.]'))] : null),
+        validator: validator ?? ((v) {
+          final val = v ?? '';
+          if (label.contains('Name') && !label.contains('Street') && !label.contains('Village')) {
+            if (label.contains('*') && val.trim().isEmpty) return 'Required';
+            if (val.trim().isNotEmpty && val.trim().length < 3) return 'Name must be at least 3 characters';
+            if (val.trim().isNotEmpty && !RegExp(r'^[a-zA-Z\s\.]+$').hasMatch(val.trim())) return 'Only letters, spaces, and dots allowed';
+          }
+          return (label.contains('*') && val.isEmpty) ? 'Required' : null;
+        }),
         decoration: InputDecoration(
           fillColor: Colors.white, filled: true,
           contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -550,9 +563,22 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
     ]);
   }
 
+  Widget _buildIntlPhoneField(String label, TextEditingController controller, {Key? fieldKey, String? Function(String?)? validator}) {
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      _buildLabelText(label, fontSize: 14),
+      const SizedBox(height: 8),
+      CustomPhoneField(
+        fieldKey: fieldKey,
+        label: '',
+        controller: controller,
+        validator: (v) => validator?.call(controller.text),
+      ),
+    ]);
+  }
+
   Widget _buildDropdownField(String label, List<String> options, String? value, ValueChanged<String?> onChanged) {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black87)),
+      _buildLabelText(label, fontSize: 14),
       const SizedBox(height: 8),
       DropdownSearch<String>(
         items: (f, p) => options,
@@ -587,7 +613,7 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
 
   Widget _buildDatePickerField(String label, TextEditingController controller) {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black87)),
+      _buildLabelText(label, fontSize: 14),
       const SizedBox(height: 8),
       TextFormField(
         controller: controller,
@@ -619,7 +645,7 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
 
   Widget _buildGenderSelector() {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      const Text('Gender *', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black87)),
+      _buildLabelText('Gender *', fontSize: 14),
       Wrap(children: [
         Radio<String>(value: 'Male', groupValue: _selectedGender, onChanged: (v) => setState(() => _selectedGender = v)),
         const Text('Male'),
@@ -631,7 +657,7 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
 
   Widget _buildRadioField(String label, List<String> options, String? value, ValueChanged<String?> onChanged) {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black87)),
+      _buildLabelText(label, fontSize: 14),
       Wrap(children: options.map((o) => Row(mainAxisSize: MainAxisSize.min, children: [
         Radio<String>(value: o, groupValue: value, onChanged: onChanged),
         Text(o),
@@ -642,7 +668,7 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
 
   Widget _buildTextArea(String label, TextEditingController controller) {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black87)),
+      _buildLabelText(label, fontSize: 14),
       const SizedBox(height: 8),
       TextFormField(
         controller: controller,
@@ -672,7 +698,7 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+        _buildLabelText(label, fontSize: 12),
         const SizedBox(height: 8),
         InkWell(
           onTap: () async {
@@ -803,7 +829,7 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
       final res = await http.Response.fromStream(await request.send());
       if (res.statusCode == 200) {
         if (mounted) {
-          showStatusDialog(context, title: 'Success', message: 'Details updated successfully.', type: DialogType.success).then((_) {
+          showStatusDialog(context, title: 'Success', message: 'Details updated successfully and sent for approval.', type: DialogType.success).then((_) {
             widget.onUpdate();
             Navigator.pop(context);
           });
@@ -829,5 +855,21 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
+  }
+  Widget _buildLabelText(String label, {double fontSize = 14}) {
+    if (label.contains('*')) {
+      final parts = label.split('*');
+      return Text.rich(
+        TextSpan(
+          text: parts[0],
+          children: [
+            const TextSpan(text: '*', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+            if (parts.length > 1) TextSpan(text: parts.sublist(1).join('*')),
+          ],
+        ),
+        style: TextStyle(fontSize: fontSize, fontWeight: FontWeight.bold, color: Colors.black87),
+      );
+    }
+    return Text(label, style: TextStyle(fontSize: fontSize, fontWeight: FontWeight.bold, color: Colors.black87));
   }
 }

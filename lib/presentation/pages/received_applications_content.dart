@@ -122,7 +122,7 @@ class _ReceivedApplicationsContentState extends State<ReceivedApplicationsConten
                           style: TextStyle(
                             fontSize: isMobile ? 18 : 22,
                             fontWeight: FontWeight.bold,
-                            color: const Color(0xFF3B82F6),
+                            color: const Color(0xFF5D1712),
                           ),
                         ),
                       ),
@@ -169,7 +169,7 @@ class _ReceivedApplicationsContentState extends State<ReceivedApplicationsConten
                               // Table Header
                               Container(
                                 decoration: const BoxDecoration(
-                                  color: Color(0xFF2D1B18),
+                                  color: const Color(0xFF2D1B18),
                                   borderRadius: BorderRadius.only(
                                     topLeft: Radius.circular(12),
                                     topRight: Radius.circular(12),
@@ -251,7 +251,7 @@ class _ReceivedApplicationsContentState extends State<ReceivedApplicationsConten
         child: Row(
           children: [
             SizedBox(width: 50, child: Text(sno.toString(), style: const TextStyle(color: Colors.black87))),
-            SizedBox(width: 140, child: Text(app['Name']?.toString() ?? '', style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.w500, overflow: TextOverflow.ellipsis))),
+            SizedBox(width: 140, child: Text(app['Name']?.toString() ?? '', style: const TextStyle(color: const Color(0xFF5D1712), fontWeight: FontWeight.w500, overflow: TextOverflow.ellipsis))),
             SizedBox(width: 120, child: Text(app['Phonenumber']?.toString() ?? '', style: const TextStyle(color: Colors.black54))),
             SizedBox(width: 110, child: _buildBadge(app['District']?.toString() ?? '', Colors.grey.shade200, textColor: Colors.black87)),
             SizedBox(width: 110, child: Text(app['Taluk']?.toString() ?? '', style: const TextStyle(color: Colors.black54, overflow: TextOverflow.ellipsis))),
@@ -411,6 +411,39 @@ class _ReceivedApplicationsContentState extends State<ReceivedApplicationsConten
     }
   }
 
+  void _showFullScreenImage(String imageUrl) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(16),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            InteractiveViewer(
+              panEnabled: true,
+              boundaryMargin: const EdgeInsets.all(20),
+              minScale: 0.5,
+              maxScale: 4,
+              child: Image.network(
+                imageUrl,
+                fit: BoxFit.contain,
+              ),
+            ),
+            Positioned(
+              top: 10,
+              right: 10,
+              child: IconButton(
+                icon: const Icon(Icons.close, color: Colors.white, size: 30),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _showApplicationDetails(dynamic app) {
     bool isCertified = false;
     showDialog(
@@ -418,9 +451,11 @@ class _ReceivedApplicationsContentState extends State<ReceivedApplicationsConten
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) {
           return Dialog(
+            insetPadding: const EdgeInsets.all(16),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             child: Container(
-              width: 700,
+              width: MediaQuery.of(context).size.width * 0.95,
+              constraints: const BoxConstraints(maxWidth: 700),
               padding: const EdgeInsets.all(24),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -429,7 +464,7 @@ class _ReceivedApplicationsContentState extends State<ReceivedApplicationsConten
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('Received application:', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                      const Expanded(child: Text('Received application:', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold))),
                       IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close)),
                     ],
                   ),
@@ -438,66 +473,72 @@ class _ReceivedApplicationsContentState extends State<ReceivedApplicationsConten
                   Flexible(
                     child: SingleChildScrollView(
                       child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           _buildDetailRow('Name:', app['Name']?.toString() ?? ''),
                           _buildDetailRow('Mobile No:', app['Phonenumber']?.toString() ?? ''),
                           _buildAddressDetail(app),
                           _buildDetailRow('Family Membership Id:', app['Familymembershipid']?.toString() ?? '-'),
                           const SizedBox(height: 16),
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const SizedBox(width: 150, child: Text('Photo:', style: TextStyle(fontWeight: FontWeight.bold))),
-                              Container(
-                                width: 100,
-                                height: 120,
-                                decoration: BoxDecoration(
-                                  border: Border.all(color: Colors.grey.shade300),
-                                  borderRadius: BorderRadius.circular(8),
+                          MediaQuery.of(context).size.width < 600
+                              ? Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text('Photo:', style: TextStyle(fontWeight: FontWeight.bold)),
+                                    const SizedBox(height: 8),
+                                    _buildPhotoWidget(app),
+                                  ],
+                                )
+                              : Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const SizedBox(width: 150, child: Text('Photo:', style: TextStyle(fontWeight: FontWeight.bold))),
+                                    _buildPhotoWidget(app),
+                                  ],
                                 ),
-                                child: app['Memberimage'] != null && app['Memberimage'].toString().isNotEmpty
-                                    ? Image.network(
-                                        '${ApiConfig.baseUrl}/assets/uploads/${app['Memberimage']}',
-                                        fit: BoxFit.cover,
-                                        errorBuilder: (context, error, stackTrace) => const Icon(Icons.person, size: 50, color: Colors.grey),
-                                      )
-                                    : const Icon(Icons.person, size: 50, color: Colors.grey),
-                              ),
-                            ],
-                          ),
                           const SizedBox(height: 16),
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const SizedBox(width: 150, child: Text('Documents:', style: TextStyle(fontWeight: FontWeight.bold))),
-                              Wrap(
-                                spacing: 12,
-                                children: [
-                                  if (app['Communitycertificate'] != null && app['Communitycertificate'].toString().isNotEmpty)
-                                    _buildDocIcon(Icons.badge_outlined, 'Certificate'),
-                                  // Add more icons if needed
-                                ],
-                              ),
-                            ],
-                          ),
+                          MediaQuery.of(context).size.width < 600
+                              ? Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text('Documents:', style: TextStyle(fontWeight: FontWeight.bold)),
+                                    const SizedBox(height: 8),
+                                    _buildDocumentsWidget(app),
+                                  ],
+                                )
+                              : Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const SizedBox(width: 150, child: Text('Documents:', style: TextStyle(fontWeight: FontWeight.bold))),
+                                    _buildDocumentsWidget(app),
+                                  ],
+                                ),
                         ],
                       ),
                     ),
                   ),
                   const SizedBox(height: 24),
                   Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Checkbox(
-                        value: isCertified,
-                        onChanged: (v) => setDialogState(() => isCertified = v ?? false),
+                      SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: Checkbox(
+                          value: isCertified,
+                          onChanged: (v) => setDialogState(() => isCertified = v ?? false),
+                        ),
                       ),
+                      const SizedBox(width: 8),
                       const Expanded(
                         child: Text('I hereby certify that the above registration details are accurate.'),
                       ),
                     ],
                   ),
                   const SizedBox(height: 16),
-                  Row(
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 12,
                     children: [
                       ElevatedButton(
                         onPressed: isCertified ? () async {
@@ -507,7 +548,6 @@ class _ReceivedApplicationsContentState extends State<ReceivedApplicationsConten
                         style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
                         child: const Text('Approve'),
                       ),
-                      const SizedBox(width: 12),
                       ElevatedButton(
                         onPressed: () async {
                           await _confirmStatusUpdate(app['Id'], 'Rejected');
@@ -527,53 +567,119 @@ class _ReceivedApplicationsContentState extends State<ReceivedApplicationsConten
     );
   }
 
+  Widget _buildPhotoWidget(dynamic app) {
+    return Container(
+      width: 100,
+      height: 120,
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey.shade300),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: app['Memberimage'] != null && app['Memberimage'].toString().isNotEmpty
+          ? GestureDetector(
+              onTap: () => _showFullScreenImage('${ApiConfig.baseUrl}/assets/uploads/${app['Memberimage']}'),
+              child: MouseRegion(
+                cursor: SystemMouseCursors.click,
+                child: Image.network(
+                  '${ApiConfig.baseUrl}/assets/uploads/${app['Memberimage']}',
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => const Icon(Icons.person, size: 50, color: Colors.grey),
+                ),
+              ),
+            )
+          : const Icon(Icons.person, size: 50, color: Colors.grey),
+    );
+  }
+
+  Widget _buildDocumentsWidget(dynamic app) {
+    return Wrap(
+      spacing: 12,
+      children: [
+        if (app['Communitycertificate'] != null && app['Communitycertificate'].toString().isNotEmpty)
+          _buildDocIcon(Icons.badge_outlined, 'Certificate'),
+      ],
+    );
+  }
+
   Widget _buildDetailRow(String label, String value) {
+    bool isMobile = MediaQuery.of(context).size.width < 600;
+    Widget labelWidget = SizedBox(
+      width: isMobile ? 120 : 150,
+      child: Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
+    );
+
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 8),
       decoration: BoxDecoration(border: Border(bottom: BorderSide(color: Colors.grey.shade100))),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(width: 150, child: Text(label, style: const TextStyle(fontWeight: FontWeight.bold))),
-          Expanded(child: Text(value)),
-        ],
-      ),
+      child: isMobile
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                labelWidget,
+                const SizedBox(height: 4),
+                Text(value),
+              ],
+            )
+          : Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                labelWidget,
+                Expanded(child: Text(value)),
+              ],
+            ),
     );
   }
 
   Widget _buildAddressDetail(dynamic app) {
+    bool isMobile = MediaQuery.of(context).size.width < 600;
+    Widget labelWidget = SizedBox(
+      width: isMobile ? 120 : 150,
+      child: const Text('Address:', style: TextStyle(fontWeight: FontWeight.bold)),
+    );
+
+    Widget contentWidget = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSubRow('D/No', app['Doornumber']?.toString() ?? '-'),
+        _buildSubRow('Street', app['Street']?.toString() ?? '-'),
+        _buildSubRow('Village', app['Village']?.toString() ?? '-'),
+        _buildSubRow('Panchayat', app['Panchayat']?.toString() ?? '-'),
+        _buildSubRow('Taluk', app['Taluk']?.toString() ?? '-'),
+        _buildSubRow('District', app['District']?.toString() ?? '-'),
+        _buildSubRow('State', app['State']?.toString() ?? '-'),
+      ],
+    );
+
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 8),
       decoration: BoxDecoration(border: Border(bottom: BorderSide(color: Colors.grey.shade100))),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(width: 150, child: Text('Address:', style: TextStyle(fontWeight: FontWeight.bold))),
-          Expanded(
-            child: Column(
+      child: isMobile
+          ? Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildSubRow('D/No', app['Doornumber']?.toString() ?? '-'),
-                _buildSubRow('Street', app['Street']?.toString() ?? '-'),
-                _buildSubRow('Village', app['Village']?.toString() ?? '-'),
-                _buildSubRow('Panchayat', app['Panchayat']?.toString() ?? '-'),
-                _buildSubRow('Taluk', app['Taluk']?.toString() ?? '-'),
-                _buildSubRow('District', app['District']?.toString() ?? '-'),
-                _buildSubRow('State', app['State']?.toString() ?? '-'),
+                labelWidget,
+                const SizedBox(height: 8),
+                contentWidget,
+              ],
+            )
+          : Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                labelWidget,
+                Expanded(child: contentWidget),
               ],
             ),
-          ),
-        ],
-      ),
     );
   }
 
   Widget _buildSubRow(String label, String value) {
+    bool isMobile = MediaQuery.of(context).size.width < 600;
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(width: 100, child: Text(label)),
+          SizedBox(width: isMobile ? 80 : 100, child: Text(label)),
           const Text(' -   '),
           Expanded(child: Text(value, style: const TextStyle(fontWeight: FontWeight.w500))),
         ],
@@ -586,11 +692,11 @@ class _ReceivedApplicationsContentState extends State<ReceivedApplicationsConten
       width: 44,
       height: 44,
       decoration: BoxDecoration(
-        color: Colors.blue.shade50,
+        color: const Color(0xFFFDECEB),
         shape: BoxShape.circle,
-        border: Border.all(color: Colors.blue.shade200),
+        border: Border.all(color: const Color(0xFFE5A09D)),
       ),
-      child: Icon(icon, color: Colors.blue, size: 24),
+      child: Icon(icon, color: const Color(0xFF5D1712), size: 24),
     );
   }
 
@@ -614,7 +720,7 @@ class _ReceivedApplicationsContentState extends State<ReceivedApplicationsConten
       width: 32,
       height: 32,
       decoration: BoxDecoration(
-        color: isActive ? const Color(0xFF3B82F6) : Colors.transparent,
+        color: isActive ? const Color(0xFF5D1712) : Colors.transparent,
         shape: BoxShape.circle,
       ),
       child: Center(

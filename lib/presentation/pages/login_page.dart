@@ -9,6 +9,7 @@ import '../../utils/api_config.dart';
 import 'admin_dashboard.dart';
 import '../widgets/custom_dialog.dart';
 import '../widgets/registration_form.dart';
+import '../widgets/forgot_password_dialog.dart';
 import 'terms_and_conditions_page.dart';
 import 'privacy_policy_page.dart';
 
@@ -44,6 +45,16 @@ class _LoginPageState extends State<LoginPage> {
         context,
         title: 'Invalid Number',
         message: 'Please enter a 10-digit Mobile number.',
+        type: DialogType.warning,
+      );
+      return;
+    }
+
+    if (password.length < 8) {
+      showStatusDialog(
+        context,
+        title: 'Invalid Password',
+        message: 'Password must be at least 8 characters long.',
         type: DialogType.warning,
       );
       return;
@@ -86,10 +97,18 @@ class _LoginPageState extends State<LoginPage> {
           );
         }
       } else {
+        String errorMsg = 'The mobile number or password you entered is incorrect.';
+        try {
+          final data = jsonDecode(response.body);
+          if (data['detail'] != null) {
+            errorMsg = data['detail'];
+          }
+        } catch (_) {}
+
         showStatusDialog(
           context,
           title: 'Login Failed',
-          message: 'The mobile number or password you entered is incorrect.',
+          message: errorMsg,
           type: DialogType.error,
         );
       }
@@ -214,7 +233,13 @@ class _LoginPageState extends State<LoginPage> {
                             Align(
                               alignment: Alignment.centerRight,
                               child: TextButton(
-                                onPressed: () {},
+                                onPressed: () {
+                                  showDialog(
+                                    context: context,
+                                    barrierDismissible: false,
+                                    builder: (context) => const ForgotPasswordDialog(),
+                                  );
+                                },
                                 style: TextButton.styleFrom(
                                   visualDensity: VisualDensity.compact,
                                 ),

@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:file_picker/file_picker.dart' as fp_pkg;
 import 'package:cross_file/cross_file.dart';
 import 'package:dropdown_search/dropdown_search.dart';
+import '../widgets/custom_phone_field.dart';
 import '../widgets/loading_spinner.dart';
 import '../widgets/custom_dialog.dart';
 import '../../utils/api_config.dart';
@@ -98,8 +99,8 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
   String? _education;
   String? _profession;
 
-  static const Color _darkBrown = Color(0xFF322E2E);
-  static const Color _gold = Color(0xFFC5A028);
+  static const Color _darkBrown = const Color(0xFF322E2E);
+  static const Color _gold = const Color(0xFFC5A028);
 
   final List<String> _relationships = ['Head','Grand Father','Grand Mother','Father','Mother','Husband','Wife','Son','Daughter','Son-in-law','Daughter-in-law','Brother','Sister','Other'];
   final List<String> _bloodGroups = ['A+','A-','B+','B-','O+','O-','AB+','AB-'];
@@ -419,7 +420,7 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
           showStatusDialog(
             context,
             title: 'Success',
-            message: 'Details updated successfully!',
+            message: 'Details updated successfully and sent for approval.',
             type: DialogType.success,
             onOk: widget.onBack,
           );
@@ -579,17 +580,16 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
       child: Column(children: [
         // Row 1: Relationship, Name, Phone
         _row(isMobile, [
-          _dropField('Relationship', _relationships, _relationship, (v) => setState(() => _relationship = v)),
+          _dropField('Relationship *', _relationships, _relationship, (v) => setState(() => _relationship = v)),
           _textField('Name *', _nameCtrl, required: true),
-          _textField('Phone Number *', _phoneCtrl, inputType: TextInputType.phone, required: true,
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(10)]),
+          _intlPhoneField('Phone Number *', _phoneCtrl, required: true),
         ]),
         const SizedBox(height: 24),
         // Row 2: DOB, Gender, Blood Group
         _row(isMobile, [
-          _dateField('Date Of Birth', _dobCtrl),
-          _radioField('Gender', ['Male', 'Female', 'Other'], _gender, (v) => setState(() => _gender = v)),
-          _dropField('Blood Group', _bloodGroups, _bloodGroup, (v) => setState(() => _bloodGroup = v)),
+          _dateField('Date Of Birth *', _dobCtrl),
+          _radioField('Gender *', ['Male', 'Female', 'Other'], _gender, (v) => setState(() => _gender = v)),
+          _dropField('Blood Group *', _bloodGroups, _bloodGroup, (v) => setState(() => _bloodGroup = v)),
         ]),
         const SizedBox(height: 24),
         // Row 3: Blood Group, Email, Whatsapp
@@ -598,20 +598,15 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('WhatsApp Number', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: _darkBrown)),
+              const Text('WhatsApp Number *', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: _darkBrown)),
               const SizedBox(height: 8),
               Row(children: [
-                Expanded(child: TextFormField(
+                Expanded(child: CustomPhoneField(
+                  label: '',
                   controller: _whatsappCtrl,
-                  keyboardType: TextInputType.phone,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(10)],
-                  decoration: InputDecoration(
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade300)),
-                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade300)),
-                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: _darkBrown)),
-                    filled: true, fillColor: Colors.white, isDense: true,
-                  ),
+                  validator: (v) {
+                    return null;
+                  },
                 )),
                 const SizedBox(width: 8),
                 SizedBox(
@@ -629,7 +624,7 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
               ]),
             ],
           ),
-          _radioField('Married', ['Yes', 'No'], _married, (v) => setState(() => _married = v)),
+          _radioField('Married *', ['Yes', 'No'], _married, (v) => setState(() => _married = v)),
         ]),
         const SizedBox(height: 24),
         // Row 4: Married, Alive, Valuvu
@@ -641,7 +636,7 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
         const SizedBox(height: 24),
         // Row 5: Thottam, Kulam, Exist Family ID
         _row(isMobile, [
-          _dropField('Kulam', _kulams, _kulam, (v) => setState(() => _kulam = v)),
+          _dropField('Kulam *', _kulams, _kulam, (v) => setState(() => _kulam = v)),
           if (!isMobile) const Expanded(child: SizedBox()),
           if (!isMobile) const Expanded(child: SizedBox()),
         ]),
@@ -655,8 +650,8 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
       decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.grey.shade200)),
       child: Column(children: [
         _row(isMobile, [
-          _dropField('Education', _educations, _education, (v) => setState(() => _education = v)),
-          _dropField('Profession', _professions, _profession, (v) => setState(() => _profession = v)),
+          _dropField('Education *', _educations, _education, (v) => setState(() => _education = v)),
+          _dropField('Profession *', _professions, _profession, (v) => setState(() => _profession = v)),
         ]),
 
       ]),
@@ -672,7 +667,7 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
           ? Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _radioField('Current Address Type', ['Tamil Nadu', 'Other State', 'NRI'], _curAddressType == 'TamilNadu' ? 'Tamil Nadu' : (_curAddressType == 'OtherState' ? 'Other State' : (_curAddressType == 'NRI' ? 'NRI' : null)), (v) {
+                _radioField('Current Address Type *', ['Tamil Nadu', 'Other State', 'NRI'], _curAddressType == 'TamilNadu' ? 'Tamil Nadu' : (_curAddressType == 'OtherState' ? 'Other State' : (_curAddressType == 'NRI' ? 'NRI' : null)), (v) {
                   setState(() {
                     if (v == 'Tamil Nadu') {
                        _curAddressType = 'TamilNadu';
@@ -730,7 +725,7 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
           : Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _radioField('Current Address Type', ['Tamil Nadu', 'Other State', 'NRI'], _curAddressType == 'TamilNadu' ? 'Tamil Nadu' : (_curAddressType == 'OtherState' ? 'Other State' : (_curAddressType == 'NRI' ? 'NRI' : null)), (v) {
+                _radioField('Current Address Type *', ['Tamil Nadu', 'Other State', 'NRI'], _curAddressType == 'TamilNadu' ? 'Tamil Nadu' : (_curAddressType == 'OtherState' ? 'Other State' : (_curAddressType == 'NRI' ? 'NRI' : null)), (v) {
                   setState(() {
                     if (v == 'Tamil Nadu') {
                        _curAddressType = 'TamilNadu';
@@ -787,54 +782,49 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
         
         if (_curAddressType == 'TamilNadu') ...[
            _row(isMobile, [
-            _dropField('District', _currDistricts, _curDistrict, (v) { setState(() { _curDistrict = v; _curTalukCtrl.clear(); _curPanchayatCtrl.clear(); _curVillageCtrl.clear(); _currTaluks = []; _currPanchayats = []; _currVillages = []; }); if (v != null) _fetchCurrTaluks(v); }),
-            _dropField('Taluk', _currTaluks, _curTalukCtrl.text, (v) { setState(() { _curTalukCtrl.text = v ?? ''; _curPanchayatCtrl.clear(); _curVillageCtrl.clear(); _currPanchayats = []; _currVillages = []; }); if (v != null) _fetchCurrPanchayats(v); }),
-            _dropField('Panchayat', _currPanchayats, _curPanchayatCtrl.text, (v) { setState(() { _curPanchayatCtrl.text = v ?? ''; _curVillageCtrl.clear(); _currVillages = []; }); if (v != null) _fetchCurrVillages(v); }),
+            _dropField('District *', _currDistricts, _curDistrict, (v) { setState(() { _curDistrict = v; _curTalukCtrl.clear(); _curPanchayatCtrl.clear(); _curVillageCtrl.clear(); _currTaluks = []; _currPanchayats = []; _currVillages = []; }); if (v != null) _fetchCurrTaluks(v); }),
+            _dropField('Taluk *', _currTaluks, _curTalukCtrl.text, (v) { setState(() { _curTalukCtrl.text = v ?? ''; _curPanchayatCtrl.clear(); _curVillageCtrl.clear(); _currPanchayats = []; _currVillages = []; }); if (v != null) _fetchCurrPanchayats(v); }),
+            _dropField('Panchayat *', _currPanchayats, _curPanchayatCtrl.text, (v) { setState(() { _curPanchayatCtrl.text = v ?? ''; _curVillageCtrl.clear(); _currVillages = []; }); if (v != null) _fetchCurrVillages(v); }),
           ]),
           const SizedBox(height: 24),
           _row(isMobile, [
-            _dropField('Village', _currVillages, _curVillageCtrl.text, (v) => setState(() => _curVillageCtrl.text = v ?? '')),
-            _textField('Door No & Street Name', _curStreetCtrl, required: true),
-          ]),
-          const SizedBox(height: 24),
-           _row(isMobile, [
-            _textField('Pin Code', _curPincodeCtrl, inputType: TextInputType.number, required: true,
+            _dropField('Village *', _currVillages, _curVillageCtrl.text, (v) => setState(() => _curVillageCtrl.text = v ?? '')),
+            _textField('Door No & Street Name *', _curStreetCtrl, required: true),
+            _textField('Pin Code *', _curPincodeCtrl, inputType: TextInputType.number, required: true,
               inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(6)]),
-            const Expanded(child: SizedBox()),
-            const Expanded(child: SizedBox()),
           ]),
         ] else if (_curAddressType == 'OtherState') ...[
           _row(isMobile, [
-            _dropField('State', _stateNames, _curState, (v) {
+            _dropField('State *', _stateNames, _curState, (v) {
               setState(() => _curState = v);
               if (v != null) _updateCities('India', v);
             }),
-            _dropField('City', _cityNames, _curDistrict, (v) => setState(() => _curDistrict = v)),
-            _textField('Zip / Postal Code', _curPincodeCtrl, required: true),
+            _dropField('City *', _cityNames, _curDistrict, (v) => setState(() => _curDistrict = v)),
+            _textField('Zip / Postal Code *', _curPincodeCtrl, required: true),
           ]),
           const SizedBox(height: 24),
-          _textField('Door No & Street Name', _curStreetCtrl, required: true),
+          _textField('Door No & Street Name *', _curStreetCtrl, required: true),
           const SizedBox(height: 24),
-          _textField('Full Address', _nriFullAddressCtrl, required: true, maxLines: 3),
+          _textField('Full Address *', _nriFullAddressCtrl, required: true, maxLines: 3),
         ] else if (_curAddressType == 'NRI') ...[
           _row(isMobile, [
-            _dropField('Country', _countryNames, _nriCountry, (v) {
+            _dropField('Country *', _countryNames, _nriCountry, (v) {
               setState(() => _nriCountry = v);
               if (v != null) _updateStates(v);
             }),
-            _dropField('State', _stateNames, _nriState, (v) {
+            _dropField('State *', _stateNames, _nriState, (v) {
               setState(() => _nriState = v);
               if (v != null && _nriCountry != null) _updateCities(_nriCountry!, v);
             }),
-            _dropField('City', _cityNames, _nriCity, (v) => setState(() => _nriCity = v)),
+            _dropField('City *', _cityNames, _nriCity, (v) => setState(() => _nriCity = v)),
           ]),
           const SizedBox(height: 24),
           _row(isMobile, [
-            _textField('Zip / Postal Code', _nriZipCtrl, required: true),
-            _textField('Door No & Street Name', _curStreetCtrl, required: true),
+            _textField('Zip / Postal Code *', _nriZipCtrl, required: true),
+            _textField('Door No & Street Name *', _curStreetCtrl, required: true),
           ]),
           const SizedBox(height: 24),
-          _textField('Full Address', _nriFullAddressCtrl, required: true, maxLines: 3),
+          _textField('Full Address *', _nriFullAddressCtrl, required: true, maxLines: 3),
         ],
       ]),
     );
@@ -864,7 +854,7 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
     }
 
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: _darkBrown)),
+      _buildLabelText(label),
       const SizedBox(height: 8),
       Material(
         color: Colors.transparent,
@@ -922,21 +912,15 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
       decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.grey.shade200)),
       child: Column(children: [
         _row(isMobile, [
-          _dropField('District', _districts, _district, (v) { setState(() { _district = v; _taluk = null; _panchayat = null; _village = null; _taluks = []; _panchayats = []; _villages = []; }); if (v != null) _fetchTaluks(v); }),
-          _dropField('Taluk', _taluks, _taluk, (v) { setState(() { _taluk = v; _panchayat = null; _village = null; _panchayats = []; _villages = []; }); if (v != null) _fetchPanchayats(v); }),
-          _dropField('Panchayat', _panchayats, _panchayat, (v) { setState(() { _panchayat = v; _village = null; _villages = []; }); if (v != null) _fetchVillages(v); }),
+          _dropField('District *', _districts, _district, (v) { setState(() { _district = v; _taluk = null; _panchayat = null; _village = null; _taluks = []; _panchayats = []; _villages = []; }); if (v != null) _fetchTaluks(v); }),
+          _dropField('Taluk *', _taluks, _taluk, (v) { setState(() { _taluk = v; _panchayat = null; _village = null; _panchayats = []; _villages = []; }); if (v != null) _fetchPanchayats(v); }),
+          _dropField('Panchayat *', _panchayats, _panchayat, (v) { setState(() { _panchayat = v; _village = null; _villages = []; }); if (v != null) _fetchVillages(v); }),
         ]),
-        const SizedBox(height: 24),
         _row(isMobile, [
-          _dropField('Village', _villages, _village, (v) => setState(() => _village = v)),
-          _textField('Door No & Street Name', _streetCtrl),
-        ]),
-        const SizedBox(height: 24),
-        _row(isMobile, [
-          _textField('Pin Code', _pincodeCtrl, inputType: TextInputType.number,
+          _dropField('Village *', _villages, _village, (v) => setState(() => _village = v)),
+          _textField('Door No & Street Name *', _streetCtrl),
+          _textField('Pin Code *', _pincodeCtrl, inputType: TextInputType.number,
             inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(6)]),
-          const Expanded(child: SizedBox()),
-          const Expanded(child: SizedBox()),
         ]),
       ]),
     );
@@ -961,16 +945,24 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
     );
   }
 
-  Widget _textField(String label, TextEditingController ctrl, {TextInputType? inputType, bool required = false, List<TextInputFormatter>? inputFormatters, Widget? suffix, int maxLines = 1}) {
+  Widget _textField(String label, TextEditingController ctrl, {TextInputType? inputType, bool required = false, List<TextInputFormatter>? inputFormatters, Widget? suffix, int maxLines = 1, int? maxLength}) {
+    List<TextInputFormatter>? formatters = inputFormatters;
+    if (label.contains('Name') && !label.contains('Street') && !label.contains('Village')) {
+      formatters = (formatters?.toList() ?? [])..add(FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z\s\.]')));
+    }
+
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: _darkBrown)),
+      _buildLabelText(label),
       const SizedBox(height: 8),
       TextFormField(
         controller: ctrl,
+        autovalidateMode: AutovalidateMode.onUserInteraction,
         keyboardType: inputType,
-        inputFormatters: inputFormatters,
+        inputFormatters: formatters,
         maxLines: maxLines,
+        maxLength: maxLength ?? 254,
         decoration: InputDecoration(
+          counterText: "",
           contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade300)),
           enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade300)),
@@ -979,14 +971,39 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
           isDense: true,
           suffixIcon: suffix,
         ),
-        validator: required ? (v) => (v == null || v.isEmpty) ? 'Required' : null : null,
+        validator: (v) {
+          final val = v ?? '';
+          if (label.contains('Name') && !label.contains('Street') && !label.contains('Village')) {
+            if (required && val.trim().isEmpty) return 'Required';
+            if (val.trim().isNotEmpty && val.trim().length < 3) return 'Name must be at least 3 characters';
+            if (val.trim().isNotEmpty && !RegExp(r'^[a-zA-Z\s\.]+$').hasMatch(val.trim())) return 'Only letters, spaces, and dots allowed';
+          }
+          if (required && val.isEmpty) return 'Required';
+          return null;
+        },
+      ),
+    ]);
+  }
+
+  Widget _intlPhoneField(String label, TextEditingController ctrl, {bool required = false}) {
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      _buildLabelText(label),
+      const SizedBox(height: 8),
+      CustomPhoneField(
+        label: '',
+        controller: ctrl,
+        validator: (v) {
+          final val = ctrl.text;
+          if (required && val.isEmpty) return 'Required';
+          return null;
+        },
       ),
     ]);
   }
 
   Widget _dropField(String label, List<String> items, String? value, ValueChanged<String?> onChanged) {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: _darkBrown)),
+      _buildLabelText(label),
       const SizedBox(height: 8),
       DropdownSearch<String>(
         items: (filter, loadProps) => items,
@@ -995,8 +1012,8 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
         decoratorProps: DropDownDecoratorProps(
           decoration: InputDecoration(
             contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFFE0E0E0))),
-            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFFE0E0E0))),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: const Color(0xFFE0E0E0))),
+            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: const Color(0xFFE0E0E0))),
             focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: _darkBrown)),
             filled: true, fillColor: Colors.white,
           ),
@@ -1017,7 +1034,7 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
 
   Widget _dateField(String label, TextEditingController ctrl) {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: _darkBrown)),
+      _buildLabelText(label),
       const SizedBox(height: 8),
       TextFormField(
         controller: ctrl,
@@ -1040,7 +1057,7 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
 
   Widget _radioField(String label, List<String> options, String? value, ValueChanged<String?> onChanged) {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: _darkBrown)),
+      _buildLabelText(label),
       const SizedBox(height: 8),
       Wrap(
         children: options.map((o) => Row(mainAxisSize: MainAxisSize.min, children: [
@@ -1050,5 +1067,21 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
         ])).toList(),
       ),
     ]);
+  }
+  Widget _buildLabelText(String label) {
+    if (label.contains('*')) {
+      final parts = label.split('*');
+      return Text.rich(
+        TextSpan(
+          text: parts[0],
+          children: [
+            const TextSpan(text: '*', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+            if (parts.length > 1) TextSpan(text: parts.sublist(1).join('*')),
+          ],
+        ),
+        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: _darkBrown),
+      );
+    }
+    return Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: _darkBrown));
   }
 }

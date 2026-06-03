@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'dart:html' as html;
+import 'package:url_launcher/url_launcher.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../widgets/loading_spinner.dart';
@@ -106,6 +106,7 @@ class _MemberDetailsContentState extends State<MemberDetailsContent> {
                     DataColumn(label: Text('Tax Amount', style: TextStyle(fontWeight: FontWeight.bold))),
                     DataColumn(label: Text('Paid Amount', style: TextStyle(fontWeight: FontWeight.bold))),
                     DataColumn(label: Text('Balance Amount', style: TextStyle(fontWeight: FontWeight.bold))),
+                    DataColumn(label: Text('Status', style: TextStyle(fontWeight: FontWeight.bold))),
                     DataColumn(label: Text('Payment Date', style: TextStyle(fontWeight: FontWeight.bold))),
                   ],
                   rows: data.asMap().entries.map((entry) {
@@ -118,24 +119,18 @@ class _MemberDetailsContentState extends State<MemberDetailsContent> {
                       DataCell(Text(row['EventName'] ?? '-')),
                       DataCell(Text(row['TaxAmount']?.toString() ?? '0')),
                       DataCell(Text(row['PaidAmount']?.toString() ?? '0')),
+                      DataCell(Text(row['BalanceAmount']?.toString() ?? '0')),
                       DataCell(
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(row['BalanceAmount']?.toString() ?? '0'),
-                            const SizedBox(width: 12),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: isPaid ? const Color(0xFF2E7D32) : const Color(0xFF1976D2),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Text(
-                                row['status'],
-                                style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                          ],
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: isPaid ? const Color(0xFF2E7D32) : const Color(0xFF5D1712),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            row['status'] ?? 'PENDING',
+                            style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                          ),
                         ),
                       ),
                       DataCell(Text(row['PaymentDate'] ?? '-')),
@@ -251,12 +246,16 @@ class _MemberDetailsContentState extends State<MemberDetailsContent> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Header
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 16,
+            runSpacing: 16,
             children: [
-              const Row(
-                children: [
-                  Icon(Icons.person, color: Color(0xFF1976D2), size: 28),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: const [
+                  Icon(Icons.person, color: Color(0xFF5D1712), size: 28),
                   SizedBox(width: 12),
                   Text('Member Details:', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF2D1B18))),
                 ],
@@ -264,12 +263,12 @@ class _MemberDetailsContentState extends State<MemberDetailsContent> {
               ElevatedButton.icon(
                 onPressed: () {
                   final url = '${ApiConfig.baseUrl}/api/download-id-card/${widget.numericId}';
-                  html.window.open(url, '_blank');
+                  launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
                 },
                 icon: const Icon(Icons.badge_outlined, size: 18),
                 label: const Text('Download ID Card'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF1976D2),
+                  backgroundColor: const Color(0xFF5D1712),
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
@@ -285,9 +284,9 @@ class _MemberDetailsContentState extends State<MemberDetailsContent> {
           // Family Members Section
           const Row(
             children: [
-              Icon(Icons.group, color: Color(0xFF1976D2), size: 24),
+              Icon(Icons.group, color: const Color(0xFF5D1712), size: 24),
               SizedBox(width: 12),
-              Text('Family Members', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF2D1B18))),
+              Text('Family Members', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: const Color(0xFF2D1B18))),
             ],
           ),
           const SizedBox(height: 16),
@@ -298,137 +297,195 @@ class _MemberDetailsContentState extends State<MemberDetailsContent> {
   }
 
   Widget _buildProfileSection(bool isMobile) {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8F9FA),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Avatar & Quick Actions
-          Column(
-            children: [
-              GestureDetector(
-                onTap: () => _showImageViewer(_userData?['Memberimage'], 'Profile Photo'),
-                child: MouseRegion(
-                  cursor: SystemMouseCursors.click,
-                  child: Container(
-                    width: 150,
-                    height: 150,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.grey.shade300, width: 2),
-                      image: _userData?['Memberimage'] != null
-                          ? DecorationImage(
-                              image: NetworkImage('${ApiConfig.baseUrl}/assets/uploads/${_userData!['Memberimage']}'),
-                              fit: BoxFit.cover,
-                            )
-                          : null,
-                    ),
-                    child: _userData?['Memberimage'] == null
-                        ? Icon(Icons.person, size: 80, color: Colors.grey.shade400)
-                        : null,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                mainAxisSize: MainAxisSize.min,
+    return Center(
+      child: Container(
+        width: isMobile ? double.infinity : 800,
+        padding: const EdgeInsets.all(32),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF8F9FA),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey.shade200),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4)),
+          ],
+        ),
+        child: isMobile 
+            ? Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  _roundIcon(Icons.contact_page_outlined, 'Community Certificate', onTap: () => _showImageViewer(_userData?['Communitycertificateimage'], 'Community Certificate')),
+                  _buildAvatarAndActions(),
+                  const SizedBox(height: 32),
+                  Container(
+                    constraints: const BoxConstraints(maxWidth: 450),
+                    child: _buildDetailsColumn(),
+                  ),
+                ],
+              )
+            : Row(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _buildAvatarAndActions(),
+                  const SizedBox(width: 60),
+                  Container(
+                    constraints: const BoxConstraints(maxWidth: 450),
+                    child: _buildDetailsColumn(),
+                  ),
                 ],
               ),
-              const SizedBox(height: 16),
-              _actionButton('Event Participation', Icons.event_available, const Color(0xFFE8F5E9), Colors.green, onTap: _showEventParticipationDialog),
-              const SizedBox(height: 12),
-              _actionButton('Update Details', Icons.edit_note, const Color(0xFFFFF3E0), Colors.orange, onTap: _showUpdateDetailsDialog),
-            ],
-          ),
-          const SizedBox(width: 60),
-          // Details
-          Expanded(
-            child: Column(
-              children: [
-                _detailItem('Name:', _userData!['Name'] ?? 'N/A', isBlue: true, isBold: true),
-                const SizedBox(height: 24),
-                _detailItem('Family Membership ID:', _userData!['Familymembershipid'] ?? 'N/A', isPill: true),
-                const SizedBox(height: 24),
-                _detailItem('Phone Number:', _userData!['Phonenumber']?.toString() ?? 'N/A'),
-                const SizedBox(height: 24),
-                _addressItem('Address:', _userData!),
-              ],
+      ),
+    );
+  }
+
+  Widget _buildAvatarAndActions() {
+    return Column(
+      children: [
+        GestureDetector(
+          onTap: () => _showImageViewer(_userData?['Memberimage'], 'Profile Photo'),
+          child: MouseRegion(
+            cursor: SystemMouseCursors.click,
+            child: Container(
+              width: 150,
+              height: 150,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.grey.shade300, width: 2),
+                image: _userData?['Memberimage'] != null
+                    ? DecorationImage(
+                        image: NetworkImage('${ApiConfig.baseUrl}/assets/uploads/${_userData!['Memberimage']}'),
+                        fit: BoxFit.cover,
+                      )
+                    : null,
+              ),
+              child: _userData?['Memberimage'] == null
+                  ? Icon(Icons.person, size: 80, color: Colors.grey.shade400)
+                  : null,
             ),
           ),
-        ],
-      ),
+        ),
+        const SizedBox(height: 16),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _roundIcon(Icons.contact_page_outlined, 'Community Certificate', onTap: () => _showImageViewer(_userData?['Communitycertificateimage'], 'Community Certificate')),
+          ],
+        ),
+        const SizedBox(height: 16),
+        _actionButton('Event Participation', Icons.event_available, const Color(0xFFE8F5E9), Colors.green, onTap: _showEventParticipationDialog),
+        const SizedBox(height: 12),
+        _actionButton('Update Details', Icons.edit_note, const Color(0xFFFFF3E0), Colors.orange, onTap: _showUpdateDetailsDialog),
+      ],
+    );
+  }
+
+  Widget _buildDetailsColumn() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _detailItem('Name:', _userData!['Name'] ?? 'N/A', isBlue: true, isBold: true),
+        const SizedBox(height: 24),
+        _detailItem('Family Membership ID:', _userData!['Familymembershipid'] ?? 'N/A', isPill: true),
+        const SizedBox(height: 24),
+        _detailItem('Phone Number:', _userData!['Phonenumber']?.toString() ?? 'N/A'),
+        const SizedBox(height: 24),
+        _addressItem('Address:', _userData!),
+      ],
     );
   }
 
   Widget _detailItem(String label, String value, {bool isBlue = false, bool isBold = false, bool isPill = false}) {
-    return Row(
-      children: [
-        SizedBox(width: 200, child: Text(label, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black54))),
-        isPill
-            ? Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                decoration: BoxDecoration(color: const Color(0xFF1976D2), borderRadius: BorderRadius.circular(20)),
-                child: Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
-              )
-            : Text(
-                value,
-                style: TextStyle(
-                  fontSize: 17,
-                  fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
-                  color: isBlue ? const Color(0xFF1976D2) : Colors.black87,
-                ),
-              ),
-      ],
+    bool isMobile = MediaQuery.of(context).size.width < 800;
+    
+    final labelWidget = SizedBox(
+      width: isMobile ? double.infinity : 200,
+      child: Text(
+        label,
+        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black54),
+      ),
     );
+
+    final valueWidget = isPill
+        ? Align(
+            alignment: Alignment.centerLeft,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+              decoration: BoxDecoration(color: const Color(0xFF5D1712), borderRadius: BorderRadius.circular(20)),
+              child: Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+          )
+        : Text(
+            value,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+              color: isBlue ? const Color(0xFF5D1712) : Colors.black87,
+            ),
+          );
+
+    if (isMobile) {
+      return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [labelWidget, const SizedBox(height: 8), valueWidget]);
+    }
+
+    return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [labelWidget, Expanded(child: valueWidget)]);
   }
 
   Widget _addressItem(String label, Map<String, dynamic> data) {
-    return Row(
+    bool isMobile = MediaQuery.of(context).size.width < 800;
+    
+    final street = data['Street'] ?? '';
+    final village = data['Village'] ?? '';
+    final taluk = data['Taluk'] ?? '';
+    final district = data['District'] ?? '';
+    final state = data['State'] ?? 'Tamil Nadu';
+    final pincode = data['Pincode']?.toString() ?? '';
+
+    final labelWidget = SizedBox(
+      width: isMobile ? double.infinity : 200,
+      child: Text(
+        label,
+        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black54),
+      ),
+    );
+
+    final contentWidget = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SizedBox(width: 200, child: Text(label, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black54))),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _addressLine(Icons.home_outlined, '${data['Street'] ?? ''}'),
-              const SizedBox(height: 6),
-              _addressLine(Icons.location_on_outlined, '${data['Village'] ?? ''}, ${data['Taluk'] ?? ''}'),
-              const SizedBox(height: 6),
-              _addressLine(Icons.push_pin_outlined, '${data['District'] ?? ''} - ${data['Pincode'] ?? ''}'),
-              const SizedBox(height: 6),
-              _addressLine(Icons.map_outlined, data['State'] ?? 'Tamil Nadu'),
-            ],
-          ),
-        ),
+        _addressLine(Icons.home, '$street'),
+        const SizedBox(height: 8),
+        _addressLine(Icons.location_on, '$village, $taluk'),
+        const SizedBox(height: 8),
+        _addressLine(Icons.push_pin, '$district - $pincode'),
+        const SizedBox(height: 8),
+        _addressLine(Icons.map, state),
       ],
     );
+
+    if (isMobile) {
+      return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [labelWidget, const SizedBox(height: 12), contentWidget]);
+    }
+
+    return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [labelWidget, Expanded(child: contentWidget)]);
   }
 
   Widget _addressLine(IconData icon, String text) {
-    if (text.trim().isEmpty || text == 'null' || text == ', ') return const SizedBox.shrink();
+    if (text.trim().isEmpty || text == 'null' || text == ', ' || text == ' - ') return const SizedBox.shrink();
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, color: const Color(0xFF1976D2), size: 18),
-        const SizedBox(width: 12),
-        Text(text, style: const TextStyle(fontSize: 16, color: Colors.black87)),
+        Icon(icon, size: 16, color: Colors.grey.shade600),
+        const SizedBox(width: 8),
+        Expanded(child: Text(text, style: TextStyle(fontSize: 15, color: Colors.grey.shade800, height: 1.4))),
       ],
     );
   }
 
   Widget _roundIcon(IconData icon, String tooltip, {VoidCallback? onTap}) {
     return Container(
-      decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: const Color(0xFF1976D2).withOpacity(0.5))),
+      decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: const Color(0xFF5D1712).withOpacity(0.5))),
       child: IconButton(
-        icon: Icon(icon, color: const Color(0xFF1976D2), size: 20),
+        icon: Icon(icon, color: const Color(0xFF5D1712), size: 20),
         onPressed: onTap ?? () {},
         tooltip: tooltip,
       ),
@@ -451,60 +508,150 @@ class _MemberDetailsContentState extends State<MemberDetailsContent> {
       ),
     );
   }
+  String _getDisplayRole(dynamic member) {
+    String role = member['MemberRole']?.toString() ?? 'Unknown';
+    String memberFmId = member['Familymembershipid']?.toString() ?? '';
+    String memberExId = member['Existfamilyid']?.toString() ?? '';
+    String gender = member['Gender']?.toString().toLowerCase() ?? '';
+    
+    String currentFmId = _userData?['Familymembershipid']?.toString() ?? '';
+    String currentExistId = _userData?['Existfamilyid']?.toString() ?? '';
+    
+    bool amISubHead = currentFmId.isNotEmpty && currentExistId.isNotEmpty;
+    
+    if (amISubHead) {
+      if (memberFmId == currentExistId && memberFmId.isNotEmpty) {
+        if (role == 'Head') return gender == 'female' ? 'Mother' : 'Father';
+      }
+      if (memberExId == currentExistId && memberExId.isNotEmpty) {
+        if (memberFmId == currentFmId && currentFmId.isNotEmpty) {
+          return 'Head';
+        }
+        if (role == 'Head') return gender == 'female' ? 'Sister' : 'Brother';
+        if (role == 'Wife' || role == 'Husband') return gender == 'male' ? 'Father' : 'Mother';
+        if (['Son', 'Daughter'].contains(role)) return gender == 'female' ? 'Sister' : 'Brother';
+        if (['Brother', 'Sister'].contains(role)) return gender == 'female' ? 'Aunt' : 'Uncle';
+        if (['Father', 'Mother'].contains(role)) return gender == 'female' ? 'Grand Mother' : 'Grand Father';
+        if (['Grand Father', 'Grand Mother'].contains(role)) return gender == 'female' ? 'Great Grand Mother' : 'Great Grand Father';
+      }
+      
+      if (memberExId.isNotEmpty && memberExId != currentExistId && memberExId != currentFmId) {
+        if (role == 'Wife') return 'Sister-in-law';
+        if (role == 'Husband') return 'Brother-in-law';
+        if (['Son', 'Daughter'].contains(role)) return gender == 'female' ? 'Niece' : 'Nephew';
+      }
+    } else {
+      String topLevelId = currentFmId.isNotEmpty ? currentFmId : currentExistId;
+      bool isFmSubHead = role == 'Head' && memberExId.isNotEmpty;
+      if (isFmSubHead && memberExId == topLevelId) {
+        return gender == 'female' ? 'Daughter' : 'Son';
+      }
+      
+      bool belongsToSubHead = memberExId.isNotEmpty && memberExId != topLevelId;
+      if (belongsToSubHead) {
+        if (role == 'Wife') return 'Daughter-in-law';
+        if (role == 'Husband') return 'Son-in-law';
+        if (['Son', 'Daughter'].contains(role)) return gender == 'female' ? 'Grand Daughter' : 'Grand Son';
+      }
+    }
+    
+    return role;
+  }
 
   Widget _buildFamilyTable() {
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: DataTable(
-          headingRowHeight: 50,
-          headingRowColor: MaterialStateProperty.all(const Color(0xFF2D1B18)),
-          columns: const [
-            DataColumn(label: Text('S.NO', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
-            DataColumn(label: Text('NAME', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
-            DataColumn(label: Text('RELATIONSHIP', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
-            DataColumn(label: Text('GENDER', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
-            DataColumn(label: Text('AGE', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
+    bool isMobile = MediaQuery.of(context).size.width < 800;
+    
+    String currentFmId = _userData?['Familymembershipid']?.toString() ?? '';
+    String currentExistId = _userData?['Existfamilyid']?.toString() ?? '';
+    bool amITopHeadFamily = currentExistId.isEmpty;
+    bool amISubHead = _userData?['MemberRole'] == 'Head' && currentExistId.isNotEmpty;
+
+    final tableMembers = _familyMembers.where((fm) {
+      bool isMarried = fm['Married']?.toString().toLowerCase() == 'yes';
+      bool isChild = ['Son', 'Daughter', 'Son-in-law', 'Daughter-in-law'].contains(fm['MemberRole']);
+      
+      if (amISubHead) {
+        if (fm['Familymembershipid']?.toString() == currentFmId && currentFmId.isNotEmpty) return true;
+        if (fm['Existfamilyid']?.toString() == currentFmId && currentFmId.isNotEmpty) return true;
+        return false;
+      } else {
+        String topLevelId = amITopHeadFamily ? currentFmId : currentExistId;
+        if (fm['Familymembershipid']?.toString() == topLevelId && topLevelId.isNotEmpty) return true;
+        if (fm['Existfamilyid']?.toString() == topLevelId && topLevelId.isNotEmpty) {
+          bool isFmSubHead = fm['MemberRole'] == 'Head' && (fm['Existfamilyid']?.toString() ?? '').isNotEmpty;
+          if (isFmSubHead) return false;
+          if (isMarried && isChild) return false;
+          return true;
+        }
+        return false;
+      }
+    }).toList();
+
+    if (tableMembers.isEmpty) {
+      return Center(
+        child: Container(
+          width: isMobile ? double.infinity : 800,
+          height: 100,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+          ),
+          child: const Center(child: Text('No family members found.', style: TextStyle(color: Colors.grey))),
+        ),
+      );
+    }
+
+    return Center(
+      child: Container(
+        width: isMobile ? double.infinity : 800,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4)),
           ],
-          rows: _familyMembers.asMap().entries.map((entry) {
-            final i = entry.key;
-            final m = entry.value;
-            return DataRow(cells: [
-              DataCell(Text('${i + 1}')),
-              DataCell(Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(m['Name'] ?? 'N/A', style: const TextStyle(fontWeight: FontWeight.w600)),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(color: Colors.blue.shade50, borderRadius: BorderRadius.circular(4)),
-                    child: Text(m['Familymembershipid'] ?? '', style: const TextStyle(fontSize: 10, color: Colors.blue, fontWeight: FontWeight.bold)),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minWidth: constraints.maxWidth),
+                  child: DataTable(
+                    showCheckboxColumn: false,
+              headingRowHeight: 50,
+              columnSpacing: 32,
+              headingRowColor: MaterialStateProperty.all(const Color(0xFF2D1B18)),
+              columns: const [
+                DataColumn(label: Text('S.No', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
+                DataColumn(label: Text('Name', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
+                DataColumn(label: Text('Relationship', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
+                DataColumn(label: Text('Gender', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
+                DataColumn(label: Text('Age', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
+              ],
+              rows: tableMembers.asMap().entries.map((entry) {
+                final index = entry.key;
+                final fm = entry.value;
+                
+                return DataRow(
+                  cells: [
+                    DataCell(Text((index + 1).toString())),
+                    DataCell(Text(fm['Name'] ?? 'N/A')),
+                    DataCell(Text(_getDisplayRole(fm))),
+                    DataCell(Text(fm['Gender'] ?? 'N/A')),
+                    DataCell(Text(_calculateAge(fm['Dob']))),
+                  ],
+                );
+              }).toList(),
                   ),
-                ],
-              )),
-              DataCell(Center(child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(4), border: Border.all(color: Colors.grey.shade300)),
-                child: Text(m['MemberRole'] ?? 'Member', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-              ))),
-              DataCell(Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(m['Gender'] == 'Male' ? Icons.male : Icons.female, size: 16, color: Colors.blue),
-                  const SizedBox(width: 4),
-                  Text(m['Gender'] ?? 'N/A'),
-                ],
-              )),
-              DataCell(Text(_calculateAge(m['Dob']))),
-            ]);
-          }).toList(),
+                ),
+              );
+            },
+          ),
         ),
       ),
     );

@@ -8,7 +8,7 @@ class IdCardBenefitsContent extends StatefulWidget {
 }
 
 class _IdCardBenefitsContentState extends State<IdCardBenefitsContent> {
-  bool _isTamil = false;
+  bool _isTamil = true;
 
   final List<Map<String, dynamic>> _benefits = [
     {
@@ -173,7 +173,7 @@ class _IdCardBenefitsContentState extends State<IdCardBenefitsContent> {
                               child: Text(
                                 _isTamil ? 'பிரத்தியேக சலுகைகள்' : 'EXCLUSIVE PRIVILEGES',
                                 style: const TextStyle(
-                                  color: Color(0xFFC49A3C),
+                                  color: const Color(0xFFC49A3C),
                                   fontWeight: FontWeight.bold,
                                   letterSpacing: 2.0,
                                   fontSize: 12,
@@ -299,7 +299,7 @@ class _IdCardBenefitsContentState extends State<IdCardBenefitsContent> {
                       crossAxisCount: crossAxisCount,
                       crossAxisSpacing: 24,
                       mainAxisSpacing: 24,
-                      mainAxisExtent: 240, // Fixed smaller height instead of scaling aspect ratio
+                      mainAxisExtent: 280, // Increased height to prevent text overflow on mobile
                     ),
                     itemCount: _benefits.length,
                     itemBuilder: (context, index) {
@@ -331,7 +331,7 @@ class _IdCardBenefitsContentState extends State<IdCardBenefitsContent> {
                                   padding: const EdgeInsets.all(12),
                                   decoration: BoxDecoration(
                                     gradient: const LinearGradient(
-                                      colors: [Color(0xFF8B1D1D), Color(0xFF2D1B18)],
+                                      colors: [const Color(0xFF8B1D1D), const Color(0xFF2D1B18)],
                                       begin: Alignment.topLeft,
                                       end: Alignment.bottomRight,
                                     ),
@@ -366,7 +366,7 @@ class _IdCardBenefitsContentState extends State<IdCardBenefitsContent> {
                               style: const TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
-                                color: Color(0xFF2D1B18),
+                                color: const Color(0xFF2D1B18),
                               ),
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,

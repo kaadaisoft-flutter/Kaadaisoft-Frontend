@@ -8,12 +8,15 @@ import 'dart:convert';
 import 'package:file_picker/file_picker.dart' as fp_pkg;
 import 'package:cross_file/cross_file.dart';
 import 'package:dropdown_search/dropdown_search.dart';
+import 'package:intl_phone_field/intl_phone_field.dart';
 import 'custom_dialog.dart';
+import 'custom_phone_field.dart';
 import '../../utils/api_config.dart';
 import '../../services/geo_data_service.dart';
 
 class RegistrationForm extends StatefulWidget {
-  const RegistrationForm({super.key});
+  final int? submitterRole;
+  const RegistrationForm({super.key, this.submitterRole});
 
   @override
   State<RegistrationForm> createState() => _RegistrationFormState();
@@ -23,11 +26,11 @@ class _RegistrationFormState extends State<RegistrationForm> {
   final _formKey = GlobalKey<FormState>();
   
   // Design Colors
-  static const Color primaryBrown = Color(0xFF2D1B18);
-  static const Color mediumBrown = Color(0xFF3E2723);
-  static const Color accentGold = Color(0xFFC5A028);
+  static const Color primaryBrown = const Color(0xFF2D1B18);
+  static const Color mediumBrown = const Color(0xFF3E2723);
+  static const Color accentGold = const Color(0xFFC5A028);
   static const Color glassWhite = Color(0xA6FFFFFF);
-  static const Color borderColor = Color(0xFFE0E0E0);
+  static const Color borderColor = const Color(0xFFE0E0E0);
 
   // Controllers and FocusNodes
   final ScrollController _scrollController = ScrollController();
@@ -384,6 +387,12 @@ class _RegistrationFormState extends State<RegistrationForm> {
 
       _currStreetController.text = _streetController.text;
       _currPinCodeController.text = _pinCodeController.text;
+      
+      // Copy manual entry fields if "Others" was selected
+      _manualCurrDistrictController.text = _manualDistrictController.text;
+      _manualCurrTalukController.text = _manualTalukController.text;
+      _manualCurrPanchayatController.text = _manualPanchayatController.text;
+      _manualCurrVillageController.text = _manualVillageController.text;
     });
     
     // Clear validation errors after copying using a post-frame callback
@@ -564,6 +573,7 @@ class _RegistrationFormState extends State<RegistrationForm> {
       request.fields['nri_city'] = _selectedCurrCity ?? '';
       request.fields['nri_zip'] = _currZipController.text;
       request.fields['nri_full_address'] = _currFullAddressController.text;
+      request.fields['submitter_role'] = (widget.submitterRole ?? 3).toString();
 
       // Add files
       if (_memberImage != null) {
@@ -598,7 +608,7 @@ class _RegistrationFormState extends State<RegistrationForm> {
           showStatusDialog(
             context,
             title: 'Success',
-            message: 'Your application is submitted. Please wait 48 hours.',
+            message: data['message'] ?? 'Member registered successfully.',
             type: DialogType.success,
           ).then((_) {
             if (mounted) Navigator.pop(context);
@@ -715,8 +725,8 @@ class _RegistrationFormState extends State<RegistrationForm> {
                       const SizedBox(height: 16),
                       
                       _buildResponsiveRow(isMobile, [
-                        _buildInputField('Name *', _nameController, isMobile, focusNode: _focusNodes['Name']),
-                        _buildInputField('Phone Number *', _phoneController, isMobile, keyboardType: TextInputType.phone, maxLength: 10, focusNode: _focusNodes['Phone Number'], fieldKey: _phoneFieldKey, autovalidateMode: AutovalidateMode.onUserInteraction),
+                        _buildInputField('Name *', _nameController, isMobile, focusNode: _focusNodes['Name'], maxLength: 254),
+                        _buildIntlPhoneField('Phone Number *', _phoneController, isMobile, focusNode: _focusNodes['Phone Number'], fieldKey: _phoneFieldKey),
                         _buildDatePickerField('Date Of Birth *', _dobController, isMobile, focusNode: _focusNodes['Date Of Birth']),
                       ]),
                       
@@ -732,11 +742,11 @@ class _RegistrationFormState extends State<RegistrationForm> {
                           value: _selectedMarried, 
                           focusNode: _focusNodes['Married'],
                           onChanged: (v) => setState(() => _selectedMarried = v)),
-                        _buildInputField('Valuvu', _valuvuController, isMobile, focusNode: _focusNodes['Valuvu']),
+                        _buildInputField('Valuvu', _valuvuController, isMobile, focusNode: _focusNodes['Valuvu'], maxLength: 254),
                       ]),
                       
                       _buildResponsiveRow(isMobile, [
-                        _buildInputField('Thottam', _thottamController, isMobile, focusNode: _focusNodes['Thottam']),
+                        _buildInputField('Thottam', _thottamController, isMobile, focusNode: _focusNodes['Thottam'], maxLength: 254),
                         _buildInputField('Kulam *', TextEditingController(text: 'Poondurai Kaadai'), isMobile, readOnly: true),
                         if (!isMobile) const Spacer(),
                       ]),
@@ -755,7 +765,7 @@ class _RegistrationFormState extends State<RegistrationForm> {
                               'M.E', 'M.Tech', 'MD', 'MS', 'MDS', 'M.Pharm', 'M.Ed', 'LLM', 'M.Phil', 'Ph.D', 'Others'
                             ], isMobile, value: _selectedEducation, onChanged: (v) => setState(() => _selectedEducation = v), focusNode: _focusNodes['Education']),
                             if (_selectedEducation == 'Others')
-                              _buildInputField('Enter Education', _educationController, isMobile),
+                              _buildInputField('Enter Education', _educationController, isMobile, maxLength: 254),
                           ],
                         ),
                         Column(
@@ -768,7 +778,7 @@ class _RegistrationFormState extends State<RegistrationForm> {
                               'Grocery Shop Staff', 'IT / Software Employee', 'Home Maker', 'Retired', 'Others'
                             ], isMobile, value: _selectedProfession, onChanged: (v) => setState(() => _selectedProfession = v), focusNode: _focusNodes['Profession']),
                             if (_selectedProfession == 'Others')
-                              _buildInputField('Enter Profession', _professionController, isMobile),
+                              _buildInputField('Enter Profession', _professionController, isMobile, maxLength: 254),
                           ],
                         ),
                         if (!isMobile) const Spacer(),
@@ -798,7 +808,7 @@ class _RegistrationFormState extends State<RegistrationForm> {
                                 }
                               }),
                             if (_selectedDistrict == 'Others')
-                              _buildInputField('Enter District *', _manualDistrictController, isMobile),
+                              _buildInputField('Enter District *', _manualDistrictController, isMobile, maxLength: 254),
                           ],
                         ),
                         Column(
@@ -818,7 +828,7 @@ class _RegistrationFormState extends State<RegistrationForm> {
                                 }
                               }),
                             if (_selectedTaluk == 'Others')
-                              _buildInputField('Enter Taluk *', _manualTalukController, isMobile),
+                              _buildInputField('Enter Taluk *', _manualTalukController, isMobile, maxLength: 254),
                           ],
                         ),
                         Column(
@@ -837,7 +847,7 @@ class _RegistrationFormState extends State<RegistrationForm> {
                                 }
                               }),
                             if (_selectedPanchayat == 'Others')
-                              _buildInputField('Enter Panchayat *', _manualPanchayatController, isMobile),
+                              _buildInputField('Enter Panchayat *', _manualPanchayatController, isMobile, maxLength: 254),
                           ],
                         ),
                         Column(
@@ -847,12 +857,12 @@ class _RegistrationFormState extends State<RegistrationForm> {
                               focusNode: _focusNodes['Village Name'],
                               onChanged: (v) => setState(() => _selectedVillage = v)),
                             if (_selectedVillage == 'Others')
-                              _buildInputField('Enter Village *', _manualVillageController, isMobile),
+                              _buildInputField('Enter Village *', _manualVillageController, isMobile, maxLength: 254),
                           ],
                         ),
                       ]),
                       _buildResponsiveRow(isMobile, [
-                        _buildInputField('Door No & Street Name *', _streetController, isMobile, focusNode: _focusNodes['Street Name']),
+                        _buildInputField('Door No & Street Name *', _streetController, isMobile, focusNode: _focusNodes['Street Name'], maxLength: 254),
                         _buildInputField('Pin Code *', _pinCodeController, isMobile, keyboardType: TextInputType.number, maxLength: 6, focusNode: _focusNodes['Pin Code']),
                         if (!isMobile) const Spacer(),
                       ]),
@@ -908,7 +918,7 @@ class _RegistrationFormState extends State<RegistrationForm> {
                                   }
                                 }),
                               if (_selectedCurrDistrict == 'Others')
-                                _buildInputField('Enter District *', _manualCurrDistrictController, isMobile),
+                                _buildInputField('Enter District *', _manualCurrDistrictController, isMobile, maxLength: 254),
                             ],
                           ),
                           Column(
@@ -928,7 +938,7 @@ class _RegistrationFormState extends State<RegistrationForm> {
                                   }
                                 }),
                               if (_selectedCurrTaluk == 'Others')
-                                _buildInputField('Enter Taluk *', _manualCurrTalukController, isMobile),
+                                _buildInputField('Enter Taluk *', _manualCurrTalukController, isMobile, maxLength: 254),
                             ],
                           ),
                           Column(
@@ -947,7 +957,7 @@ class _RegistrationFormState extends State<RegistrationForm> {
                                   }
                                 }),
                               if (_selectedCurrPanchayat == 'Others')
-                                _buildInputField('Enter Panchayat *', _manualCurrPanchayatController, isMobile),
+                                _buildInputField('Enter Panchayat *', _manualCurrPanchayatController, isMobile, maxLength: 254),
                             ],
                           ),
                           Column(
@@ -957,12 +967,12 @@ class _RegistrationFormState extends State<RegistrationForm> {
                                 focusNode: _focusNodes['Curr Village'],
                                 onChanged: (v) => setState(() => _selectedCurrVillage = v)),
                               if (_selectedCurrVillage == 'Others')
-                                _buildInputField('Enter Village *', _manualCurrVillageController, isMobile),
+                                _buildInputField('Enter Village *', _manualCurrVillageController, isMobile, maxLength: 254),
                             ],
                           ),
                         ]),
                         _buildResponsiveRow(isMobile, [
-                          _buildInputField('Door No & Street Name *', _currStreetController, isMobile, focusNode: _focusNodes['Curr Street']),
+                          _buildInputField('Door No & Street Name *', _currStreetController, isMobile, focusNode: _focusNodes['Curr Street'], maxLength: 254),
                           _buildInputField('Pin Code *', _currPinCodeController, isMobile, keyboardType: TextInputType.number, maxLength: 6, focusNode: _focusNodes['Curr Pin']),
                           if (!isMobile) const Spacer(),
                           if (!isMobile) const Spacer(),
@@ -1202,7 +1212,7 @@ class _RegistrationFormState extends State<RegistrationForm> {
         RichText(
           text: TextSpan(
             text: label.replaceAll('*', ''),
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF333333)),
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: const Color(0xFF333333)),
             children: [
               if (label.contains('*'))
                 const TextSpan(text: ' *', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
@@ -1217,13 +1227,18 @@ class _RegistrationFormState extends State<RegistrationForm> {
           keyboardType: keyboardType,
           readOnly: readOnly,
           maxLength: maxLength,
-          autovalidateMode: autovalidateMode,
+          autovalidateMode: autovalidateMode ?? AutovalidateMode.onUserInteraction,
           inputFormatters: (keyboardType == TextInputType.phone || keyboardType == TextInputType.number)
               ? [FilteringTextInputFormatter.digitsOnly]
-              : null,
-          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: Color(0xFF333333)),
+              : ((label.contains('Name') && !label.contains('Street') && !label.contains('Village')) ? [FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z\s\.]'))] : null),
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: const Color(0xFF333333)),
           validator: (value) {
             final val = value ?? '';
+            if (label.contains('Name') && !label.contains('Street') && !label.contains('Village')) {
+              if (val.trim().isEmpty && _showMandatoryErrors) return 'Please fill this field';
+              if (val.trim().isNotEmpty && val.trim().length < 3) return 'Name must be at least 3 characters';
+              if (val.trim().isNotEmpty && !RegExp(r'^[a-zA-Z\s\.]+$').hasMatch(val.trim())) return 'Only letters, spaces, and dots allowed';
+            }
             if (label.contains('Phone')) {
               if (val.isEmpty) return _showMandatoryErrors ? 'Please fill this field' : null;
               if (val.length < 10) return 'Phone number should contain 10 digits.';
@@ -1250,6 +1265,38 @@ class _RegistrationFormState extends State<RegistrationForm> {
     );
   }
 
+  Widget _buildIntlPhoneField(String label, TextEditingController controller, bool isMobile, {String? hint, FocusNode? focusNode, Key? fieldKey}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        RichText(
+          text: TextSpan(
+            text: label.replaceAll('*', ''),
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: const Color(0xFF333333)),
+            children: [
+              if (label.contains('*'))
+                const TextSpan(text: ' *', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+            ],
+          ),
+        ),
+        const SizedBox(height: 6),
+        CustomPhoneField(
+          fieldKey: fieldKey,
+          label: '', // Label is already built above in this method, so pass empty or skip
+          controller: controller,
+          focusNode: focusNode,
+          hint: hint,
+          validator: (value) {
+            final val = controller.text;
+            if (val.isEmpty) return _showMandatoryErrors ? 'Please fill this field' : null;
+            if (_phoneExists) return 'Phone number already exist.';
+            return null;
+          },
+        ),
+      ],
+    );
+  }
+
   Widget _buildDatePickerField(String label, TextEditingController controller, bool isMobile, {FocusNode? focusNode}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1257,7 +1304,7 @@ class _RegistrationFormState extends State<RegistrationForm> {
         RichText(
           text: TextSpan(
             text: label.replaceAll('*', ''),
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF333333)),
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: const Color(0xFF333333)),
             children: [
               if (label.contains('*'))
                 const TextSpan(text: ' *', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
@@ -1269,7 +1316,7 @@ class _RegistrationFormState extends State<RegistrationForm> {
           controller: controller,
           focusNode: focusNode,
           readOnly: true,
-          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: Color(0xFF333333)),
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: const Color(0xFF333333)),
           validator: (value) {
             if (label.contains('*') && (value == null || value.isEmpty) && _showMandatoryErrors) {
               return 'Please select date';
@@ -1315,7 +1362,7 @@ class _RegistrationFormState extends State<RegistrationForm> {
           RichText(
             text: const TextSpan(
               text: 'Gender',
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF333333)),
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: const Color(0xFF333333)),
               children: [
                 TextSpan(text: ' *', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
               ],
@@ -1370,7 +1417,7 @@ class _RegistrationFormState extends State<RegistrationForm> {
         RichText(
           text: TextSpan(
             text: label.replaceAll('*', ''),
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF333333)),
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: const Color(0xFF333333)),
             children: [
               if (label.contains('*'))
                 const TextSpan(text: ' *', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
@@ -1424,7 +1471,7 @@ class _RegistrationFormState extends State<RegistrationForm> {
         RichText(
           text: const TextSpan(
             text: 'Email',
-            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF333333)),
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: const Color(0xFF333333)),
           ),
         ),
         const SizedBox(height: 6),
@@ -1437,7 +1484,9 @@ class _RegistrationFormState extends State<RegistrationForm> {
             if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(val)) return 'Invalid email';
             return null;
           },
+          maxLength: 254,
           decoration: InputDecoration(
+            counterText: "",
             hintText: 'Email address',
             hintStyle: const TextStyle(fontSize: 13, color: Colors.grey),
             fillColor: Colors.white.withOpacity(0.9),
@@ -1465,7 +1514,7 @@ class _RegistrationFormState extends State<RegistrationForm> {
             RichText(
               text: const TextSpan(
                 text: 'WhatsApp Number',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF333333)),
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: const Color(0xFF333333)),
                 children: [
                   TextSpan(text: ' *', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
                 ],
@@ -1493,29 +1542,13 @@ class _RegistrationFormState extends State<RegistrationForm> {
           ],
         ),
         const SizedBox(height: 2),
-        TextFormField(
+        CustomPhoneField(
+          label: '', // Handled above
           controller: _whatsappController,
           focusNode: focusNode,
-          keyboardType: TextInputType.phone,
-          maxLength: 10,
-          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
           validator: (value) {
-            final val = value ?? '';
-            if (val.isEmpty) return _showMandatoryErrors ? 'Please enter WhatsApp number' : null;
-            if (val.length != 10) return 'Enter 10-digit number';
             return null;
           },
-          decoration: InputDecoration(
-            hintText: 'WhatsApp number',
-            counterText: "",
-            hintStyle: const TextStyle(fontSize: 13, color: Colors.grey),
-            fillColor: Colors.white.withOpacity(0.9),
-            filled: true,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: borderColor, width: 1.5)),
-            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: borderColor, width: 1.5)),
-            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: mediumBrown, width: 1.5)),
-          ),
         ),
       ],
     );
@@ -1530,7 +1563,7 @@ class _RegistrationFormState extends State<RegistrationForm> {
           RichText(
             text: TextSpan(
               text: label.replaceAll('*', ''),
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF333333)),
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: const Color(0xFF333333)),
               children: [
                 if (label.contains('*'))
                   const TextSpan(text: ' *', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
@@ -1582,7 +1615,7 @@ class _RegistrationFormState extends State<RegistrationForm> {
         RichText(
           text: TextSpan(
             text: label.replaceAll('*', ''),
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF333333)),
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: const Color(0xFF333333)),
             children: [
               if (label.contains('*'))
                 const TextSpan(text: ' *', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
@@ -1652,7 +1685,7 @@ class _RegistrationFormState extends State<RegistrationForm> {
           RichText(
             text: TextSpan(
               text: label.replaceAll('*', ''),
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF333333)),
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: const Color(0xFF333333)),
               children: [
                 if (label.contains('*'))
                   const TextSpan(text: ' *', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
