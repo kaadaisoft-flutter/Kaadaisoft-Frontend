@@ -290,32 +290,49 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
       width: isMobile ? double.infinity : 300,
       child: Column(
         children: [
-          GestureDetector(
-            onTap: (_userData?['Memberimage'] != null && _userData!['Memberimage'].toString().isNotEmpty)
-                ? () => _showImageDialog('Profile Picture', _userData!['Memberimage'])
-                : null,
-            child: Container(
-              width: 200,
-              height: 200,
-              decoration: BoxDecoration(
-                color: Colors.grey[200],
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 4),
-                boxShadow: [
-                  BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 4)),
-                ],
-                image: (_userData?['Memberimage'] != null && _userData!['Memberimage'].toString().isNotEmpty)
-                    ? DecorationImage(
-                        image: NetworkImage('${ApiConfig.baseUrl}/assets/uploads/${_userData!['Memberimage']}'),
-                        fit: BoxFit.cover,
-                      )
-                    : null,
-              ),
-              child: (_userData?['Memberimage'] == null || _userData!['Memberimage'].toString().isEmpty)
-                  ? Icon(Icons.person, size: 100, color: Colors.grey[400])
-                  : null,
-            ),
-          ),
+          Builder(builder: (context) {
+            bool profileImageFailed = false;
+            return StatefulBuilder(builder: (context, setImgState) {
+              final hasProfileImage = _userData?['Memberimage'] != null && _userData!['Memberimage'].toString().isNotEmpty;
+              return Tooltip(
+                message: !hasProfileImage || profileImageFailed ? 'Profile Image Not Found' : '',
+                waitDuration: const Duration(milliseconds: 300),
+                child: GestureDetector(
+                  onTap: (hasProfileImage && !profileImageFailed)
+                      ? () => _showImageDialog('Profile Picture', _userData!['Memberimage'])
+                      : null,
+                  child: MouseRegion(
+                  cursor: (hasProfileImage && !profileImageFailed) ? SystemMouseCursors.click : SystemMouseCursors.basic,
+                  child: Container(
+                    width: 200,
+                    height: 200,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[200],
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 4),
+                      boxShadow: [
+                        BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 4)),
+                      ],
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: hasProfileImage && !profileImageFailed
+                        ? Image.network(
+                            '${ApiConfig.baseUrl}/assets/uploads/${_userData!['Memberimage']}',
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              WidgetsBinding.instance.addPostFrameCallback((_) {
+                                setImgState(() => profileImageFailed = true);
+                              });
+                              return Icon(Icons.person, size: 100, color: Colors.grey[400]);
+                            },
+                          )
+                        : Icon(Icons.person, size: 100, color: Colors.grey[400]),
+                  ),
+                ),
+                ),
+              );
+            });
+          }),
           const SizedBox(height: 24),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -840,27 +857,42 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
                 ),
       child: Column(
         children: [
-          GestureDetector(
-            onTap: hasImage ? () => _showFullScreenImage('${ApiConfig.baseUrl}/assets/uploads/${member['Memberimage']}') : null,
-            child: MouseRegion(
-              cursor: hasImage ? SystemMouseCursors.click : SystemMouseCursors.basic,
-              child: Container(
-                width: 52,
-                height: 52,
-                decoration: BoxDecoration(
-                  color: hasImage ? Colors.grey.shade200 : iconBgColor,
-                  shape: BoxShape.circle,
-                  image: hasImage 
-                      ? DecorationImage(
-                          image: NetworkImage('${ApiConfig.baseUrl}/assets/uploads/${member['Memberimage']}'),
-                          fit: BoxFit.cover,
-                        )
-                      : null,
+          Builder(builder: (context) {
+            bool imageLoadFailed = false;
+            return StatefulBuilder(builder: (context, setImgState) {
+              return Tooltip(
+                message: !hasImage || imageLoadFailed ? 'Image Not Found' : '',
+                waitDuration: const Duration(milliseconds: 300),
+                child: GestureDetector(
+                  onTap: (hasImage && !imageLoadFailed) ? () => _showFullScreenImage('${ApiConfig.baseUrl}/assets/uploads/${member['Memberimage']}') : null,
+                  child: MouseRegion(
+                    cursor: (hasImage && !imageLoadFailed) ? SystemMouseCursors.click : SystemMouseCursors.basic,
+                    child: Container(
+                      width: 52,
+                      height: 52,
+                      decoration: BoxDecoration(
+                        color: iconBgColor,
+                        shape: BoxShape.circle,
+                      ),
+                      clipBehavior: Clip.antiAlias,
+                      child: hasImage && !imageLoadFailed
+                          ? Image.network(
+                              '${ApiConfig.baseUrl}/assets/uploads/${member['Memberimage']}',
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                WidgetsBinding.instance.addPostFrameCallback((_) {
+                                  setImgState(() => imageLoadFailed = true);
+                                });
+                                return Icon(icon, color: iconColor, size: 28);
+                              },
+                            )
+                          : Icon(icon, color: iconColor, size: 28),
+                    ),
+                  ),
                 ),
-                child: !hasImage ? Icon(icon, color: iconColor, size: 28) : null,
-              ),
-            ),
-          ),
+              );
+            });
+          }),
           const SizedBox(height: 12),
           Text(
             member['Name'] ?? 'Unknown',
@@ -1052,22 +1084,47 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
     );
   }
 
-  Widget _buildRoundIcon(IconData icon, String tooltip, String? imgPath) {
-    final bool hasImage = imgPath != null && imgPath.isNotEmpty;
-    return Container(
-      width: 48,
-      height: 48,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: hasImage ? const Color(0xFF5D1712).withOpacity(0.1) : Colors.transparent,
-        border: Border.all(color: hasImage ? const Color(0xFF5D1712) : const Color(0xFF5D1712).withOpacity(0.3)),
-      ),
-      child: IconButton(
-        icon: Icon(icon, color: const Color(0xFF5D1712), size: 20),
-        onPressed: hasImage ? () => _showImageDialog(tooltip, imgPath) : () {},
-        tooltip: tooltip,
-      ),
-    );
+  Widget _buildRoundIcon(IconData icon, String tooltip, dynamic imgPath) {
+    return StatefulBuilder(builder: (context, setIconState) {
+      bool imageLoadFailed = false;
+      final hasImage = imgPath != null && imgPath.toString().isNotEmpty;
+      final isValidImage = hasImage && !imageLoadFailed;
+
+      return Stack(
+        children: [
+          if (hasImage && !imageLoadFailed)
+            Offstage(
+              offstage: true,
+              child: Image.network(
+                '${ApiConfig.baseUrl}/assets/uploads/$imgPath',
+                errorBuilder: (context, error, stackTrace) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (context.mounted) {
+                      setIconState(() => imageLoadFailed = true);
+                    }
+                  });
+                  return const SizedBox();
+                },
+              ),
+            ),
+          Tooltip(
+            message: !isValidImage ? 'Community Certificate Image Not Found' : tooltip,
+            waitDuration: const Duration(milliseconds: 300),
+            child: Container(
+              decoration: BoxDecoration(
+                color: isValidImage ? const Color(0xFF5D1712).withOpacity(0.1) : Colors.transparent,
+                shape: BoxShape.circle,
+                border: Border.all(color: isValidImage ? const Color(0xFF5D1712) : const Color(0xFF5D1712).withOpacity(0.3)),
+              ),
+              child: IconButton(
+                icon: Icon(icon, color: const Color(0xFF5D1712), size: 20),
+                onPressed: isValidImage ? () => _showImageDialog(tooltip, imgPath) : null,
+              ),
+            ),
+          ),
+        ],
+      );
+    });
   }
 
   void _showImageDialog(String title, String imgName) {

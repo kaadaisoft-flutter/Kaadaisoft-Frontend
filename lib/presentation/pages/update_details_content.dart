@@ -383,19 +383,64 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
         curStreetName = fullCurStreet.substring(commaIndex + 1).trim();
       }
       request.fields['cur_address_type'] = _curAddressType ?? '';
-      request.fields['cur_state'] = _curState ?? '';
-      request.fields['cur_district'] = _curDistrict ?? '';
-      request.fields['cur_taluk'] = _curTalukCtrl.text.trim();
-      request.fields['cur_panchayat'] = _curPanchayatCtrl.text.trim();
-      request.fields['cur_village'] = _curVillageCtrl.text.trim();
-      request.fields['cur_street'] = curStreetName;
-      request.fields['cur_door_no'] = curDoorNo;
-      request.fields['cur_pincode'] = _curPincodeCtrl.text.trim();
-      request.fields['nri_country'] = _nriCountryCtrl.text.trim();
-      request.fields['nri_state'] = _nriStateCtrl.text.trim();
-      request.fields['nri_city'] = _nriCityCtrl.text.trim();
-      request.fields['nri_zip'] = _nriZipCtrl.text.trim();
-      request.fields['nri_full_address'] = _nriFullAddressCtrl.text.trim();
+      
+      if (_curAddressType == 'TamilNadu') {
+        request.fields['cur_state'] = '';
+        request.fields['cur_district'] = _curDistrict ?? '';
+        request.fields['cur_taluk'] = _curTalukCtrl.text.trim();
+        request.fields['cur_panchayat'] = _curPanchayatCtrl.text.trim();
+        request.fields['cur_village'] = _curVillageCtrl.text.trim();
+        request.fields['cur_street'] = curStreetName;
+        request.fields['cur_door_no'] = curDoorNo;
+        request.fields['cur_pincode'] = _curPincodeCtrl.text.trim();
+        request.fields['nri_country'] = '';
+        request.fields['nri_state'] = '';
+        request.fields['nri_city'] = '';
+        request.fields['nri_zip'] = '';
+        request.fields['nri_full_address'] = '';
+      } else if (_curAddressType == 'OtherState') {
+        request.fields['cur_state'] = _curState ?? '';
+        request.fields['cur_district'] = _curDistrict ?? '';
+        request.fields['cur_taluk'] = '';
+        request.fields['cur_panchayat'] = '';
+        request.fields['cur_village'] = '';
+        request.fields['cur_street'] = curStreetName;
+        request.fields['cur_door_no'] = curDoorNo;
+        request.fields['cur_pincode'] = _curPincodeCtrl.text.trim();
+        request.fields['nri_country'] = '';
+        request.fields['nri_state'] = '';
+        request.fields['nri_city'] = '';
+        request.fields['nri_zip'] = '';
+        request.fields['nri_full_address'] = '';
+      } else if (_curAddressType == 'NRI') {
+        request.fields['cur_state'] = '';
+        request.fields['cur_district'] = '';
+        request.fields['cur_taluk'] = '';
+        request.fields['cur_panchayat'] = '';
+        request.fields['cur_village'] = '';
+        request.fields['cur_street'] = '';
+        request.fields['cur_door_no'] = '';
+        request.fields['cur_pincode'] = '';
+        request.fields['nri_country'] = _nriCountryCtrl.text.trim();
+        request.fields['nri_state'] = _nriStateCtrl.text.trim();
+        request.fields['nri_city'] = _nriCityCtrl.text.trim();
+        request.fields['nri_zip'] = _nriZipCtrl.text.trim();
+        request.fields['nri_full_address'] = _nriFullAddressCtrl.text.trim();
+      } else {
+        request.fields['cur_state'] = _curState ?? '';
+        request.fields['cur_district'] = _curDistrict ?? '';
+        request.fields['cur_taluk'] = _curTalukCtrl.text.trim();
+        request.fields['cur_panchayat'] = _curPanchayatCtrl.text.trim();
+        request.fields['cur_village'] = _curVillageCtrl.text.trim();
+        request.fields['cur_street'] = curStreetName;
+        request.fields['cur_door_no'] = curDoorNo;
+        request.fields['cur_pincode'] = _curPincodeCtrl.text.trim();
+        request.fields['nri_country'] = _nriCountryCtrl.text.trim();
+        request.fields['nri_state'] = _nriStateCtrl.text.trim();
+        request.fields['nri_city'] = _nriCityCtrl.text.trim();
+        request.fields['nri_zip'] = _nriZipCtrl.text.trim();
+        request.fields['nri_full_address'] = _nriFullAddressCtrl.text.trim();
+      }
 
       // Files helper for Web/Mobile
       Future<void> addFile(String field, dynamic file) async {
