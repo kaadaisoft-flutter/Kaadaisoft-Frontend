@@ -8,7 +8,7 @@ import 'loading_spinner.dart';
 import 'custom_dialog.dart';
 import '../../utils/bank_list.dart';
 import 'package:qr_flutter/qr_flutter.dart';
-
+import 'custom_dropdown_search.dart';
 class PaymentForm extends StatefulWidget {
   final Map<String, dynamic> memberData;
   final VoidCallback onPaymentSuccess;
@@ -218,18 +218,20 @@ class _PaymentFormState extends State<PaymentForm> {
             ).toList();
 
             return Dialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              backgroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               child: Container(
                 width: 400,
+                height: 500,
                 padding: const EdgeInsets.all(20),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Row(
                       children: [
-                        Icon(Icons.account_balance, color: const Color(0xFF5D1712)),
+                        const Icon(Icons.account_balance, color: Color(0xFF5D1712)),
                         const SizedBox(width: 12),
-                        const Text('Choose bank', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                        const Text('Choose bank', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF5D1712))),
                         const Spacer(),
                         IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close)),
                       ],
@@ -238,36 +240,62 @@ class _PaymentFormState extends State<PaymentForm> {
                     TextField(
                       decoration: InputDecoration(
                         hintText: 'Search bank...',
-                        prefixIcon: const Icon(Icons.search),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                        isDense: true,
+                        hintStyle: const TextStyle(color: Colors.black38, fontSize: 14),
+                        suffixIcon: const Icon(Icons.search, color: Color(0xFF5D1712)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        filled: true,
+                        fillColor: const Color(0xFFF9FAFB),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: const BorderSide(color: Colors.black12),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: const BorderSide(color: Colors.black12),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: const BorderSide(color: Color(0xFF5D1712), width: 1.5),
+                        ),
                       ),
                       onChanged: (val) {
                         setDialogState(() => searchQuery = val);
                       },
                     ),
                     const SizedBox(height: 16),
-                    ConstrainedBox(
-                      constraints: const BoxConstraints(maxHeight: 400),
+                    Expanded(
                       child: filteredBanks.isEmpty 
-                        ? const Padding(
-                            padding: EdgeInsets.all(20),
-                            child: Text('No banks found'),
+                        ? const Center(
+                            child: Text('No banks found', style: TextStyle(color: Colors.black54)),
                           )
-                        : ListView.builder(
-                            shrinkWrap: true,
+                        : ListView.separated(
                             itemCount: filteredBanks.length,
+                            separatorBuilder: (context, index) => Divider(color: Colors.grey.shade200, height: 1),
                             itemBuilder: (context, index) {
                               final bank = filteredBanks[index];
-                              return ListTile(
-                                title: Text(bank, style: const TextStyle(fontSize: 14)),
-                                onTap: () {
-                                  setState(() {
-                                    _selectedBank = bank;
-                                    _showOtherBank = bank == 'Other Bank';
-                                  });
-                                  Navigator.pop(context);
-                                },
+                              return Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  onTap: () {
+                                    setState(() {
+                                      _selectedBank = bank;
+                                      _showOtherBank = bank == 'Other Bank';
+                                    });
+                                    Navigator.pop(context);
+                                  },
+                                  hoverColor: const Color(0xFF5D1712).withOpacity(0.05),
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+                                    child: Text(
+                                      bank, 
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500,
+                                        color: Colors.black87,
+                                      ),
+                                    ),
+                                  ),
+                                ),
                               );
                             },
                           ),
@@ -454,22 +482,18 @@ class _PaymentFormState extends State<PaymentForm> {
         children: [
           const Text('Event Year', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF64748B))),
           const SizedBox(height: 6),
-          DropdownButtonFormField<int?>(
-            value: _selectedYear,
-            decoration: InputDecoration(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-              isDense: true,
-            ),
-            items: [
-              const DropdownMenuItem<int?>(value: null, child: Text('Choose Year')),
-              ..._years.map((y) => DropdownMenuItem<int?>(value: y, child: Text(y.toString()))),
-            ],
+          CustomDropdownSearch(
+            label: '',
+            hint: 'Choose Year',
+            dropdownItems: _years.map((y) => y.toString()).toList(),
+            value: _selectedYear?.toString(),
+            height: 45,
             onChanged: (val) {
               setState(() {
-                _selectedYear = val;
-                if (val != null) {
-                  _fetchEvents(val);
+                final intVal = val == null ? null : int.tryParse(val);
+                _selectedYear = intVal;
+                if (intVal != null) {
+                  _fetchEvents(intVal);
                 } else {
                   _events = [];
                   _selectedEventId = null;
@@ -484,21 +508,20 @@ class _PaymentFormState extends State<PaymentForm> {
           const SizedBox(height: 16),
           const Text('Event', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF64748B))),
           const SizedBox(height: 6),
-          DropdownButtonFormField<int>(
-            value: _selectedEventId,
-            isExpanded: true,
-            decoration: InputDecoration(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-              isDense: true,
-              hintText: 'Choose Event',
-            ),
-            items: _events.map((e) => DropdownMenuItem<int>(value: e['Id'], child: Text(e['EventName'], overflow: TextOverflow.ellipsis))).toList(),
-            onChanged: (val) {
-              setState(() => _selectedEventId = val);
-              if (val != null) _fetchSummary(val);
+          CustomDropdownSearch(
+            label: '',
+            hint: 'Choose Event',
+            dropdownMap: {
+              for (var e in _events) e['Id'].toString(): e['EventName'].toString(),
             },
+            value: _selectedEventId?.toString(),
+            height: 45,
             validator: (v) => v == null ? 'Required' : null,
+            onChanged: (val) {
+              final intVal = val == null ? null : int.tryParse(val);
+              setState(() => _selectedEventId = intVal);
+              if (intVal != null) _fetchSummary(intVal);
+            },
           ),
           const SizedBox(height: 16),
           const Text('Pay Amount *', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF64748B))),

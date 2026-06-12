@@ -11,7 +11,7 @@ import '../../utils/api_config.dart';
 import 'update_details_content.dart';
 import 'member_details_content.dart';
 import '../widgets/registration_form.dart';
-import 'package:dropdown_search/dropdown_search.dart';
+import '../widgets/custom_dropdown_search.dart';
 
 
 
@@ -536,16 +536,12 @@ class _MembersContentState extends State<MembersContent> {
             children: [
               const Text('Please select a reason for rejection:'),
               const SizedBox(height: 16),
-              DropdownButtonFormField<String>(
+              CustomDropdownSearch(
+                label: '',
+                hint: '-- Choose a reason --',
                 value: selectedReason,
-                isExpanded: true,
-                hint: const Text('-- Choose a reason --'),
-                items: reasons.map((r) => DropdownMenuItem(value: r, child: Text(r, style: const TextStyle(fontSize: 13)))).toList(),
+                dropdownItems: reasons,
                 onChanged: (val) => setDialogState(() => selectedReason = val),
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                ),
               ),
               if (selectedReason == 'Other (Enter manually)') ...[
                 const SizedBox(height: 16),
@@ -1456,54 +1452,15 @@ class _MembersContentState extends State<MembersContent> {
   }
 
   Widget _buildFilterDropdown(String label, List<String> items, String? value, Function(String?) onChanged, {bool isLoading = false}) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black87)),
-        const SizedBox(height: 8),
-        SizedBox(
-          height: 45,
-          child: isLoading 
-            ? Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: BoxDecoration(borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.grey.shade300)),
-                child: const Center(child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))),
-              )
-            : DropdownSearch<String>(
-                items: (filter, loadProps) => items,
-                selectedItem: value,
-                decoratorProps: DropDownDecoratorProps(
-                  decoration: InputDecoration(
-                    hintText: 'Select ${label.replaceAll(':', '')}',
-                    hintStyle: const TextStyle(fontSize: 13, color: Colors.black45),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade300)),
-                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade300)),
-                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: const Color(0xFF5D1712), width: 1)),
-                  ),
-                ),
-                popupProps: PopupProps.menu(
-                  showSearchBox: true,
-                  searchFieldProps: TextFieldProps(
-                    decoration: InputDecoration(
-                      hintText: 'Search...',
-                      prefixIcon: const Icon(Icons.search, size: 18),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                    ),
-                  ),
-                  menuProps: const MenuProps(
-                    elevation: 4,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
-                  ),
-                ),
-                onSelected: (v) {
-                  onChanged(v);
-                  _fetchMembers();
-                },
-              ),
-        ),
-      ],
+    return CustomDropdownSearch(
+      label: label,
+      dropdownItems: items,
+      value: value,
+      onChanged: (v) {
+        onChanged(v);
+        _fetchMembers();
+      },
+      isLoading: isLoading,
     );
   }
 

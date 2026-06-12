@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:dropdown_search/dropdown_search.dart';
+import '../widgets/custom_dropdown_search.dart';
 import 'package:http/http.dart' as http;
 import '../widgets/loading_spinner.dart';
 import '../widgets/payment_form.dart';
@@ -407,28 +407,6 @@ class _PaymentsContentState extends State<PaymentsContent> {
               color: const Color(0xFF2D1B18)
             )
           ),
-          // Member Details Card
-          if (member != null)
-            _buildProfileCard(
-              title: 'My Details:',
-              data: member,
-              showPayNow: true,
-              isMobile: isMobile,
-            ),
-
-          if (member == null)
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(color: Colors.orange.shade50, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.orange.shade200)),
-              child: const Row(
-                children: [
-                  Icon(Icons.info_outline, color: Colors.orange),
-                  SizedBox(width: 12),
-                  Expanded(child: Text('No details found. Please contact your admin.', style: TextStyle(color: Colors.orange))),
-                ],
-              ),
-            ),
-
           const SizedBox(height: 28),
 
           // Payment Receipt History
@@ -1016,30 +994,25 @@ class _PaymentsContentState extends State<PaymentsContent> {
               runSpacing: 16,
               crossAxisAlignment: WrapCrossAlignment.end,
               children: [
-                _buildFilterField('Event Year', DropdownButtonFormField<int>(
-                  value: _selectedYear,
-                  decoration: InputDecoration(
-                    prefixIcon: const Icon(Icons.calendar_today, size: 20, color: Colors.orange),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                    isDense: true,
-                  ),
-                  items: _years.map((y) => DropdownMenuItem(value: y, child: Text(y.toString()))).toList(),
+                _buildFilterField('Event Year', CustomDropdownSearch(
+                  label: '',
+                  hint: 'Select Year',
+                  dropdownMap: { for (var y in _years) y.toString(): y.toString() },
+                  value: _selectedYear?.toString(),
                   onChanged: (val) {
-                    setState(() => _selectedYear = val);
-                    _fetchEvents(val!);
+                    final intVal = val != null ? int.tryParse(val) : null;
+                    setState(() => _selectedYear = intVal);
+                    if (intVal != null) _fetchEvents(intVal);
                   },
                 ), isMobile),
-                _buildFilterField('Event', DropdownButtonFormField<int>(
-                  value: _selectedEventId,
-                  decoration: InputDecoration(
-                    prefixIcon: const Icon(Icons.event_available, size: 20, color: Colors.orange),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                    isDense: true,
-                  ),
-                  items: _events.map((e) => DropdownMenuItem<int>(value: e['Id'], child: Text(e['EventName']))).toList(),
-                  onChanged: (val) => setState(() => _selectedEventId = val),
+                _buildFilterField('Event', CustomDropdownSearch(
+                  label: '',
+                  hint: 'Select Event',
+                  dropdownMap: { for (var e in _events) e['Id'].toString(): e['EventName'].toString() },
+                  value: _selectedEventId?.toString(),
+                  onChanged: (val) {
+                    setState(() => _selectedEventId = val != null ? int.tryParse(val) : null);
+                  },
                 ), isMobile),
                 _buildFilterField('Status', Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -1148,39 +1121,17 @@ class _PaymentsContentState extends State<PaymentsContent> {
   }
 
   Widget _buildDropdown(String label, List<dynamic> items, String? value, Function(String?) onChanged, {IconData? icon, bool isStringList = false}) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey)),
-        const SizedBox(height: 4),
-        DropdownSearch<String>(
-          selectedItem: value,
-          items: (filter, loadProps) => items.map((item) {
-            String val = isStringList ? (item is String ? item : item['taluk_name'] ?? item['panchayat_name'] ?? item['village_name']) : item['district_name'];
-            return val;
-          }).toList(),
-          decoratorProps: DropDownDecoratorProps(
-            decoration: InputDecoration(
-              prefixIcon: Icon(icon, size: 20, color: const Color(0xFF5D1712)),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
-              isDense: true,
-            ),
-          ),
-          popupProps: PopupProps.menu(
-            showSearchBox: true,
-            searchFieldProps: TextFieldProps(
-              decoration: InputDecoration(
-                hintText: 'Search $label...',
-                prefixIcon: const Icon(Icons.search, size: 18),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              ),
-            ),
-          ),
-          onSelected: onChanged,
-        ),
-      ],
+    List<String> mappedItems = items.map((item) {
+      String val = isStringList ? (item is String ? item : item['taluk_name'] ?? item['panchayat_name'] ?? item['village_name']) : item['district_name'];
+      return val;
+    }).toList();
+
+    return CustomDropdownSearch(
+      label: '',  // label is already shown by _buildFilterField wrapper
+      hint: 'Select $label',
+      dropdownItems: mappedItems,
+      value: value,
+      onChanged: onChanged,
     );
   }
 
@@ -1534,7 +1485,7 @@ class _PaymentsContentState extends State<PaymentsContent> {
   Widget _buildReceiptsHistorySection(List<dynamic> receipts, Map<String, dynamic> memberData, bool isMobile) {
     final Map<String, List<dynamic>> grouped = {};
     for (var r in receipts) {
-      final name = r['eventname']?.toString() ?? 'Other';
+      final name = r['eventname']?.toString() ?? r['EventName']?.toString() ?? 'Other';
       if (!grouped.containsKey(name)) grouped[name] = [];
       grouped[name]!.add(r);
     }
@@ -1631,7 +1582,7 @@ class _PaymentsContentState extends State<PaymentsContent> {
                     controller: controller,
                     scrollDirection: Axis.horizontal,
                 child: Container(
-                  width: constraints.maxWidth > 990 ? constraints.maxWidth : 990,
+                  width: constraints.maxWidth > 1140 ? constraints.maxWidth : 1140,
                   color: Colors.white,
                   child: Column(
                     children: [
@@ -1642,6 +1593,7 @@ class _PaymentsContentState extends State<PaymentsContent> {
                         child: Row(
                           children: [
                             _buildHistoryHeaderCell('S.NO', 50),
+                            _buildHistoryHeaderCell('EVENT NAME', 150),
                             _buildHistoryHeaderCell('TOTAL AMOUNT', 120),
                             _buildHistoryHeaderCell('PAID', 100),
                             _buildHistoryHeaderCell('PENDING', 100),
@@ -1666,10 +1618,11 @@ class _PaymentsContentState extends State<PaymentsContent> {
                           child: Row(
                             children: [
                               _buildHistoryDataCell('${items.indexOf(r) + 1}', 50),
+                              _buildHistoryDataCell(r['eventname']?.toString() ?? r['EventName']?.toString() ?? eventName, 150),
                               _buildHistoryDataCell('${r['TaxAmount'] ?? '-'} Rs', 120),
                               _buildHistoryDataCell('${r['paidamount'] ?? '-'} Rs', 100, color: Colors.green),
                               _buildHistoryDataCell('${r['balanceamount'] ?? '-'} Rs', 100, color: Colors.red),
-                              _buildHistoryDataCell(r['bankname'] ?? '-', 150),
+                              Expanded(child: _buildHistoryDataCell(r['bankname'] ?? '-', 150)),
                               _buildHistoryDataCell(r['paymentdate'] ?? '-', 100),
                               _buildHistoryDataCell(r['year']?.toString() ?? '-', 70),
                               _buildHistoryDataCell(r['dues']?.toString() ?? '-', 70),

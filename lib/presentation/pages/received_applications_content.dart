@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import '../widgets/loading_spinner.dart';
 import '../widgets/custom_dialog.dart';
 import '../../utils/api_config.dart';
+import '../widgets/custom_dropdown_search.dart';
 
 class ReceivedApplicationsContent extends StatefulWidget {
   final dynamic userId;
@@ -303,11 +304,11 @@ class _ReceivedApplicationsContentState extends State<ReceivedApplicationsConten
               children: [
                 const Text('Please select a reason for rejection:'),
                 const SizedBox(height: 16),
-                DropdownButtonFormField<String>(
+                CustomDropdownSearch(
+                  label: '',
+                  hint: '-- Choose a reason --',
                   value: selectedReason,
-                  isExpanded: true,
-                  hint: const Text('-- Choose a reason --'),
-                  items: reasons.map((r) => DropdownMenuItem(value: r, child: Text(r, style: const TextStyle(fontSize: 13)))).toList(),
+                  dropdownItems: reasons,
                   onChanged: (val) => setDialogState(() => selectedReason = val),
                 ),
                 if (selectedReason == 'Other (Enter manually)') ...[

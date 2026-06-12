@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:dropdown_search/dropdown_search.dart';
+import 'custom_dropdown_search.dart';
 import '../../utils/api_config.dart';
 import '../widgets/loading_spinner.dart';
 import '../widgets/custom_dialog.dart';
@@ -79,6 +79,7 @@ class _AssignCoordinatorViewState extends State<AssignCoordinatorView> {
   bool _isRemovingCoord = false;
   bool _isAddingVillage = false;
   bool _isRemovingVillage = false;
+  bool _isFetchingStatus = false;
 
   @override
   void initState() {
@@ -192,6 +193,9 @@ class _AssignCoordinatorViewState extends State<AssignCoordinatorView> {
   }
 
   Future<void> _fetchCoordinatorVillages(String coordId, {bool isReassign = true}) async {
+    if (!isReassign) {
+      setState(() => _isFetchingStatus = true);
+    }
     try {
       final response = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/coordinator-villages/$coordId'));
       if (response.statusCode == 200) {
@@ -223,9 +227,24 @@ class _AssignCoordinatorViewState extends State<AssignCoordinatorView> {
           setState(() {
             _removeCoordVillages = list.map((v) => v as Map<String, dynamic>).toList();
           });
+          if (list.isEmpty) {
+            showStatusDialog(context, title: 'Info', message: 'No villages assigned to this coordinator.', type: DialogType.warning);
+          }
+        }
+      } else {
+        if (!isReassign) {
+          showStatusDialog(context, title: 'Error', message: 'Failed to fetch status.', type: DialogType.error);
         }
       }
-    } catch (e) {}
+    } catch (e) {
+      if (!isReassign) {
+        showStatusDialog(context, title: 'Error', message: 'Connection error.', type: DialogType.error);
+      }
+    } finally {
+      if (!isReassign) {
+        setState(() => _isFetchingStatus = false);
+      }
+    }
   }
 
   Future<void> _assignCoordinator() async {
@@ -788,9 +807,11 @@ class _AssignCoordinatorViewState extends State<AssignCoordinatorView> {
             SizedBox(
               height: 45,
               child: ElevatedButton(
-                onPressed: _selectedRemoveCoordId == null ? null : () => _fetchCoordinatorVillages(_selectedRemoveCoordId!, isReassign: false),
+                onPressed: _selectedRemoveCoordId == null || _isFetchingStatus ? null : () => _fetchCoordinatorVillages(_selectedRemoveCoordId!, isReassign: false),
                 style: ElevatedButton.styleFrom(backgroundColor: Colors.grey.shade600),
-                child: const Text('Status', style: TextStyle(color: Colors.white)),
+                child: _isFetchingStatus 
+                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                  : const Text('Status', style: TextStyle(color: Colors.white)),
               ),
             ),
           ],
@@ -1055,58 +1076,17 @@ class _AssignCoordinatorViewState extends State<AssignCoordinatorView> {
   }
 
   Widget _buildDropdown({required String value, required List<String> items, required void Function(String?) onChanged}) {
-    return Container(
+    // Treat "Choose X" placeholder strings as null so hint text shows
+    final isPlaceholder = value.startsWith('Choose ');
+    // Filter out placeholder items from the dropdown list
+    final filteredItems = items.where((e) => !e.startsWith('Choose ')).toList();
+    return CustomDropdownSearch(
+      label: '',
+      hint: value, // Use the "Choose X" string as the hint
+      dropdownItems: filteredItems,
+      value: isPlaceholder ? null : value,
+      onChanged: (val) => onChanged(val ?? value),
       height: 45,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: DropdownSearch<String>(
-        items: (filter, loadProps) => items,
-        selectedItem: value,
-        onSelected: (String? val) => onChanged(val),
-        popupProps: PopupProps.menu(
-          showSearchBox: true,
-          searchFieldProps: TextFieldProps(
-            decoration: InputDecoration(
-              hintText: "Search...",
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-          ),
-          itemBuilder: (context, item, isSelected, isHighlighted) {
-            return Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                color: isSelected ? const Color(0xFF5D1712).withOpacity(0.1) : null,
-                border: const Border(bottom: BorderSide(color: Colors.black12, width: 0.5)),
-              ),
-              child: Text(
-                item,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: isSelected ? const Color(0xFF5D1712) : Colors.black87,
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                ),
-              ),
-            );
-          },
-        ),
-        decoratorProps: DropDownDecoratorProps(
-          decoration: InputDecoration(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: const BorderSide(color: Colors.black12)),
-            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: const BorderSide(color: Colors.black12)),
-          ),
-        ),
-        dropdownBuilder: (context, selectedItem) {
-          return Text(
-            selectedItem ?? "",
-            style: const TextStyle(fontSize: 13),
-            overflow: TextOverflow.ellipsis,
-          );
-        },
-      ),
     );
   }
 
@@ -1309,43 +1289,116 @@ class _SearchUserDialogState extends State<_SearchUserDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: Text(widget.isMember ? 'Search Member' : 'Search Coordinator'),
-      content: SizedBox(
+    return Dialog(
+      backgroundColor: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Container(
         width: 400,
-        height: 400,
+        height: 500,
+        padding: const EdgeInsets.all(20),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Text(
+              widget.isMember ? 'Search Member' : 'Search Coordinator',
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF5D1712),
+              ),
+            ),
+            const SizedBox(height: 16),
             TextField(
               controller: _controller,
               onChanged: (_) => _search(),
               decoration: InputDecoration(
                 hintText: 'Enter name or ID...',
-                suffixIcon: IconButton(icon: const Icon(Icons.search), onPressed: _search),
-                border: const OutlineInputBorder(),
+                hintStyle: const TextStyle(color: Colors.black38, fontSize: 14),
+                suffixIcon: IconButton(
+                  icon: const Icon(Icons.search, color: Color(0xFF5D1712)), 
+                  onPressed: _search,
+                ),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                filled: true,
+                fillColor: const Color(0xFFF9FAFB),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: Colors.black12),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: Colors.black12),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: Color(0xFF5D1712), width: 1.5),
+                ),
               ),
               onSubmitted: (_) => _search(),
             ),
             const SizedBox(height: 16),
             if (_isLoading)
-              const Center(child: CircularProgressIndicator())
+              const Expanded(child: Center(child: CircularProgressIndicator(color: Color(0xFF5D1712))))
+            else if (_results.isEmpty)
+              const Expanded(
+                child: Center(
+                  child: Text('No results found', style: TextStyle(color: Colors.black54)),
+                ),
+              )
             else
               Expanded(
-                child: ListView.builder(
+                child: ListView.separated(
                   itemCount: _results.length,
+                  separatorBuilder: (context, index) => Divider(color: Colors.grey.shade200, height: 1),
                   itemBuilder: (context, index) {
                     final user = _results[index];
-                    return ListTile(
-                      title: Text(user['Name'] ?? 'N/A'),
-                      subtitle: Text(user['Familymembershipid'] ?? 'N/A'),
-                      onTap: () {
-                        widget.onSelected(user['Familymembershipid'], user['Name']);
-                        Navigator.pop(context);
-                      },
+                    return Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () {
+                          final String selectedId = user['Familymembershipid']?.toString() ?? user['Id'].toString();
+                          widget.onSelected(selectedId, user['Name'] ?? '');
+                          Navigator.pop(context);
+                        },
+                        hoverColor: const Color(0xFF5D1712).withOpacity(0.05),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                user['Name'] ?? 'N/A',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 14,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                user['Familymembershipid'] ?? 'N/A',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.black54,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                     );
                   },
                 ),
               ),
+            const SizedBox(height: 12),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: () => Navigator.pop(context),
+                style: TextButton.styleFrom(foregroundColor: Colors.black54),
+                child: const Text('Cancel'),
+              ),
+            ),
           ],
         ),
       ),

@@ -133,6 +133,7 @@ class _CustomPhoneFieldState extends State<CustomPhoneField> {
             controller: widget.controller,
             focusNode: widget.focusNode,
             keyboardType: TextInputType.phone,
+            autovalidateMode: AutovalidateMode.onUserInteraction,
             inputFormatters: [
               FilteringTextInputFormatter.digitsOnly,
               LengthLimitingTextInputFormatter(_selectedCountry.maxLength),

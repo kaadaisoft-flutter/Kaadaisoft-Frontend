@@ -5,7 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:file_picker/file_picker.dart' as fp_pkg;
 import 'package:cross_file/cross_file.dart';
-import 'package:dropdown_search/dropdown_search.dart';
+import '../widgets/custom_dropdown_search.dart';
 import '../widgets/custom_phone_field.dart';
 import '../widgets/loading_spinner.dart';
 import '../widgets/custom_dialog.dart';
@@ -26,6 +26,7 @@ class UpdateDetailsContent extends StatefulWidget {
 class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
   final _formKey = GlobalKey<FormState>();
   bool _isSaving = false;
+  bool _whatsappSameAsPhone = false;
 
   // Controllers
   TextEditingController _nameCtrl = TextEditingController();
@@ -104,7 +105,7 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
 
   final List<String> _relationships = ['Head','Grand Father','Grand Mother','Father','Mother','Husband','Wife','Son','Daughter','Son-in-law','Daughter-in-law','Brother','Sister','Other'];
   final List<String> _bloodGroups = ['A+','A-','B+','B-','O+','O-','AB+','AB-'];
-  final List<String> _kulams = ['Poondurai Kaadai','Aanthuvan Kulam','Azhagu Kulam','Aathe Kulam','Kaadai Kulam','Kaari Kulam','Keeran Kulam','Sellan Kulam','Semban Kulam','Pandiyan Kulam','Ponnar Kulam','Maniyan Kulam','Others'];
+  final List<String> _kulams = ['Poondurai Kaadai', 'Aanthuvan Kulam', 'Azhagu Kulam', 'Aathe Kulam', 'Aanthai Kulam', 'Aadar Kulam', 'Aavan Kulam', 'Eenjan Kulam', 'Ozukkar Kulam', 'Oothaalar Kulam', 'Kannakkan Kulam', 'Kannan Kulam', 'Kannaanthai Kulam', 'Kaadai Kulam', 'Kaari Kulam', 'Keeran Kulam', 'Kuzhlaayan Kulam', 'Koorai Kulam', 'Koovendhar Kulam', 'Saathanthai Kulam', 'Sellan Kulam', 'Semban Kulam', 'Sengkannan Kulam', 'Sembuthan Kulam', 'Senkunnier Kulam', 'Sevvaayar Kulam', 'Cheran Kulam', 'Chedan Kulam', 'Dananjayan Kulam', 'Thazhinji Kulam', 'Thooran Kulam', 'Devendran Kulam', 'Thoodar Kulam', 'Neerunniyar Kulam', 'Pavazhalar Kulam', 'Panayan Kulam', 'Pathuman Kulam', 'Payiran Kulam', 'Panagkaadar Kulam', 'Pathariar Kulam', 'Pandiyan Kulam', 'Pillar Kulam', 'Poosan Kulam', 'Poochanthai Kulam', 'Periyan Kulam', 'Perunkudiyaan Kulam', 'Porulaanthai Kulam', 'Ponnar Kulam', 'Maniyan Kulam', 'Mayilar Kulam', 'Maadar Kulam', 'Mutthan Kulam', 'Muzhukathan Kulam', 'Medhi Kulam', 'Vannakkan Kulam', 'Villiyar Kulam', 'Vilayan Kulam', 'Vizhiyar Kulam', 'Venduvan Kulam', 'Vennag Kulam', 'Vellampar Kulam', 'Others'];
   final List<String> _educations = ['SSLC', 'HSC', 'Diploma', 'ITI', 'B.A', 'B.Sc', 'B.Com', 'BBA', 'BCA', 'B.E', 'B.Tech', 'MBBS', 'BDS', 'B.Pharm', 'B.Ed', 'LLB', 'B.Arch', 'M.A', 'M.Sc', 'M.Com', 'MBA', 'MCA', 'M.E', 'M.Tech', 'MD', 'MS', 'MDS', 'M.Pharm', 'M.Ed', 'LLM', 'M.Phil', 'Ph.D', 'Others'];
   final List<String> _professions = ['Doctor', 'Lawyer', 'Police', 'Teacher / Lecturer', 'Engineer', 'Government Employee', 'Private Employee', 'Student', 'Farmer – Agriculture', 'Textile Mill Worker (Spinning / Weaving)', 'Garment Factory Worker', 'Tailor / Apparel Stitching', 'Garment Pattern Master / Designer', 'Textile Machinery Technician / Mechanic', 'Textile Machinery Sales & Service', 'Powerloom / Auto‑Loom Operator', 'Knitting Machine Operator', 'Truck / Lorry Driver', 'Truck / Lorry Owner‑cum‑Driver', 'Logistics / Transport Staff', 'Fleet Manager', 'Dairy Farmer', 'Poultry Farmer', 'Goat / Sheep Rearing', 'Pump / Motor Technician', 'Pump / Motor Manufacturing Worker', 'Motor Rewinding Technician', 'Machinist / Turner', 'Welder / Fabricator', 'Steel / Aluminium Foundry Worker', 'Mixer‑Grinder Assembly / Service Technician', 'Plastic / Net / Packaging Unit Worker', 'Windmill Maintenance Technician', 'Electrical Line / Maintenance Technician', 'Grocery Shop Staff', 'Medical Shop / Pharmacy Staff', 'Retail Shop / Sales Staff', 'Office Admin / Computer Operator', 'Accountant / Finance Staff', 'Bank / NBFC Staff', 'Hospital Nurse / Lab Tech / Pharmacist', 'Medical Representative', 'IT / Software Employee', 'Home Maker', 'Retired', 'Others'];
 
@@ -116,6 +117,9 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
     _nameCtrl = TextEditingController(text: d['Name'] ?? '');
     _phoneCtrl = TextEditingController(text: d['Phonenumber']?.toString() ?? '');
     _whatsappCtrl = TextEditingController(text: d['Whatsappnumber']?.toString() ?? '');
+    if (_whatsappCtrl.text.isNotEmpty && _whatsappCtrl.text == _phoneCtrl.text) {
+      _whatsappSameAsPhone = true;
+    }
     _emailCtrl = TextEditingController(text: d['Email'] ?? '');
     _dobCtrl = TextEditingController(text: d['Dob'] ?? '');
     _valuvuCtrl = TextEditingController(text: d['Valuvu'] ?? '');
@@ -462,10 +466,13 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
 
       if (mounted) {
         if (res.statusCode == 200) {
+          String successMsg = widget.userRole != 3 
+              ? 'Details updated and verified successfully.' 
+              : 'Details updated successfully and sent for approval.';
           showStatusDialog(
             context,
             title: 'Success',
-            message: 'Details updated successfully and sent for approval.',
+            message: successMsg,
             type: DialogType.success,
             onOk: widget.onBack,
           );
@@ -643,30 +650,40 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('WhatsApp Number *', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: _darkBrown)),
-              const SizedBox(height: 8),
-              Row(children: [
-                Expanded(child: CustomPhoneField(
-                  label: '',
-                  controller: _whatsappCtrl,
-                  validator: (v) {
-                    return null;
-                  },
-                )),
-                const SizedBox(width: 8),
-                SizedBox(
-                  height: 46,
-                  child: OutlinedButton(
-                    onPressed: () => setState(() => _whatsappCtrl.text = _phoneCtrl.text),
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Colors.grey),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                    ),
-                    child: const Text('Same as Phone', style: TextStyle(color: _darkBrown, fontSize: 12, fontWeight: FontWeight.bold)),
+              Wrap(
+                spacing: 12,
+                runSpacing: 8,
+                alignment: WrapAlignment.start,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  const Text('WhatsApp Number *', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: _darkBrown)),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: Checkbox(
+                          value: _whatsappSameAsPhone,
+                          onChanged: (v) => setState(() {
+                            _whatsappSameAsPhone = v!;
+                            if (v) _whatsappCtrl.text = _phoneCtrl.text;
+                          }),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      const Text('Same as Phone', style: TextStyle(fontSize: 10)),
+                    ],
                   ),
-                ),
-              ]),
+                ],
+              ),
+              CustomPhoneField(
+                label: '',
+                controller: _whatsappCtrl,
+                validator: (v) {
+                  return null;
+                },
+              ),
             ],
           ),
           _radioField('Married *', ['Yes', 'No'], _married, (v) => setState(() => _married = v)),
@@ -1047,32 +1064,23 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
   }
 
   Widget _dropField(String label, List<String> items, String? value, ValueChanged<String?> onChanged) {
+    String? matchedValue = value;
+    if (value != null && value.isNotEmpty) {
+      final valTrimmed = value.trim().toLowerCase();
+      try {
+        matchedValue = items.firstWhere((item) => item.trim().toLowerCase() == valTrimmed);
+      } catch (_) {
+        matchedValue = value;
+      }
+    }
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       _buildLabelText(label),
       const SizedBox(height: 8),
-      DropdownSearch<String>(
-        items: (filter, loadProps) => items,
-        selectedItem: items.contains(value) ? value : null,
-        onSelected: onChanged,
-        decoratorProps: DropDownDecoratorProps(
-          decoration: InputDecoration(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: const Color(0xFFE0E0E0))),
-            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: const Color(0xFFE0E0E0))),
-            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: _darkBrown)),
-            filled: true, fillColor: Colors.white,
-          ),
-        ),
-        popupProps: const PopupProps.menu(
-          showSearchBox: true,
-          searchFieldProps: TextFieldProps(
-            decoration: InputDecoration(
-              hintText: 'Search...',
-              prefixIcon: Icon(Icons.search),
-              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            ),
-          ),
-        ),
+      CustomDropdownSearch(
+        label: '',
+        dropdownItems: items,
+        value: matchedValue,
+        onChanged: onChanged,
       ),
     ]);
   }

@@ -6,7 +6,7 @@ import 'dart:convert';
 import 'package:file_picker/file_picker.dart' as fp_pkg;
 import 'package:cross_file/cross_file.dart';
 import 'package:flutter/services.dart';
-import 'package:dropdown_search/dropdown_search.dart';
+import 'custom_dropdown_search.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
 import 'custom_phone_field.dart';
 import 'custom_dialog.dart';
@@ -17,8 +17,15 @@ class AddFamilyMemberForm extends StatefulWidget {
   final dynamic parentId;
   final Map<String, dynamic> parentData;
   final int submitterRole;
+  final String? preSelectedRelationship;
 
-  const AddFamilyMemberForm({super.key, required this.parentId, required this.parentData, required this.submitterRole});
+  const AddFamilyMemberForm({
+    super.key, 
+    required this.parentId, 
+    required this.parentData, 
+    required this.submitterRole,
+    this.preSelectedRelationship,
+  });
 
   @override
   State<AddFamilyMemberForm> createState() => _AddFamilyMemberFormState();
@@ -60,6 +67,11 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
   final _currStateController = TextEditingController();
   final _currFullAddressController = TextEditingController();
 
+  // Husband Details for Married Daughter
+  final _husbandNameController = TextEditingController();
+  final _husbandDobController = TextEditingController();
+  final _husbandMobileController = TextEditingController();
+
   // State Variables
   String? _selectedRelationship;
   String? _selectedGender;
@@ -79,6 +91,9 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
   String? _selectedCurrVillage;
   String? _selectedCountry;
   String? _selectedCurrCity;
+  String? _selectedHusbandKulam;
+
+  final List<String> _kulams = ['Poondurai Kaadai', 'Aanthuvan Kulam', 'Azhagu Kulam', 'Aathe Kulam', 'Aanthai Kulam', 'Aadar Kulam', 'Aavan Kulam', 'Eenjan Kulam', 'Ozukkar Kulam', 'Oothaalar Kulam', 'Kannakkan Kulam', 'Kannan Kulam', 'Kannaanthai Kulam', 'Kaadai Kulam', 'Kaari Kulam', 'Keeran Kulam', 'Kuzhlaayan Kulam', 'Koorai Kulam', 'Koovendhar Kulam', 'Saathanthai Kulam', 'Sellan Kulam', 'Semban Kulam', 'Sengkannan Kulam', 'Sembuthan Kulam', 'Senkunnier Kulam', 'Sevvaayar Kulam', 'Cheran Kulam', 'Chedan Kulam', 'Dananjayan Kulam', 'Thazhinji Kulam', 'Thooran Kulam', 'Devendran Kulam', 'Thoodar Kulam', 'Neerunniyar Kulam', 'Pavazhalar Kulam', 'Panayan Kulam', 'Pathuman Kulam', 'Payiran Kulam', 'Panagkaadar Kulam', 'Pathariar Kulam', 'Pandiyan Kulam', 'Pillar Kulam', 'Poosan Kulam', 'Poochanthai Kulam', 'Periyan Kulam', 'Perunkudiyaan Kulam', 'Porulaanthai Kulam', 'Ponnar Kulam', 'Maniyan Kulam', 'Mayilar Kulam', 'Maadar Kulam', 'Mutthan Kulam', 'Muzhukathan Kulam', 'Medhi Kulam', 'Vannakkan Kulam', 'Villiyar Kulam', 'Vilayan Kulam', 'Vizhiyar Kulam', 'Venduvan Kulam', 'Vennag Kulam', 'Vellampar Kulam', 'Others'];
 
   bool _whatsappSameAsPhone = false;
   bool _showMandatoryErrors = false;
@@ -104,7 +119,7 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
   final GeoDataService _geoService = GeoDataService();
 
   // Options
-  final List<String> _relationships = ['Head','Grand Father','Grand Mother','Father','Mother','Husband','Wife','Son','Daughter','Son-in-law','Daughter-in-law','Brother','Sister','Other'];
+  final List<String> _relationships = ['Grand Father','Grand Mother','Father','Mother','Husband','Wife','Son','Daughter','Son-in-law','Daughter-in-law','Brother','Sister','Other'];
   final List<String> _bloodGroups = ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'];
   final List<String> _educations = ['SSLC', 'HSC', 'Diploma', 'ITI', 'B.A', 'B.Sc', 'B.Com', 'BBA', 'BCA', 'B.E', 'B.Tech', 'MBBS', 'BDS', 'B.Pharm', 'B.Ed', 'LLB', 'B.Arch', 'M.A', 'M.Sc', 'M.Com', 'MBA', 'MCA', 'M.E', 'M.Tech', 'MD', 'MS', 'MDS', 'M.Pharm', 'M.Ed', 'LLM', 'M.Phil', 'Ph.D', 'Others'];
   final List<String> _professions = ['Doctor', 'Lawyer', 'Police', 'Teacher / Lecturer', 'Engineer', 'Government Employee', 'Private Employee', 'Student', 'Farmer', 'Textile Mill Worker', 'Garment Factory Worker', 'Tailor', 'Pattern Master', 'Textile Machinery Technician', 'Loom Operator', 'Truck Driver', 'Dairy Farmer', 'Poultry Farmer', 'Animal Husbandry', 'Pump Technician', 'Electrical Technician', 'Grocery Shop Staff', 'IT / Software Employee', 'Home Maker', 'Retired', 'Others'];
@@ -129,6 +144,20 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
         if (_phoneExists) setState(() => _phoneExists = false);
       }
     });
+
+    if (widget.preSelectedRelationship != null && _relationships.contains(widget.preSelectedRelationship)) {
+      _selectedRelationship = widget.preSelectedRelationship;
+      final v = _selectedRelationship;
+      if (['Wife', 'Daughter', 'Mother', 'Grand Mother', 'Daughter-in-law', 'Sister'].contains(v)) {
+        _selectedGender = 'Female';
+      } else if (['Husband', 'Son', 'Father', 'Grand Father', 'Son-in-law', 'Brother'].contains(v)) {
+        _selectedGender = 'Male';
+      }
+      
+      if (v == 'Wife' || v == 'Husband' || v == 'Father' || v == 'Mother' || v == 'Grand Father' || v == 'Grand Mother' || v == 'Daughter-in-law' || v == 'Son-in-law') {
+        _selectedMarried = 'Yes';
+      }
+    }
 
     _fetchDistricts();
     _loadGeoData();
@@ -169,10 +198,10 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
     _valuvuController.text = p['Valuvu'] ?? '';
     _thottamController.text = p['Thottam'] ?? '';
     
-    _selectedDistrict = p['District'];
-    _selectedTaluk = p['Taluk'];
-    _selectedPanchayat = p['Panchayat'];
-    _selectedVillage = p['Village'];
+    _selectedDistrict = (p['District']?.toString().trim().isEmpty ?? true) ? null : p['District'];
+    _selectedTaluk = (p['Taluk']?.toString().trim().isEmpty ?? true) ? null : p['Taluk'];
+    _selectedPanchayat = (p['Panchayat']?.toString().trim().isEmpty ?? true) ? null : p['Panchayat'];
+    _selectedVillage = (p['Village']?.toString().trim().isEmpty ?? true) ? null : p['Village'];
     final street = p['Street'] ?? '';
     final doorNo = p['Doornumber'] ?? '';
     _streetController.text = doorNo.isNotEmpty ? "$doorNo, $street" : street;
@@ -194,6 +223,32 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
     setState(() {
       _stateNames = _geoService.getStates(countryName);
     });
+  }
+
+  void _checkMarriedAgeValidation(String? marriedVal) {
+    if (marriedVal == 'Yes' && _dobController.text.isNotEmpty) {
+      try {
+        DateTime? dob;
+        final parts = _dobController.text.split('-');
+        if (parts.length == 3) {
+          if (parts[0].length == 4) {
+            dob = DateTime.parse(_dobController.text);
+          } else if (parts[2].length == 4) {
+            dob = DateTime.parse("${parts[2]}-${parts[1]}-${parts[0]}");
+          }
+        }
+        if (dob != null) {
+          int age = DateTime.now().year - dob.year;
+          if (DateTime.now().month < dob.month || (DateTime.now().month == dob.month && DateTime.now().day < dob.day)) age--;
+          if (age < 18) {
+            showStatusDialog(context, title: 'Validation Error', message: 'Person must be at least 18 years old to be marked as married.', type: DialogType.error);
+            setState(() => _selectedMarried = 'No');
+            return;
+          }
+        }
+      } catch (_) {}
+    }
+    setState(() => _selectedMarried = marriedVal);
   }
 
   void _updateCities(String countryName, String stateName) {
@@ -372,16 +427,42 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
                         const SizedBox(height: 16),
                         
                         _buildResponsiveRow(isMobile, [
-                          _buildDropdownField('Relationship *', _relationships, isMobile, value: _selectedRelationship, onChanged: (v) {
-                            setState(() {
-                              _selectedRelationship = v;
-                              if (['Wife', 'Daughter', 'Mother', 'Grand Mother', 'Daughter-in-law', 'Sister'].contains(v)) {
-                                _selectedGender = 'Female';
-                              } else if (['Husband', 'Son', 'Father', 'Grand Father', 'Son-in-law', 'Brother'].contains(v)) {
-                                _selectedGender = 'Male';
+                          _buildDropdownField('Relationship *', _relationships, isMobile, value: _selectedRelationship, 
+                            validator: (v) {
+                              if (v == null || v.isEmpty) return 'Required';
+                              final isMarried = (widget.parentData['Married']?.toString().toLowerCase() == 'yes') || 
+                                                (widget.parentData['married']?.toString().toLowerCase() == 'yes');
+                              if ((v == 'Wife' || v == 'Husband') && !isMarried) {
+                                return 'Select a different relationship';
                               }
-                            });
-                          }),
+                              return null;
+                            },
+                            onChanged: (v) {
+                              final isMarried = (widget.parentData['Married']?.toString().toLowerCase() == 'yes') || 
+                                                (widget.parentData['married']?.toString().toLowerCase() == 'yes');
+                              if ((v == 'Wife' || v == 'Husband') && !isMarried) {
+                                showStatusDialog(
+                                  context,
+                                  title: 'Validation Error',
+                                  message: 'Family Head is not married. You cannot add a $v.',
+                                  type: DialogType.error,
+                                  autoDismiss: false,
+                                );
+                              }
+                              setState(() {
+                                _selectedRelationship = v;
+                                if (['Wife', 'Daughter', 'Mother', 'Grand Mother', 'Daughter-in-law', 'Sister'].contains(v)) {
+                                  _selectedGender = 'Female';
+                                } else if (['Husband', 'Son', 'Father', 'Grand Father', 'Son-in-law', 'Brother'].contains(v)) {
+                                  _selectedGender = 'Male';
+                                }
+                                
+                                if (v == 'Wife' || v == 'Husband' || v == 'Father' || v == 'Mother' || v == 'Grand Father' || v == 'Grand Mother' || v == 'Daughter-in-law' || v == 'Son-in-law') {
+                                  _selectedMarried = 'Yes';
+                                }
+                              });
+                            }
+                          ),
                           _buildInputField('Name *', _nameController, isMobile, maxLength: 254),
                           _buildIntlPhoneField('Phone Number *', _phoneController, isMobile, 
                             fieldKey: _phoneFieldKey,
@@ -403,7 +484,7 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
                         _buildResponsiveRow(isMobile, [
                           _buildEmailField(isMobile),
                           _buildWhatsAppField(isMobile),
-                          _buildRadioField('Married *', ['Yes', 'No'], isMobile, value: _selectedMarried, onChanged: (v) => setState(() => _selectedMarried = v)),
+                          _buildRadioField('Married *', ['Yes', 'No'], isMobile, value: _selectedMarried, onChanged: _checkMarriedAgeValidation),
                         ]),
 
                         _buildResponsiveRow(isMobile, [
@@ -411,6 +492,18 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
                           _buildInputField('Thottam', _thottamController, isMobile, maxLength: 254),
                           _buildInputField('Kulam *', TextEditingController(text: 'Poondurai Kaadai'), isMobile, readOnly: true),
                         ]),
+
+                        if (_selectedRelationship == 'Daughter' && _selectedMarried == 'Yes') ...[
+                          const SizedBox(height: 16),
+                          _buildResponsiveRow(isMobile, [
+                            _buildInputField('Husband Name *', _husbandNameController, isMobile, maxLength: 254),
+                            _buildDatePickerField('Husband Date Of Birth *', _husbandDobController, isMobile),
+                          ]),
+                          _buildResponsiveRow(isMobile, [
+                            _buildIntlPhoneField('Husband Phone *', _husbandMobileController, isMobile, validator: (v) => (v == null || v.isEmpty) ? 'Required' : null),
+                            _buildDropdownField('Husband Kulam *', _kulams, isMobile, value: _selectedHusbandKulam, onChanged: (v) => setState(() => _selectedHusbandKulam = v)),
+                          ]),
+                        ],
 
                         const SizedBox(height: 32),
                         _buildSectionTitle(Icons.work_outline, 'Education & Career Details'),
@@ -644,33 +737,14 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
     );
   }
 
-  Widget _buildDropdownField(String label, List<String> options, bool isMobile, {String? value, ValueChanged<String?>? onChanged}) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildLabelText(label, fontSize: 14),
-        const SizedBox(height: 8),
-        DropdownSearch<String>(
-          items: (filter, loadProps) => options,
-          selectedItem: value,
-          onSelected: onChanged,
-          decoratorProps: DropDownDecoratorProps(
-            baseStyle: const TextStyle(fontSize: 14, color: Colors.black87),
-            decoration: InputDecoration(
-              fillColor: Colors.white, filled: true,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: borderColor)),
-            ),
-          ),
-          popupProps: PopupProps.menu(
-            showSearchBox: true,
-            menuProps: MenuProps(
-              backgroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-          ),
-        ),
-      ],
+  Widget _buildDropdownField(String label, List<String> options, bool isMobile, {String? value, ValueChanged<String?>? onChanged, String? Function(String?)? validator}) {
+    return CustomDropdownSearch(
+      label: label,
+      dropdownItems: options,
+      value: value,
+      onChanged: onChanged,
+      requiredMark: label.contains('*'),
+      validator: validator ?? ((v) => (label.contains('*') && (v == null || v.isEmpty)) ? 'Required' : null),
     );
   }
 
@@ -687,6 +761,7 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
             final picked = await showDatePicker(context: context, initialDate: DateTime.now(), firstDate: DateTime(1900), lastDate: DateTime.now());
             if (picked != null) {
               setState(() => controller.text = "${picked.day.toString().padLeft(2, '0')}-${picked.month.toString().padLeft(2, '0')}-${picked.year}");
+              if (controller == _dobController && _selectedMarried == 'Yes') _checkMarriedAgeValidation('Yes');
             }
           },
           decoration: InputDecoration(
@@ -884,6 +959,33 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate() || _phoneExists) return;
+    
+    if (_selectedMarried == 'Yes' && _dobController.text.isNotEmpty) {
+      try {
+        DateTime? dob;
+        final parts = _dobController.text.split('-');
+        if (parts.length == 3) {
+          if (parts[0].length == 4) {
+            dob = DateTime.parse(_dobController.text);
+          } else if (parts[2].length == 4) {
+            dob = DateTime.parse("${parts[2]}-${parts[1]}-${parts[0]}");
+          }
+        }
+        if (dob != null) {
+          int age = DateTime.now().year - dob.year;
+          if (DateTime.now().month < dob.month || (DateTime.now().month == dob.month && DateTime.now().day < dob.day)) {
+            age--;
+          }
+          if (age < 18) {
+            showStatusDialog(context, title: 'Validation Error', message: 'Person must be at least 18 years old to be marked as married.', type: DialogType.error);
+            return;
+          }
+        }
+      } catch (e) {
+        // Ignore parse error
+      }
+    }
+
     if (_memberImage == null) {
       showStatusDialog(context, title: 'Missing Documents', message: 'Please upload all required documents.', type: DialogType.warning);
       return;
@@ -907,6 +1009,13 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
       request.fields['profession'] = _selectedProfession == 'Others' ? _professionController.text : (_selectedProfession ?? '');
       request.fields['relationship'] = _selectedRelationship ?? '';
       request.fields['family_id'] = widget.parentData['Familymembershipid'] ?? '';
+      
+      if (_selectedRelationship == 'Daughter' && _selectedMarried == 'Yes') {
+        request.fields['husband_name'] = _husbandNameController.text;
+        request.fields['husband_dob'] = _husbandDobController.text;
+        request.fields['husband_mobile'] = _husbandMobileController.text;
+        request.fields['husband_kulam'] = _selectedHusbandKulam ?? '';
+      }
       
       request.fields['state_id'] = '31';
       request.fields['state'] = 'Tamil Nadu';
@@ -967,7 +1076,10 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
       final response = await http.Response.fromStream(await request.send());
       if (response.statusCode == 200) {
         if (mounted) {
-           showStatusDialog(context, title: 'Success', message: 'Family member added successfully and sent for approval.', type: DialogType.success).then((_) => Navigator.pop(context));
+           String successMsg = widget.submitterRole != 3 
+              ? 'Family member added and verified successfully.' 
+              : 'Family member added successfully and sent for approval.';
+           showStatusDialog(context, title: 'Success', message: successMsg, type: DialogType.success).then((_) => Navigator.pop(context, true));
         }
       } else {
          String errorMsg = 'Failed to add member';

@@ -8,6 +8,7 @@ import '../widgets/custom_dialog.dart';
 import '../../utils/api_config.dart';
 import '../../utils/download_helper.dart' as dl;
 import 'update_details_content.dart';
+import '../widgets/custom_dropdown_search.dart';
 
 class ReportsContent extends StatefulWidget {
   final int? userId;
@@ -460,6 +461,15 @@ class _ReportsContentState extends State<ReportsContent> {
   }
 
   Widget _buildFilterDropdown(String label, IconData icon, Color iconColor, List<dynamic> items, dynamic value, Function(dynamic) onChanged, {bool isEvent = false}) {
+    // Build a Map<String, String> where key = id (as string), value = display label
+    final Map<String, String> dropdownMap = {
+      for (var item in items)
+        (isEvent ? item['Id'].toString() : item.toString()):
+        (isEvent ? item['EventName'].toString() : item.toString())
+    };
+
+    final String? selectedKey = value != null ? value.toString() : null;
+
     return Container(
       width: 280,
       constraints: const BoxConstraints(maxWidth: 300),
@@ -474,22 +484,18 @@ class _ReportsContentState extends State<ReportsContent> {
             ],
           ),
           const SizedBox(height: 8),
-          DropdownButtonFormField<int>(
-            value: value,
-            isExpanded: true,
-            decoration: InputDecoration(
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              isDense: true,
-              hintText: isEvent ? 'Choose Event' : 'Choose Year',
-            ),
-            items: items.map((item) {
-              return DropdownMenuItem<int>(
-                value: isEvent ? item['Id'] : item,
-                child: Text(isEvent ? item['EventName'] : item.toString(), overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13)),
-              );
-            }).toList(),
-            onChanged: onChanged,
+          CustomDropdownSearch(
+            label: '',
+            hint: isEvent ? 'Choose Event' : 'Choose Year',
+            dropdownMap: dropdownMap,
+            value: selectedKey,
+            onChanged: (val) {
+              if (val == null) {
+                onChanged(null);
+              } else {
+                onChanged(int.tryParse(val));
+              }
+            },
           ),
         ],
       ),
@@ -546,32 +552,35 @@ class _ReportsContentState extends State<ReportsContent> {
   }
 
   Widget _buildSummarySection(bool isMobile) {
-    return Wrap(
-      spacing: 16,
-      runSpacing: 12,
-      alignment: WrapAlignment.spaceBetween,
-      crossAxisAlignment: WrapCrossAlignment.center,
-      children: [
-        Text(
-          'Total Members: $_totalItems',
-          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Colors.black54),
-        ),
-        SizedBox(
-          width: isMobile ? double.infinity : null,
-          child: ElevatedButton.icon(
-            onPressed: _downloadReport,
-            icon: const Icon(Icons.download, size: 18),
-            label: const Text('Download Excel'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFFFC107),
-              foregroundColor: Colors.black87,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-              elevation: 1,
+    return SizedBox(
+      width: double.infinity,
+      child: Wrap(
+        spacing: 16,
+        runSpacing: 12,
+        alignment: WrapAlignment.spaceBetween,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          Text(
+            'Total Members: $_totalItems',
+            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Colors.black54),
+          ),
+          SizedBox(
+            width: isMobile ? double.infinity : null,
+            child: ElevatedButton.icon(
+              onPressed: _downloadReport,
+              icon: const Icon(Icons.download, size: 18),
+              label: const Text('Download Excel'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFFFC107),
+                foregroundColor: Colors.black87,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                elevation: 1,
+              ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 

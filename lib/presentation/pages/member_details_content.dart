@@ -96,47 +96,55 @@ class _MemberDetailsContentState extends State<MemberDetailsContent> {
                 return const SizedBox(height: 100, child: Center(child: Text('No event participation found.')));
               }
 
-              return SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: DataTable(
-                  headingRowColor: MaterialStateProperty.all(Colors.grey[50]),
-                  columns: const [
-                    DataColumn(label: Text('SNo', style: TextStyle(fontWeight: FontWeight.bold))),
-                    DataColumn(label: Text('Event Name', style: TextStyle(fontWeight: FontWeight.bold))),
-                    DataColumn(label: Text('Tax Amount', style: TextStyle(fontWeight: FontWeight.bold))),
-                    DataColumn(label: Text('Paid Amount', style: TextStyle(fontWeight: FontWeight.bold))),
-                    DataColumn(label: Text('Balance Amount', style: TextStyle(fontWeight: FontWeight.bold))),
-                    DataColumn(label: Text('Status', style: TextStyle(fontWeight: FontWeight.bold))),
-                    DataColumn(label: Text('Payment Date', style: TextStyle(fontWeight: FontWeight.bold))),
-                  ],
-                  rows: data.asMap().entries.map((entry) {
-                    final i = entry.key;
-                    final row = entry.value;
-                    final bool isPaid = row['status'] == 'PAID';
-                    
-                    return DataRow(cells: [
-                      DataCell(Text('${i + 1}')),
-                      DataCell(Text(row['EventName'] ?? '-')),
-                      DataCell(Text(row['TaxAmount']?.toString() ?? '0')),
-                      DataCell(Text(row['PaidAmount']?.toString() ?? '0')),
-                      DataCell(Text(row['BalanceAmount']?.toString() ?? '0')),
-                      DataCell(
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: isPaid ? const Color(0xFF2E7D32) : const Color(0xFF5D1712),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            row['status'] ?? 'PENDING',
-                            style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
-                          ),
-                        ),
+              return LayoutBuilder(
+                builder: (context, constraints) {
+                  return SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(minWidth: constraints.maxWidth),
+                      child: DataTable(
+                        border: TableBorder(verticalInside: BorderSide(color: Colors.grey.shade300, width: 1)),
+                        headingRowColor: MaterialStateProperty.all(Colors.grey[50]),
+                        columns: const [
+                          DataColumn(label: Text('SNo', style: TextStyle(fontWeight: FontWeight.bold))),
+                          DataColumn(label: Text('Event Name', style: TextStyle(fontWeight: FontWeight.bold))),
+                          DataColumn(label: Text('Tax Amount', style: TextStyle(fontWeight: FontWeight.bold))),
+                          DataColumn(label: Text('Paid Amount', style: TextStyle(fontWeight: FontWeight.bold))),
+                          DataColumn(label: Text('Balance Amount', style: TextStyle(fontWeight: FontWeight.bold))),
+                          DataColumn(label: Text('Status', style: TextStyle(fontWeight: FontWeight.bold))),
+                          DataColumn(label: Text('Payment Date', style: TextStyle(fontWeight: FontWeight.bold))),
+                        ],
+                        rows: data.asMap().entries.map((entry) {
+                          final i = entry.key;
+                          final row = entry.value;
+                          final bool isPaid = row['status'] == 'PAID';
+                          
+                          return DataRow(cells: [
+                            DataCell(Text('${i + 1}')),
+                            DataCell(Text(row['EventName'] ?? '-')),
+                            DataCell(Text(row['TaxAmount']?.toString() ?? '0')),
+                            DataCell(Text(row['PaidAmount']?.toString() ?? '0')),
+                            DataCell(Text(row['BalanceAmount']?.toString() ?? '0')),
+                            DataCell(
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: isPaid ? const Color(0xFF2E7D32) : const Color(0xFF5D1712),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  row['status'] ?? 'PENDING',
+                                  style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                            ),
+                            DataCell(Text(row['PaymentDate'] ?? '-')),
+                          ]);
+                        }).toList(),
                       ),
-                      DataCell(Text(row['PaymentDate'] ?? '-')),
-                    ]);
-                  }).toList(),
-                ),
+                    ),
+                  );
+                }
               );
             },
           ),

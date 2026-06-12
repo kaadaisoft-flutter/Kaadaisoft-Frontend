@@ -7,7 +7,7 @@ import 'package:kaadaisoft/presentation/pages/privacy_policy_page.dart';
 import 'dart:convert';
 import 'package:file_picker/file_picker.dart' as fp_pkg;
 import 'package:cross_file/cross_file.dart';
-import 'package:dropdown_search/dropdown_search.dart';
+import 'custom_dropdown_search.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
 import 'custom_dialog.dart';
 import 'custom_phone_field.dart';
@@ -1411,56 +1411,18 @@ class _RegistrationFormState extends State<RegistrationForm> {
   }
 
   Widget _buildDropdownField(String label, List<String> options, bool isMobile, {String? value, ValueChanged<String?>? onChanged, FocusNode? focusNode}) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        RichText(
-          text: TextSpan(
-            text: label.replaceAll('*', ''),
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: const Color(0xFF333333)),
-            children: [
-              if (label.contains('*'))
-                const TextSpan(text: ' *', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
-            ],
-          ),
-        ),
-        const SizedBox(height: 6),
-        DropdownSearch<String>(
-          popupProps: PopupProps.menu(
-            showSearchBox: true,
-            searchFieldProps: TextFieldProps(
-              decoration: InputDecoration(
-                hintText: "Search...",
-                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-            ),
-          ),
-          items: (filter, loadProps) => options,
-          filterFn: (item, filter) => item.toLowerCase().contains(filter.toLowerCase()),
-          selectedItem: value,
-          onSelected: onChanged,
-          validator: (value) {
-            if (label.contains('*') && (value == null || value.isEmpty) && _showMandatoryErrors) {
-              return 'Please select an option';
-            }
-            return null;
-          },
-          decoratorProps: DropDownDecoratorProps(
-            decoration: InputDecoration(
-              hintText: 'Select ${label.replaceAll('*', '').trim()}',
-              hintStyle: const TextStyle(fontSize: 13, color: Colors.grey),
-              fillColor: Colors.white.withOpacity(0.9),
-              filled: true,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: borderColor, width: 1.5)),
-              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: borderColor, width: 1.5)),
-              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: mediumBrown, width: 1.5)),
-              errorStyle: const TextStyle(fontSize: 11),
-            ),
-          ),
-        ),
-      ],
+    return CustomDropdownSearch(
+      label: label,
+      dropdownItems: options,
+      value: value,
+      onChanged: onChanged,
+      requiredMark: label.contains('*'),
+      validator: (val) {
+        if (label.contains('*') && (val == null || val.isEmpty) && _showMandatoryErrors) {
+          return 'Please select an option';
+        }
+        return null;
+      },
     );
   }
 

@@ -5,12 +5,13 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:file_picker/file_picker.dart' as fp_pkg;
 import 'package:cross_file/cross_file.dart';
-import 'package:dropdown_search/dropdown_search.dart';
+import 'custom_dropdown_search.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
 import 'custom_phone_field.dart';
 import 'custom_dialog.dart';
 import '../../utils/api_config.dart';
 import '../../services/geo_data_service.dart';
+import 'add_family_member_form.dart';
 
 class UpdateFamilyMemberForm extends StatefulWidget {
   final Map<String, dynamic> memberData;
@@ -44,6 +45,11 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
   final _thottamController = TextEditingController();
   final _professionController = TextEditingController();
   
+  // Husband Details
+  final _husbandNameController = TextEditingController();
+  final _husbandDobController = TextEditingController();
+  final _husbandMobileController = TextEditingController();
+  
   // Address Controllers
   final _streetController = TextEditingController();
   final _pinCodeController = TextEditingController();
@@ -76,11 +82,13 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
   String? _selectedCountry;
   String? _selectedCurrCity;
   String _selectedAliveStatus = 'Alive';
+  String? _selectedHusbandKulam;
 
   XFile? _memberImage;
   XFile? _communityCert;
 
   bool _isAgreed = false;
+  bool _whatsappSameAsPhone = false;
 
   // Address Data
   List<String> _districts = [];
@@ -104,6 +112,7 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
   final List<String> _bloodGroups = ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'];
   final List<String> _educations = ['SSLC', 'HSC', 'Diploma', 'ITI', 'B.A', 'B.Sc', 'B.Com', 'BBA', 'BCA', 'B.E', 'B.Tech', 'MBBS', 'BDS', 'B.Pharm', 'B.Ed', 'LLB', 'B.Arch', 'M.A', 'M.Sc', 'M.Com', 'MBA', 'MCA', 'M.E', 'M.Tech', 'MD', 'MS', 'MDS', 'M.Pharm', 'M.Ed', 'LLM', 'M.Phil', 'Ph.D', 'Others'];
   final List<String> _professions = ['Doctor', 'Lawyer', 'Police', 'Teacher / Lecturer', 'Engineer', 'Government Employee', 'Private Employee', 'Student', 'Farmer – Agriculture', 'Textile Mill Worker (Spinning / Weaving)', 'Garment Factory Worker', 'Tailor / Apparel Stitching', 'Garment Pattern Master / Designer', 'Textile Machinery Technician / Mechanic', 'Textile Machinery Sales & Service', 'Powerloom / Auto‑Loom Operator', 'Knitting Machine Operator', 'Truck / Lorry Driver', 'Truck / Lorry Owner‑cum‑Driver', 'Logistics / Transport Staff', 'Fleet Manager', 'Dairy Farmer', 'Poultry Farmer', 'Goat / Sheep Rearing', 'Pump / Motor Technician', 'Pump / Motor Manufacturing Worker', 'Motor Rewinding Technician', 'Machinist / Turner', 'Welder / Fabricator', 'Steel / Aluminium Foundry Worker', 'Mixer‑Grinder Assembly / Service Technician', 'Plastic / Net / Packaging Unit Worker', 'Windmill Maintenance Technician', 'Electrical Line / Maintenance Technician', 'Grocery Shop Staff', 'Medical Shop / Pharmacy Staff', 'Retail Shop / Sales Staff', 'Office Admin / Computer Operator', 'Accountant / Finance Staff', 'Bank / NBFC Staff', 'Hospital Nurse / Lab Tech / Pharmacist', 'Medical Representative', 'IT / Software Employee', 'Home Maker', 'Retired', 'Others'];
+  final List<String> _kulams = ['Poondurai Kaadai', 'Aanthuvan Kulam', 'Azhagu Kulam', 'Aathe Kulam', 'Aanthai Kulam', 'Aadar Kulam', 'Aavan Kulam', 'Eenjan Kulam', 'Ozukkar Kulam', 'Oothaalar Kulam', 'Kannakkan Kulam', 'Kannan Kulam', 'Kannaanthai Kulam', 'Kaadai Kulam', 'Kaari Kulam', 'Keeran Kulam', 'Kuzhlaayan Kulam', 'Koorai Kulam', 'Koovendhar Kulam', 'Saathanthai Kulam', 'Sellan Kulam', 'Semban Kulam', 'Sengkannan Kulam', 'Sembuthan Kulam', 'Senkunnier Kulam', 'Sevvaayar Kulam', 'Cheran Kulam', 'Chedan Kulam', 'Dananjayan Kulam', 'Thazhinji Kulam', 'Thooran Kulam', 'Devendran Kulam', 'Thoodar Kulam', 'Neerunniyar Kulam', 'Pavazhalar Kulam', 'Panayan Kulam', 'Pathuman Kulam', 'Payiran Kulam', 'Panagkaadar Kulam', 'Pathariar Kulam', 'Pandiyan Kulam', 'Pillar Kulam', 'Poosan Kulam', 'Poochanthai Kulam', 'Periyan Kulam', 'Perunkudiyaan Kulam', 'Porulaanthai Kulam', 'Ponnar Kulam', 'Maniyan Kulam', 'Mayilar Kulam', 'Maadar Kulam', 'Mutthan Kulam', 'Muzhukathan Kulam', 'Medhi Kulam', 'Vannakkan Kulam', 'Villiyar Kulam', 'Vilayan Kulam', 'Vizhiyar Kulam', 'Venduvan Kulam', 'Vennag Kulam', 'Vellampar Kulam', 'Others'];
 
   @override
   void initState() {
@@ -156,6 +165,11 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
     _dobController.text = d['Dob'] ?? '';
     _valuvuController.text = d['Valuvu'] ?? '';
     _thottamController.text = d['Thottam'] ?? '';
+    _husbandNameController.text = d['husband_name'] ?? '';
+    _husbandDobController.text = d['husband_dob'] ?? '';
+    _husbandMobileController.text = d['husband_mobile'] ?? '';
+    final hk = (d['husband_kulam']?.toString() ?? '').trim();
+    _selectedHusbandKulam = _kulams.contains(hk) ? hk : null;
     _selectedAliveStatus = (d['is_dead'] == 0 || d['is_dead'] == '0' || d['is_dead'] == null) ? 'Alive' : 'Dead';
     
     final rawRole = (d['MemberRole']?.toString() ?? '').trim();
@@ -178,10 +192,10 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
     _selectedProfession = d['Profession'];
     
     // Native Address
-    _selectedDistrict = d['District'];
-    _selectedTaluk = d['Taluk'];
-    _selectedPanchayat = d['Panchayat'];
-    _selectedVillage = d['Village'];
+    _selectedDistrict = (d['District']?.toString().trim().isEmpty ?? true) ? null : d['District'];
+    _selectedTaluk = (d['Taluk']?.toString().trim().isEmpty ?? true) ? null : d['Taluk'];
+    _selectedPanchayat = (d['Panchayat']?.toString().trim().isEmpty ?? true) ? null : d['Panchayat'];
+    _selectedVillage = (d['Village']?.toString().trim().isEmpty ?? true) ? null : d['Village'];
     final street = d['Street'] ?? '';
     final doorNo = d['Doornumber']?.toString() ?? '';
     _streetController.text = doorNo.isNotEmpty ? "$doorNo, $street" : street;
@@ -189,11 +203,11 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
     
     // Current Address
     _selectedCurrentAddressType = d['Curaddresstype'] == 'TamilNadu' ? 'Tamil Nadu' : (d['Curaddresstype'] == 'OtherState' ? 'Other State' : (d['Curaddresstype'] == 'NRI' ? 'NRI' : null));
-    _selectedCurrState = d['Curstate'];
-    _selectedCurrDistrict = d['Curdistrict'];
-    _selectedCurrTaluk = d['Curtaluk'];
-    _selectedCurrPanchayat = d['Curpanchayat'];
-    _selectedCurrVillage = d['Curvillage'];
+    _selectedCurrState = (d['Curstate']?.toString().trim().isEmpty ?? true) ? null : d['Curstate'];
+    _selectedCurrDistrict = (d['Curdistrict']?.toString().trim().isEmpty ?? true) ? null : d['Curdistrict'];
+    _selectedCurrTaluk = (d['Curtaluk']?.toString().trim().isEmpty ?? true) ? null : d['Curtaluk'];
+    _selectedCurrPanchayat = (d['Curpanchayat']?.toString().trim().isEmpty ?? true) ? null : d['Curpanchayat'];
+    _selectedCurrVillage = (d['Curvillage']?.toString().trim().isEmpty ?? true) ? null : d['Curvillage'];
     final curStreet = d['Curstreet'] ?? '';
     final curDoorNo = d['Curdoorno']?.toString() ?? '';
     _currStreetController.text = curDoorNo.isNotEmpty ? "$curDoorNo, $curStreet" : curStreet;
@@ -224,6 +238,22 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
     }
     
     setState(() {});
+
+    final controllers = [
+      _nameController, _phoneController, _emailController, _whatsappController,
+      _dobController, _valuvuController, _thottamController, _professionController,
+      _husbandNameController, _husbandDobController, _husbandMobileController,
+      _streetController, _pinCodeController, _currStreetController, _currPinCodeController,
+      _currFullAddressController
+    ];
+    for (var c in controllers) {
+      c.addListener(_markChanged);
+    }
+  }
+
+  bool _hasChanges = false;
+  void _markChanged() {
+    if (mounted && !_hasChanges) setState(() => _hasChanges = true);
   }
 
   Future<void> _loadGeoData() async {
@@ -233,6 +263,62 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
     setState(() {
       _countryNames = _geoService.countryNames;
     });
+  }
+
+  void _checkMarriedAgeValidation(String? marriedVal) async {
+    bool wasNotMarried = _selectedMarried != 'Yes';
+    
+    if (marriedVal == 'Yes' && _dobController.text.isNotEmpty) {
+      try {
+        DateTime? dob;
+        final parts = _dobController.text.split('-');
+        if (parts.length == 3) {
+          if (parts[0].length == 4) {
+            dob = DateTime.parse(_dobController.text);
+          } else if (parts[2].length == 4) {
+            dob = DateTime.parse("${parts[2]}-${parts[1]}-${parts[0]}");
+          }
+        }
+        if (dob != null) {
+          int age = DateTime.now().year - dob.year;
+          if (DateTime.now().month < dob.month || (DateTime.now().month == dob.month && DateTime.now().day < dob.day)) age--;
+          if (age < 18) {
+            showStatusDialog(context, title: 'Validation Error', message: 'Person must be at least 18 years old to be marked as married.', type: DialogType.error);
+            setState(() => _selectedMarried = 'No');
+            return;
+          }
+        }
+      } catch (_) {}
+    }
+    
+    setState(() => _selectedMarried = marriedVal);
+
+    if (marriedVal == 'Yes' && wasNotMarried) {
+      // Auto open Add Spouse dialog
+      bool isMale = _selectedGender == 'Male';
+      String preSelectedRole = isMale ? 'Wife' : 'Husband';
+      
+      final familyId = widget.memberData['Existfamilyid'] ?? widget.memberData['Familymembershipid'];
+      
+      // Temporarily mark the parent data as married so AddFamilyMemberForm allows 'Wife' or 'Husband'
+      final modifiedParentData = Map<String, dynamic>.from(widget.memberData);
+      modifiedParentData['Married'] = 'Yes';
+      
+      final result = await showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AddFamilyMemberForm(
+          parentId: familyId,
+          parentData: modifiedParentData, // Pass modified context for the spouse
+          submitterRole: widget.submitterRole,
+          preSelectedRelationship: preSelectedRole,
+        ),
+      );
+      
+      if (result != true) {
+        setState(() => _selectedMarried = 'No');
+      }
+    }
   }
 
   void _updateStates(String countryName) {
@@ -252,7 +338,7 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
       final res = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/districts'));
       if (res.statusCode == 200) {
         final d = json.decode(res.body);
-        _districts = List<String>.from(d['data']);
+        if (mounted) setState(() => _districts = List<String>.from(d['data']));
       }
     } catch (_) {}
   }
@@ -262,7 +348,7 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
       final res = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/taluks/$district'));
       if (res.statusCode == 200) {
         final d = json.decode(res.body);
-        _taluks = List<String>.from(d['data']);
+        if (mounted) setState(() => _taluks = List<String>.from(d['data']));
       }
     } catch (_) {}
   }
@@ -272,7 +358,7 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
       final res = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/panchayats/$taluk'));
       if (res.statusCode == 200) {
         final d = json.decode(res.body);
-        _panchayats = List<String>.from(d['data']);
+        if (mounted) setState(() => _panchayats = List<String>.from(d['data']));
       }
     } catch (_) {}
   }
@@ -282,7 +368,7 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
       final res = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/villages/$panchayat'));
       if (res.statusCode == 200) {
         final d = json.decode(res.body);
-        _villages = List<String>.from(d['data']);
+        if (mounted) setState(() => _villages = List<String>.from(d['data']));
       }
     } catch (_) {}
   }
@@ -292,7 +378,7 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
       final res = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/districts'));
       if (res.statusCode == 200) {
         final d = json.decode(res.body);
-        _currDistricts = List<String>.from(d['data']);
+        if (mounted) setState(() => _currDistricts = List<String>.from(d['data']));
       }
     } catch (_) {}
   }
@@ -302,7 +388,7 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
       final res = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/taluks/$district'));
       if (res.statusCode == 200) {
         final d = json.decode(res.body);
-        _currTaluks = List<String>.from(d['data']);
+        if (mounted) setState(() => _currTaluks = List<String>.from(d['data']));
       }
     } catch (_) {}
   }
@@ -312,7 +398,7 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
       final res = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/panchayats/$taluk'));
       if (res.statusCode == 200) {
         final d = json.decode(res.body);
-        _currPanchayats = List<String>.from(d['data']);
+        if (mounted) setState(() => _currPanchayats = List<String>.from(d['data']));
       }
     } catch (_) {}
   }
@@ -322,7 +408,7 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
       final res = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/villages/$panchayat'));
       if (res.statusCode == 200) {
         final d = json.decode(res.body);
-        _currVillages = List<String>.from(d['data']);
+        if (mounted) setState(() => _currVillages = List<String>.from(d['data']));
       }
     } catch (_) {}
   }
@@ -359,8 +445,7 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
                           fieldKey: _phoneFieldKey,
                           validator: (v) {
                             if (v == null || v.isEmpty) return null;
-                            final phone = v.trim();
-                            if (_phoneExists && phone != _initialPhone) return 'Phone number already registered';
+                            if (_phoneExists) return 'Phone number already registered';
                             return null;
                           }
                         ),
@@ -372,8 +457,8 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
                       ]),
                       _buildResponsiveRow(isMobile, [
                         _buildInputField('Email', _emailController, maxLength: 254),
-                        _buildIntlPhoneField('WhatsApp', _whatsappController),
-                        _buildRadioField('Married *', ['Yes', 'No'], _selectedMarried, (v) => setState(() => _selectedMarried = v)),
+                        _buildWhatsAppField(),
+                        _buildRadioField('Married *', ['Yes', 'No'], _selectedMarried, _checkMarriedAgeValidation),
                       ]),
                       _buildResponsiveRow(isMobile, [
                         _buildRadioField('Alive Status', ['Alive', 'Dead'], _selectedAliveStatus, (v) => setState(() => _selectedAliveStatus = v!)),
@@ -385,6 +470,17 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
                         if (!isMobile) const Spacer(),
                         if (!isMobile) const Spacer(),
                       ]),
+                      if (_selectedRelationship == 'Daughter' && _selectedMarried == 'Yes') ...[
+                        const SizedBox(height: 16),
+                        _buildResponsiveRow(isMobile, [
+                          _buildInputField('Husband Name *', _husbandNameController, maxLength: 254),
+                          _buildDatePickerField('Husband Date Of Birth *', _husbandDobController),
+                        ]),
+                        _buildResponsiveRow(isMobile, [
+                          _buildIntlPhoneField('Husband Phone *', _husbandMobileController, validator: (v) => (v == null || v.isEmpty) ? 'Required' : null),
+                          _buildDropdownField('Husband Kulam *', _kulams, _selectedHusbandKulam, (v) => setState(() => _selectedHusbandKulam = v)),
+                        ]),
+                      ],
                       const SizedBox(height: 32),
                       _buildSectionTitle(Icons.work_outline, 'Education & Career'),
                       const SizedBox(height: 16),
@@ -407,11 +503,9 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
                         _buildInputField('Pin Code *', _pinCodeController, keyboardType: TextInputType.number, maxLength: 6),
                       ]),
                       const SizedBox(height: 32),
-                      Wrap(
-                        alignment: WrapAlignment.spaceBetween,
-                        crossAxisAlignment: WrapCrossAlignment.center,
+                      Row(
                         children: [
-                          _buildSectionTitle(Icons.home_outlined, 'Current Address'),
+                          Expanded(child: _buildSectionTitle(Icons.home_outlined, 'Current Address')),
                           if (_selectedCurrentAddressType == 'Tamil Nadu')
                             TextButton.icon(
                               onPressed: _copyNativeToCurrent,
@@ -576,39 +670,71 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
     ]);
   }
 
-  Widget _buildDropdownField(String label, List<String> options, String? value, ValueChanged<String?> onChanged) {
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      _buildLabelText(label, fontSize: 14),
-      const SizedBox(height: 8),
-      DropdownSearch<String>(
-        items: (f, p) => options,
-        selectedItem: options.contains(value) ? value : null,
-        onSelected: onChanged,
-        decoratorProps: DropDownDecoratorProps(
-          baseStyle: const TextStyle(fontSize: 14, color: Colors.black87),
-          decoration: InputDecoration(
-            fillColor: Colors.white, filled: true,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: borderColor)),
-            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: borderColor)),
-          ),
-        ),
-        popupProps: PopupProps.menu(
-          showSearchBox: true,
-          menuProps: MenuProps(
-            backgroundColor: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          ),
-          searchFieldProps: TextFieldProps(
-            decoration: InputDecoration(
-              hintText: "Search...",
-              contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+  Widget _buildWhatsAppField() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Wrap(
+          spacing: 12,
+          runSpacing: 4,
+          alignment: WrapAlignment.start,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            _buildLabelText('WhatsApp', fontSize: 14),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: Checkbox(
+                    value: _whatsappSameAsPhone,
+                    activeColor: mediumBrown,
+                    onChanged: (v) => setState(() {
+                      _whatsappSameAsPhone = v!;
+                      if (v) {
+                        _whatsappController.text = _phoneController.text;
+                        _markChanged();
+                      }
+                    }),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                const Text('Same as Phone', style: TextStyle(fontSize: 11, color: Colors.black87)),
+              ],
             ),
-          ),
+          ],
         ),
-      ),
-    ]);
+        const SizedBox(height: 8),
+        CustomPhoneField(
+          label: '',
+          controller: _whatsappController,
+          validator: (v) => null,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDropdownField(String label, List<String> options, String? value, ValueChanged<String?> onChanged) {
+    String? matchedValue = value;
+    if (value != null && value.isNotEmpty) {
+      final valTrimmed = value.trim().toLowerCase();
+      try {
+        matchedValue = options.firstWhere((item) => item.trim().toLowerCase() == valTrimmed);
+      } catch (_) {
+        matchedValue = value;
+      }
+    }
+    return CustomDropdownSearch(
+      label: label,
+      dropdownItems: options,
+      value: matchedValue,
+      onChanged: (v) {
+        _markChanged();
+        onChanged(v);
+      },
+      requiredMark: label.contains('*'),
+    );
   }
 
   Widget _buildDatePickerField(String label, TextEditingController controller) {
@@ -629,7 +755,11 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
           }
           final date = await showDatePicker(context: context, initialDate: initial, firstDate: DateTime(1900), lastDate: DateTime.now());
           if (date != null) {
-            controller.text = "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
+            setState(() {
+              controller.text = "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
+              _markChanged();
+            });
+            if (controller == _dobController && _selectedMarried == 'Yes') _checkMarriedAgeValidation('Yes');
           }
         },
         validator: (v) => (v == null || v.isEmpty) ? 'Required' : null,
@@ -647,9 +777,9 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       _buildLabelText('Gender *', fontSize: 14),
       Wrap(children: [
-        Radio<String>(value: 'Male', groupValue: _selectedGender, onChanged: (v) => setState(() => _selectedGender = v)),
+        Radio<String>(value: 'Male', groupValue: _selectedGender, onChanged: (v) { _markChanged(); setState(() => _selectedGender = v); }),
         const Text('Male'),
-        Radio<String>(value: 'Female', groupValue: _selectedGender, onChanged: (v) => setState(() => _selectedGender = v)),
+        Radio<String>(value: 'Female', groupValue: _selectedGender, onChanged: (v) { _markChanged(); setState(() => _selectedGender = v); }),
         const Text('Female'),
       ]),
     ]);
@@ -659,7 +789,10 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       _buildLabelText(label, fontSize: 14),
       Wrap(children: options.map((o) => Row(mainAxisSize: MainAxisSize.min, children: [
-        Radio<String>(value: o, groupValue: value, onChanged: onChanged),
+        Radio<String>(value: o, groupValue: value, onChanged: (v) {
+          _markChanged();
+          onChanged(v);
+        }),
         Text(o),
         const SizedBox(width: 8),
       ])).toList()),
@@ -705,6 +838,7 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
             final result = await fp_pkg.FilePicker.pickFiles(type: fp_pkg.FileType.image, withData: kIsWeb);
             if (result != null) {
               setState(() {
+                _markChanged();
                 final xfile = kIsWeb ? XFile.fromData(result.files.single.bytes!, name: result.files.single.name) : XFile(result.files.single.path!);
                 if (type == 'member_image') _memberImage = xfile;
                 if (type == 'community_cert') _communityCert = xfile;
@@ -734,23 +868,52 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
   Widget _buildAgreement() {
     return Row(children: [
       Checkbox(value: _isAgreed, onChanged: (v) => setState(() => _isAgreed = v!)),
-      const Expanded(child: Text('I confirm that the updated details are correct.', style: TextStyle(fontSize: 13))),
+      Expanded(child: Text('I confirm that the updated details are correct.', style: TextStyle(fontSize: 13, color: _hasChanges ? Colors.black : Colors.grey))),
     ]);
   }
 
   Widget _buildSubmitButton() {
-    return SizedBox(
-      width: double.infinity, height: 50,
-      child: ElevatedButton(
-        onPressed: (_isSaving || !_isAgreed) ? null : _submit,
-        style: ElevatedButton.styleFrom(backgroundColor: mediumBrown, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-        child: _isSaving ? const CircularProgressIndicator(color: Colors.white) : const Text('UPDATE FAMILY MEMBER', style: TextStyle(fontWeight: FontWeight.bold)),
+    return Center(
+      child: SizedBox(
+        width: 250, height: 50,
+        child: ElevatedButton(
+          onPressed: (_isSaving || !_isAgreed || !_hasChanges) ? null : _submit,
+          style: ElevatedButton.styleFrom(backgroundColor: mediumBrown, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+          child: _isSaving ? const CircularProgressIndicator(color: Colors.white) : const Text('UPDATE FAMILY MEMBER', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+        ),
       ),
     );
   }
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate() || _phoneExists) return;
+    
+    if (_selectedMarried == 'Yes' && _dobController.text.isNotEmpty) {
+      try {
+        DateTime? dob;
+        final parts = _dobController.text.split('-');
+        if (parts.length == 3) {
+          if (parts[0].length == 4) {
+            dob = DateTime.parse(_dobController.text);
+          } else if (parts[2].length == 4) {
+            dob = DateTime.parse("${parts[2]}-${parts[1]}-${parts[0]}");
+          }
+        }
+        if (dob != null) {
+          int age = DateTime.now().year - dob.year;
+          if (DateTime.now().month < dob.month || (DateTime.now().month == dob.month && DateTime.now().day < dob.day)) {
+            age--;
+          }
+          if (age < 18) {
+            showStatusDialog(context, title: 'Validation Error', message: 'Person must be at least 18 years old to be marked as married.', type: DialogType.error);
+            return;
+          }
+        }
+      } catch (e) {
+        // Ignore parse error
+      }
+    }
+    
     setState(() => _isSaving = true);
     try {
       var request = http.MultipartRequest('POST', Uri.parse(ApiConfig.updateMember));
@@ -773,8 +936,17 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
       request.fields['profession'] = _selectedProfession ?? '';
       request.fields['relationship'] = _selectedRelationship ?? '';
       
+      if (_selectedRelationship == 'Daughter' && _selectedMarried == 'Yes') {
+        request.fields['husband_name'] = _husbandNameController.text;
+        request.fields['husband_dob'] = _husbandDobController.text;
+        request.fields['husband_mobile'] = _husbandMobileController.text;
+        request.fields['husband_kulam'] = _selectedHusbandKulam ?? '';
+      }
+      
       request.fields['district'] = _selectedDistrict ?? '';
       request.fields['taluk'] = _selectedTaluk ?? '';
+      request.fields['panchayat'] = _selectedPanchayat ?? '';
+      request.fields['village'] = _selectedVillage ?? '';
       // Split native street by comma
       String fullStreet = _streetController.text.trim();
       String doorNo = '';
@@ -789,11 +961,12 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
       request.fields['pincode'] = _pinCodeController.text.trim();
 
       request.fields['cur_address_type'] = _selectedCurrentAddressType == 'Tamil Nadu' ? 'TamilNadu' : (_selectedCurrentAddressType == 'Other State' ? 'OtherState' : 'NRI');
-      request.fields['cur_state'] = _selectedCurrState ?? '';
-      request.fields['cur_district'] = _selectedCurrDistrict ?? '';
-      request.fields['cur_taluk'] = _selectedCurrTaluk ?? '';
-      request.fields['cur_panchayat'] = _selectedCurrPanchayat ?? '';
-      request.fields['cur_village'] = _selectedCurrVillage ?? '';
+      bool isNRI = _selectedCurrentAddressType == 'NRI';
+      request.fields['cur_state'] = isNRI ? '' : (_selectedCurrState ?? '');
+      request.fields['cur_district'] = isNRI ? '' : (_selectedCurrDistrict ?? '');
+      request.fields['cur_taluk'] = isNRI ? '' : (_selectedCurrTaluk ?? '');
+      request.fields['cur_panchayat'] = isNRI ? '' : (_selectedCurrPanchayat ?? '');
+      request.fields['cur_village'] = isNRI ? '' : (_selectedCurrVillage ?? '');
       
       // Split current street by comma
       String fullCurStreet = _currStreetController.text.trim();
@@ -804,14 +977,15 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
         curDoorNo = fullCurStreet.substring(0, commaIndex).trim();
         curStreetName = fullCurStreet.substring(commaIndex + 1).trim();
       }
-      request.fields['cur_street'] = curStreetName;
-      request.fields['cur_door_no'] = curDoorNo;
-      request.fields['cur_pincode'] = _currPinCodeController.text.trim();
-      request.fields['nri_country'] = _selectedCountry ?? '';
-      request.fields['nri_state'] = _selectedCurrState ?? '';
-      request.fields['nri_city'] = _selectedCurrCity ?? '';
-      request.fields['nri_zip'] = _currPinCodeController.text.trim();
-      request.fields['nri_full_address'] = _currFullAddressController.text.trim();
+      request.fields['cur_street'] = isNRI ? '' : curStreetName;
+      request.fields['cur_door_no'] = isNRI ? '' : curDoorNo;
+      request.fields['cur_pincode'] = isNRI ? '' : _currPinCodeController.text.trim();
+      
+      request.fields['nri_country'] = isNRI ? (_selectedCountry ?? '') : '';
+      request.fields['nri_state'] = isNRI ? (_selectedCurrState ?? '') : '';
+      request.fields['nri_city'] = isNRI ? (_selectedCurrCity ?? '') : '';
+      request.fields['nri_zip'] = isNRI ? _currPinCodeController.text.trim() : '';
+      request.fields['nri_full_address'] = isNRI ? _currFullAddressController.text.trim() : '';
 
       // Files
       Future<void> addFile(String field, XFile? file) async {
@@ -827,13 +1001,17 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
       await addFile('community_cert', _communityCert);
 
       final res = await http.Response.fromStream(await request.send());
+      
+      if (!mounted) return;
+
       if (res.statusCode == 200) {
-        if (mounted) {
-          showStatusDialog(context, title: 'Success', message: 'Details updated successfully and sent for approval.', type: DialogType.success).then((_) {
-            widget.onUpdate();
-            Navigator.pop(context);
-          });
-        }
+        String successMsg = widget.submitterRole != 3 
+            ? 'Details updated and verified successfully.' 
+            : 'Details updated successfully and sent for approval.';
+        showStatusDialog(context, title: 'Success', message: successMsg, type: DialogType.success).then((_) {
+          widget.onUpdate();
+          Navigator.pop(context);
+        });
       } else {
         String errorMsg = 'Update failed';
         try {
@@ -846,9 +1024,8 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
             _phoneExists = true;
           });
           _phoneFieldKey.currentState?.validate();
-        } else {
-          if (mounted) showStatusDialog(context, title: 'Error', message: errorMsg, type: DialogType.error);
         }
+        if (mounted) showStatusDialog(context, title: 'Error', message: errorMsg, type: DialogType.error);
       }
     } catch (e) {
       if (mounted) showStatusDialog(context, title: 'Error', message: e.toString(), type: DialogType.error);

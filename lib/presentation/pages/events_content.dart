@@ -877,7 +877,7 @@ class _EventsContentState extends State<EventsContent> {
                                                 alignment: Alignment.bottomCenter,
                                                 children: [
                                                   SizedBox.expand(
-                                                    child: event['Image'] != null 
+                                                    child: event['Image'] != null && event['Image'].toString().isNotEmpty && event['Image'].toString() != 'null' && event['Image'].toString() != 'N/A'
                                                       ? InkWell(
                                                           onTap: () => _showFullScreenImage('${ApiConfig.baseUrl}/assets/uploads/${event['Image']}'),
                                                           child: ClipRRect(
@@ -885,11 +885,23 @@ class _EventsContentState extends State<EventsContent> {
                                                             child: Image.network(
                                                               '${ApiConfig.baseUrl}/assets/uploads/${event['Image']}',
                                                               fit: BoxFit.cover,
-                                                              errorBuilder: (context, error, stackTrace) => Icon(Icons.image_not_supported, color: Colors.grey[400]),
+                                                              errorBuilder: (context, error, stackTrace) => GestureDetector(
+                                                                onTap: () {}, // Consume tap to prevent opening dialog
+                                                                child: Tooltip(
+                                                                  message: 'image not found',
+                                                                  child: Container(
+                                                                    color: Colors.grey[100],
+                                                                    child: Icon(Icons.image_not_supported, color: Colors.grey[400]),
+                                                                  ),
+                                                                ),
+                                                              ),
                                                             ),
                                                           ),
                                                         )
-                                                      : Icon(Icons.image, color: Colors.grey[400]),
+                                                      : Tooltip(
+                                                          message: 'image not found',
+                                                          child: Icon(Icons.image_not_supported, color: Colors.grey[400]),
+                                                        ),
                                                   ),
                                                   if (widget.role == 1)
                                                     InkWell(

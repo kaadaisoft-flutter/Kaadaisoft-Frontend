@@ -1,4 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import '../../utils/api_config.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class IdCardBenefitsContent extends StatefulWidget {
   const IdCardBenefitsContent({super.key});
@@ -9,6 +14,35 @@ class IdCardBenefitsContent extends StatefulWidget {
 
 class _IdCardBenefitsContentState extends State<IdCardBenefitsContent> {
   bool _isTamil = true;
+  Map<String, dynamic>? _userData;
+  int? _userId;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchUserData();
+  }
+
+  Future<void> _fetchUserData() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userId = prefs.getInt('userId');
+      if (userId != null) {
+        _userId = userId;
+        final res = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/user-details/$userId'));
+        if (res.statusCode == 200) {
+          final data = jsonDecode(res.body);
+          if (mounted) {
+            setState(() {
+              _userData = data['data'];
+            });
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Error fetching user data for ID card: $e');
+    }
+  }
 
   final List<Map<String, dynamic>> _benefits = [
     {
@@ -158,14 +192,20 @@ class _IdCardBenefitsContentState extends State<IdCardBenefitsContent> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Header & Language Toggle
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.start,
+                spacing: 16,
+                runSpacing: 16,
                 children: [
-                  Expanded(
+                  Container(
+                    constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width > 800 ? 600 : double.infinity),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
                             Container(width: 40, height: 2, color: const Color(0xFFC49A3C)),
                             const SizedBox(width: 12),
@@ -195,21 +235,42 @@ class _IdCardBenefitsContentState extends State<IdCardBenefitsContent> {
                       ],
                     ),
                   ),
-                  const SizedBox(width: 16),
-                  OutlinedButton.icon(
-                    icon: const Icon(Icons.language, size: 18),
-                    label: Text(_isTamil ? 'English' : 'தமிழ்', style: const TextStyle(fontWeight: FontWeight.bold)),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(0xFF2D1B18),
-                      side: BorderSide(color: const Color(0xFFC49A3C).withOpacity(0.5)),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    ),
-                    onPressed: () {
-                      setState(() {
-                        _isTamil = !_isTamil;
-                      });
-                    },
+                  Wrap(
+                    spacing: 16,
+                    runSpacing: 16,
+                    children: [
+                      if (_userId != null)
+                        ElevatedButton.icon(
+                          onPressed: () {
+                            final url = '${ApiConfig.baseUrl}/api/download-id-card/$_userId';
+                            launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+                          },
+                          icon: const Icon(Icons.badge_outlined, size: 18),
+                          label: Text(_isTamil ? 'அடையாள அட்டையை பதிவிறக்க' : 'Download ID Card', style: const TextStyle(fontWeight: FontWeight.bold)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF5D1712),
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          ),
+                        ),
+                      OutlinedButton.icon(
+                        icon: const Icon(Icons.language, size: 18),
+                        label: Text(_isTamil ? 'English' : 'தமிழ்', style: const TextStyle(fontWeight: FontWeight.bold)),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFF2D1B18),
+                          side: BorderSide(color: const Color(0xFFC49A3C).withOpacity(0.5)),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _isTamil = !_isTamil;
+                          });
+                        },
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -239,7 +300,7 @@ class _IdCardBenefitsContentState extends State<IdCardBenefitsContent> {
 
                   Widget cardSection = Column(
                     children: [
-                      const _FlipCard(),
+                      _FlipCard(userData: _userData),
                       const SizedBox(height: 16),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -402,7 +463,8 @@ class _IdCardBenefitsContentState extends State<IdCardBenefitsContent> {
 }
 
 class _FlipCard extends StatefulWidget {
-  const _FlipCard();
+  final Map<String, dynamic>? userData;
+  const _FlipCard({this.userData});
 
   @override
   State<_FlipCard> createState() => _FlipCardState();
@@ -455,11 +517,11 @@ class _FlipCardState extends State<_FlipCard> with SingleTickerProviderStateMixi
                 ..rotateY(angle),
               alignment: Alignment.center,
               child: isFrontVisible 
-                ? _buildCardSide('assets/images/id card front.jpeg')
+                ? _buildCardSide('assets/images/id card front.jpeg', true)
                 : Transform(
                     transform: Matrix4.identity()..rotateY(3.1415926535897932), // pi
                     alignment: Alignment.center,
-                    child: _buildCardSide('assets/images/id card back.jpeg'),
+                    child: _buildCardSide('assets/images/id card back.jpeg', false),
                   ),
             );
           },
@@ -468,7 +530,7 @@ class _FlipCardState extends State<_FlipCard> with SingleTickerProviderStateMixi
     );
   }
 
-  Widget _buildCardSide(String imagePath) {
+  Widget _buildCardSide(String imagePath, bool isFront) {
     return ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 400),
       child: AspectRatio(
@@ -489,8 +551,112 @@ class _FlipCardState extends State<_FlipCard> with SingleTickerProviderStateMixi
               fit: BoxFit.cover,
             ),
           ),
+          child: isFront && widget.userData != null ? _buildFrontContent() : null,
         ),
       ),
+    );
+  }
+
+  Widget _buildFrontContent() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final w = constraints.maxWidth;
+        final h = constraints.maxHeight;
+        
+        final hasProfileImage = widget.userData?['Memberimage'] != null && widget.userData!['Memberimage'].toString().isNotEmpty;
+
+        return Stack(
+          children: [
+            // Profile Photo Box
+            Positioned(
+              left: w * 0.1239,
+              top: h * 0.3437,
+              width: w * 0.1897,
+              height: h * 0.3537,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: hasProfileImage
+                    ? Image.network(
+                        '${ApiConfig.baseUrl}/assets/uploads/${widget.userData!['Memberimage']}',
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) => Container(color: Colors.transparent),
+                      )
+                    : Container(color: Colors.transparent),
+              ),
+            ),
+            // Member ID Box (below photo)
+            Positioned(
+              left: w * 0.1233,
+              top: h * 0.7386,
+              width: w * 0.1897,
+              child: Center(
+                child: Text(
+                  widget.userData?['Familymembershipid']?.toString() ?? '',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: w * 0.0347,
+                    fontWeight: FontWeight.bold,
+                    height: 1.0,
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                ),
+              ),
+            ),
+            // Details: Name
+            Positioned(
+              left: w * 0.4744,
+              top: h * 0.3698,
+              width: w * 0.5,
+              child: Text(
+                widget.userData?['Name']?.toString() ?? '',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: w * 0.0442,
+                  fontWeight: FontWeight.w600,
+                  height: 1.0,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            // Details: Phone
+            Positioned(
+              left: w * 0.4744,
+              top: h * 0.5075,
+              width: w * 0.5,
+              child: Text(
+                widget.userData?['Phonenumber']?.toString() ?? '',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: w * 0.0442,
+                  fontWeight: FontWeight.w600,
+                  height: 1.0,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            // Details: Blood Group
+            Positioned(
+              left: w * 0.4744,
+              top: h * 0.6532,
+              width: w * 0.5,
+              child: Text(
+                widget.userData?['Bloodgroup']?.toString() ?? '',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: w * 0.0442,
+                  fontWeight: FontWeight.w600,
+                  height: 1.0,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }

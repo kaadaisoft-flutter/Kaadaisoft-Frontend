@@ -107,7 +107,7 @@ class _UpdateRequestsContentState extends State<UpdateRequestsContent> {
                     children: [
                       // Fixed Left Part
                       SizedBox(
-                        width: 380, // 60+180+140
+                        width: 560, // 60+180+180+140
                         child: Column(
                           children: [
                             Container(
@@ -117,6 +117,7 @@ class _UpdateRequestsContentState extends State<UpdateRequestsContent> {
                                 children: [
                                   _buildHeaderCell('S.NO', 60),
                                   _buildHeaderCell('MEMBER NAME', 180),
+                                  _buildHeaderCell('FAMILY HEAD', 180),
                                   _buildHeaderCell('MEMBER ID', 140),
                                 ],
                               ),
@@ -274,6 +275,7 @@ class _UpdateRequestsContentState extends State<UpdateRequestsContent> {
         children: [
           _buildDataCell((startIndex + index + 1).toString(), 60),
           _buildDataCell(req['Name'] ?? '-', 180, isBold: true),
+          _buildDataCell(req['head_name'] ?? '-', 180),
           _buildDataCell(req['Familymembershipid'] ?? '-', 140, isBlue: true),
         ],
       ),

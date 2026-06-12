@@ -8,6 +8,7 @@ import '../../utils/api_config.dart';
 import 'update_details_content.dart';
 import 'coordinator_details_content.dart';
 import 'coordinator_responsibilities_content.dart';
+import '../widgets/custom_dropdown_search.dart';
 
 
 class CoordinatorsContent extends StatefulWidget {
@@ -333,12 +334,14 @@ class _CoordinatorsContentState extends State<CoordinatorsContent> {
             )
           else ...[
             // Top bar: Title + Buttons
-            Wrap(
-              alignment: WrapAlignment.spaceBetween,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              runSpacing: 10,
-              spacing: 12,
-              children: [
+            SizedBox(
+              width: double.infinity,
+              child: Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                runSpacing: 10,
+                spacing: 12,
+                children: [
                 const Text(
                   'Coordinators Management',
                   style: TextStyle(
@@ -386,6 +389,7 @@ class _CoordinatorsContentState extends State<CoordinatorsContent> {
                 ),
               ],
             ),
+          ),
         if (_showFilters) ...[
           const SizedBox(height: 8),
           _buildFilterBar(),
@@ -440,8 +444,9 @@ class _CoordinatorsContentState extends State<CoordinatorsContent> {
                             children: [
                               _buildHeaderCell('DISTRICT', 100),
                               _buildHeaderCell('TALUK', 100),
-                              _buildHeaderCell('PANCHAYAT', 130),
+                               _buildHeaderCell('PANCHAYAT', 130),
                               _buildHeaderCell('VILLAGE', 130),
+                              _buildHeaderCell('ASSIGNED VILLAGE', 150),
                               _buildHeaderCell('ACTIONS', 120, isLast: true),
                             ],
                           ),
@@ -465,6 +470,7 @@ class _CoordinatorsContentState extends State<CoordinatorsContent> {
                                         c['Taluk'] ?? '-',
                                         c['Panchayat'] ?? '-',
                                         c['Village'] ?? '-',
+                                        c['villagenames'] ?? c['Villagenames'] ?? c['VillageNames'] ?? '-',
                                       );
                                     },
                                   ),
@@ -523,7 +529,7 @@ class _CoordinatorsContentState extends State<CoordinatorsContent> {
                         ),
                         // Scrollable Right Part
                         isNarrow 
-                            ? SizedBox(width: 580, child: rightPart)
+                            ? SizedBox(width: 730, child: rightPart)
                             : Expanded(
                                 child: Scrollbar(
                                   controller: _horizontalScrollController,
@@ -533,7 +539,7 @@ class _CoordinatorsContentState extends State<CoordinatorsContent> {
                                     controller: _horizontalScrollController,
                                     scrollDirection: Axis.horizontal,
                                     child: SizedBox(
-                                      width: 580, // 100+100+130+130+120
+                                      width: 730, // 100+100+130+130+150+120
                                       child: rightPart,
                                     ),
                                   ),
@@ -648,7 +654,7 @@ class _CoordinatorsContentState extends State<CoordinatorsContent> {
     );
   }
 
-  Widget _buildScrollableRow(String numericId, String id, String district, String taluk, String panchayat, String village) {
+  Widget _buildScrollableRow(String numericId, String id, String district, String taluk, String panchayat, String village, String assignedVillage) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -665,6 +671,7 @@ class _CoordinatorsContentState extends State<CoordinatorsContent> {
               _buildDataCell(taluk, 100),
               _buildDataCell(panchayat, 130),
               _buildDataCell(village, 130),
+              _buildDataCell(assignedVillage, 150),
               _buildDataCell('', 120, isLast: true, child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -754,125 +761,143 @@ class _CoordinatorsContentState extends State<CoordinatorsContent> {
         border: Border.all(color: Colors.grey.shade200),
       ),
       width: double.infinity,
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            _buildDropdown('District', _selectedDistrict, _districts, (val) {
-              setState(() {
-                _selectedDistrict = val!;
-                _taluks = ['All Taluks'];
-                _selectedTaluk = 'All Taluks';
-                _panchayats = ['All Panchayats'];
-                _selectedPanchayat = 'All Panchayats';
-                _villages = ['All Villages'];
-                _selectedVillage = 'All Villages';
-              });
-              _fetchTaluks(val!);
-              _fetchCoordinators();
-            }),
-            const SizedBox(width: 16),
-            _buildDropdown('Taluk', _selectedTaluk, _taluks, (val) {
-              setState(() {
-                _selectedTaluk = val!;
-                _panchayats = ['All Panchayats'];
-                _selectedPanchayat = 'All Panchayats';
-                _villages = ['All Villages'];
-                _selectedVillage = 'All Villages';
-              });
-              _fetchPanchayats(_selectedDistrict, val!);
-              _fetchCoordinators();
-            }),
-            const SizedBox(width: 16),
-            _buildDropdown('Panchayat', _selectedPanchayat, _panchayats, (val) {
-              setState(() {
-                _selectedPanchayat = val!;
-                _villages = ['All Villages'];
-                _selectedVillage = 'All Villages';
-              });
-              _fetchVillages(_selectedDistrict, _selectedTaluk, val!);
-              _fetchCoordinators();
-            }),
-            const SizedBox(width: 16),
-            _buildDropdown('Village', _selectedVillage, _villages, (val) {
-              setState(() {
-                _selectedVillage = val!;
-              });
-              _fetchCoordinators();
-            }),
-            const SizedBox(width: 16),
-            SizedBox(
-              width: 250,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Search Name/ID/Mobile', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black54)),
-                  const SizedBox(height: 6),
-                  SizedBox(
-                    height: 40,
-                    child: TextField(
-                      controller: _searchController,
-                      onSubmitted: (_) => _fetchCoordinators(),
-                      decoration: InputDecoration(
-                        hintText: 'Search...',
-                        prefixIcon: const Icon(Icons.search, size: 18),
-                        suffixIcon: IconButton(
-                          icon: const Icon(Icons.refresh, size: 18),
-                          onPressed: () {
-                            _searchController.clear();
-                            setState(() {
-                              _selectedDistrict = 'All Districts';
-                              _selectedTaluk = 'All Taluks';
-                              _selectedPanchayat = 'All Panchayats';
-                              _selectedVillage = 'All Villages';
-                            });
-                            _fetchCoordinators();
-                          },
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: Colors.grey.shade300)),
-                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: Colors.grey.shade300)),
-                        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: const BorderSide(color: const Color(0xFF5D1712))),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isWide = constraints.maxWidth > 800;
+
+          Widget district = _buildDropdown('District', _selectedDistrict, _districts, (val) {
+            setState(() {
+              _selectedDistrict = val!;
+              _taluks = ['All Taluks'];
+              _selectedTaluk = 'All Taluks';
+              _panchayats = ['All Panchayats'];
+              _selectedPanchayat = 'All Panchayats';
+              _villages = ['All Villages'];
+              _selectedVillage = 'All Villages';
+            });
+            _fetchTaluks(val!);
+            _fetchCoordinators();
+          });
+
+          Widget taluk = _buildDropdown('Taluk', _selectedTaluk, _taluks, (val) {
+            setState(() {
+              _selectedTaluk = val!;
+              _panchayats = ['All Panchayats'];
+              _selectedPanchayat = 'All Panchayats';
+              _villages = ['All Villages'];
+              _selectedVillage = 'All Villages';
+            });
+            _fetchPanchayats(_selectedDistrict, val!);
+            _fetchCoordinators();
+          });
+
+          Widget panchayat = _buildDropdown('Panchayat', _selectedPanchayat, _panchayats, (val) {
+            setState(() {
+              _selectedPanchayat = val!;
+              _villages = ['All Villages'];
+              _selectedVillage = 'All Villages';
+            });
+            _fetchVillages(_selectedDistrict, _selectedTaluk, val!);
+            _fetchCoordinators();
+          });
+
+          Widget village = _buildDropdown('Village', _selectedVillage, _villages, (val) {
+            setState(() {
+              _selectedVillage = val!;
+            });
+            _fetchCoordinators();
+          });
+
+          Widget searchField = SizedBox(
+            width: 250,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Search Name/ID/Mobile', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black54)),
+                const SizedBox(height: 6),
+                SizedBox(
+                  height: 40,
+                  child: TextField(
+                    controller: _searchController,
+                    onSubmitted: (_) => _fetchCoordinators(),
+                    decoration: InputDecoration(
+                      hintText: 'Search...',
+                      prefixIcon: const Icon(Icons.search, size: 18),
+                      suffixIcon: IconButton(
+                        icon: const Icon(Icons.refresh, size: 18),
+                        onPressed: () {
+                          _searchController.clear();
+                          setState(() {
+                            _selectedDistrict = 'All Districts';
+                            _selectedTaluk = 'All Taluks';
+                            _selectedPanchayat = 'All Panchayats';
+                            _selectedVillage = 'All Villages';
+                          });
+                          _fetchCoordinators();
+                        },
                       ),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: Colors.grey.shade300)),
+                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: Colors.grey.shade300)),
+                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: const BorderSide(color: const Color(0xFF5D1712))),
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
-        ),
+          );
+
+          if (isWide) {
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Expanded(child: district),
+                const SizedBox(width: 16),
+                Expanded(child: taluk),
+                const SizedBox(width: 16),
+                Expanded(child: panchayat),
+                const SizedBox(width: 16),
+                Expanded(child: village),
+                const SizedBox(width: 16),
+                searchField,
+              ],
+            );
+          } else {
+            return Wrap(
+              crossAxisAlignment: WrapCrossAlignment.end,
+              spacing: 16,
+              runSpacing: 16,
+              children: [
+                SizedBox(width: 160, child: district),
+                SizedBox(width: 160, child: taluk),
+                SizedBox(width: 160, child: panchayat),
+                SizedBox(width: 160, child: village),
+                searchField,
+              ],
+            );
+          }
+        },
       ),
     );
   }
 
   Widget _buildDropdown(String label, String value, List<String> items, ValueChanged<String?> onChanged) {
-    return SizedBox(
-      width: 160,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black54)),
-          const SizedBox(height: 6),
-          Container(
-            height: 40,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey.shade300),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<String>(
-                value: value,
-                isExpanded: true,
-                icon: const Icon(Icons.keyboard_arrow_down, size: 18),
-                items: items.map((e) => DropdownMenuItem(value: e, child: Text(e, style: const TextStyle(fontSize: 13), overflow: TextOverflow.ellipsis))).toList(),
-                onChanged: onChanged,
-              ),
-            ),
-          ),
-        ],
-      ),
+    // Treat "All X" as the placeholder / unselected state
+    final isPlaceholder = value.startsWith('All ');
+    final filteredItems = items.where((e) => !e.startsWith('All ')).toList();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black54)),
+        const SizedBox(height: 6),
+        CustomDropdownSearch(
+          label: '',
+          hint: value, // "All Districts" etc. as hint
+          dropdownItems: filteredItems,
+          value: isPlaceholder ? null : value,
+          onChanged: (val) => onChanged(val ?? items.first),
+        ),
+      ],
     );
   }
 }
