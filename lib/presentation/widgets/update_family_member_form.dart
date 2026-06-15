@@ -293,7 +293,7 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
     
     setState(() => _selectedMarried = marriedVal);
 
-    if (marriedVal == 'Yes' && wasNotMarried) {
+    if (marriedVal == 'Yes' && wasNotMarried && _selectedRelationship == 'Son') {
       // Auto open Add Spouse dialog
       bool isMale = _selectedGender == 'Male';
       String preSelectedRole = isMale ? 'Wife' : 'Husband';
@@ -1009,8 +1009,10 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
             ? 'Details updated and verified successfully.' 
             : 'Details updated successfully and sent for approval.';
         showStatusDialog(context, title: 'Success', message: successMsg, type: DialogType.success).then((_) {
-          widget.onUpdate();
-          Navigator.pop(context);
+          if (mounted) {
+            widget.onUpdate();
+            Navigator.pop(context);
+          }
         });
       } else {
         String errorMsg = 'Update failed';

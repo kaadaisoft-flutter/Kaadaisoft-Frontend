@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:intl_phone_field/countries.dart';
+import '../widgets/custom_phone_field.dart';
 import '../../utils/api_config.dart';
 
 import 'admin_dashboard.dart';
@@ -25,6 +27,8 @@ class _LoginPageState extends State<LoginPage> {
   final _passwordController = TextEditingController();
   bool _isPasswordVisible = false;
   bool _isLoading = false;
+  int _selectedMinLength = 10;
+  int _selectedMaxLength = 10;
 
   Future<void> _handleLogin() async {
     final mobile = _mobileController.text.trim();
@@ -40,11 +44,15 @@ class _LoginPageState extends State<LoginPage> {
       return;
     }
 
-    if (mobile.length != 10) {
+    if (mobile.length < _selectedMinLength || mobile.length > _selectedMaxLength) {
+      String digitMsg = _selectedMinLength == _selectedMaxLength 
+          ? '$_selectedMinLength-digit' 
+          : '$_selectedMinLength to $_selectedMaxLength digit';
+
       showStatusDialog(
         context,
         title: 'Invalid Number',
-        message: 'Please enter a 10-digit Mobile number.',
+        message: 'Please enter a valid $digitMsg Mobile number.',
         type: DialogType.warning,
       );
       return;
@@ -207,13 +215,51 @@ class _LoginPageState extends State<LoginPage> {
                             ),
                             SizedBox(height: isMobile ? 20 : 24),
                             // Mobile Number Field
-                            _buildTextField(
-                              controller: _mobileController,
-                              hint: 'Mobile Number',
-                              suffixIcon: Icons.phone_android,
-                              isMobile: isMobile,
-                              maxLength: 10,
-                              keyboardType: TextInputType.number,
+                            Container(
+                              height: 52,
+                              decoration: BoxDecoration(
+                                color: Colors.black.withOpacity(0.5),
+                                borderRadius: BorderRadius.circular(30),
+                                border: Border.all(
+                                  color: Colors.white.withOpacity(0.3),
+                                  width: 1,
+                                ),
+                              ),
+                              child: Theme(
+                                data: Theme.of(context).copyWith(
+                                  inputDecorationTheme: InputDecorationTheme(
+                                    filled: false,
+                                    fillColor: Colors.transparent,
+                                    border: InputBorder.none,
+                                    enabledBorder: InputBorder.none,
+                                    focusedBorder: InputBorder.none,
+                                    errorBorder: InputBorder.none,
+                                    focusedErrorBorder: InputBorder.none,
+                                    contentPadding: EdgeInsets.symmetric(
+                                      horizontal: isMobile ? 20 : 25,
+                                      vertical: isMobile ? 15 : 18,
+                                    ),
+                                    hintStyle: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: isMobile ? 14 : 16,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                                child: CustomPhoneField(
+                                  label: '',
+                                  controller: _mobileController,
+                                  hint: 'Mobile Number',
+                                  isDarkTheme: true,
+                                  showDropdownOnRight: true,
+                                  onCountryChanged: (country) {
+                                    setState(() {
+                                      _selectedMinLength = country.minLength;
+                                      _selectedMaxLength = country.maxLength;
+                                    });
+                                  },
+                                ),
+                              ),
                             ),
                             SizedBox(height: isMobile ? 12 : 16),
                             // Password Field
@@ -372,6 +418,7 @@ class _LoginPageState extends State<LoginPage> {
     bool isMobile = false,
     int? maxLength,
     TextInputType? keyboardType,
+    String? prefixText,
   }) {
     return Container(
       decoration: BoxDecoration(
@@ -397,6 +444,12 @@ class _LoginPageState extends State<LoginPage> {
         decoration: InputDecoration(
           counterText: "", // Hide character counter
           hintText: hint,
+          prefixText: prefixText,
+          prefixStyle: TextStyle(
+            color: Colors.white,
+            fontSize: isMobile ? 14 : 16,
+            fontWeight: FontWeight.bold,
+          ),
           hintStyle: TextStyle(
             color: Colors.white,
             fontSize: isMobile ? 14 : 16,

@@ -102,12 +102,14 @@ class _UpdateRequestsContentState extends State<UpdateRequestsContent> {
               borderRadius: BorderRadius.circular(8),
               child: Column(
                 children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Fixed Left Part
-                      SizedBox(
-                        width: 560, // 60+180+180+140
+                  Scrollbar(
+                    controller: _horizontalScrollController,
+                    thumbVisibility: true,
+                    child: SingleChildScrollView(
+                      controller: _horizontalScrollController,
+                      scrollDirection: Axis.horizontal,
+                      child: SizedBox(
+                        width: 1180, // 560 + 620
                         child: Column(
                           children: [
                             Container(
@@ -119,13 +121,24 @@ class _UpdateRequestsContentState extends State<UpdateRequestsContent> {
                                   _buildHeaderCell('MEMBER NAME', 180),
                                   _buildHeaderCell('FAMILY HEAD', 180),
                                   _buildHeaderCell('MEMBER ID', 140),
+                                  _buildHeaderCell('DISTRICT', 130),
+                                  _buildHeaderCell('TALUK', 130),
+                                  _buildHeaderCell('PANCHAYAT', 130),
+                                  _buildHeaderCell('VILLAGE', 130),
+                                  _buildHeaderCell('REQUEST', 100, hasDivider: false),
                                 ],
                               ),
                             ),
                             _isLoading
-                                ? const SizedBox.shrink()
+                                ? const Padding(
+                                    padding: EdgeInsets.all(48.0),
+                                    child: Center(child: LoadingSpinner(message: 'Loading requests...')),
+                                  )
                                 : _requests.isEmpty
-                                    ? const SizedBox.shrink()
+                                    ? const Padding(
+                                        padding: EdgeInsets.all(48.0),
+                                        child: Center(child: Text('No pending update requests.', style: TextStyle(color: Colors.black54))),
+                                      )
                                     : ListView.separated(
                                         shrinkWrap: true,
                                         physics: const NeverScrollableScrollPhysics(),
@@ -133,64 +146,13 @@ class _UpdateRequestsContentState extends State<UpdateRequestsContent> {
                                         separatorBuilder: (_, __) => const Divider(height: 1),
                                         itemBuilder: (context, index) {
                                           final req = currentPageData[index];
-                                          return _buildFixedDataRow(index, req, startIndex);
+                                          return _buildFullDataRow(index, req, startIndex);
                                         },
                                       ),
                           ],
                         ),
                       ),
-                      // Scrollable Right Part
-                      Expanded(
-                        child: Scrollbar(
-                          controller: _horizontalScrollController,
-                          thumbVisibility: true,
-                          child: SingleChildScrollView(
-                            controller: _horizontalScrollController,
-                            scrollDirection: Axis.horizontal,
-                            child: SizedBox(
-                              width: 620, // 130+130+130+130+100
-                              child: Column(
-                                children: [
-                                  Container(
-                                    color: const Color(0xFF2D1B18),
-                                    height: 48,
-                                    child: Row(
-                                      children: [
-                                        _buildHeaderCell('DISTRICT', 130),
-                                        _buildHeaderCell('TALUK', 130),
-                                        _buildHeaderCell('PANCHAYAT', 130),
-                                        _buildHeaderCell('VILLAGE', 130),
-                                        _buildHeaderCell('REQUEST', 100, hasDivider: false),
-                                      ],
-                                    ),
-                                  ),
-                                  _isLoading
-                                      ? const Padding(
-                                          padding: EdgeInsets.all(48.0),
-                                          child: Center(child: LoadingSpinner(message: 'Loading requests...')),
-                                        )
-                                      : _requests.isEmpty
-                                          ? const Padding(
-                                              padding: EdgeInsets.all(48.0),
-                                              child: Center(child: Text('No pending update requests.', style: TextStyle(color: Colors.black54))),
-                                            )
-                                          : ListView.separated(
-                                              shrinkWrap: true,
-                                              physics: const NeverScrollableScrollPhysics(),
-                                              itemCount: currentPageData.length,
-                                              separatorBuilder: (_, __) => const Divider(height: 1),
-                                              itemBuilder: (context, index) {
-                                                final req = currentPageData[index];
-                                                return _buildScrollableDataRow(index, req);
-                                              },
-                                            ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                   ],
                 ),
@@ -267,7 +229,7 @@ class _UpdateRequestsContentState extends State<UpdateRequestsContent> {
     );
   }
 
-  Widget _buildFixedDataRow(int index, dynamic req, int startIndex) {
+  Widget _buildFullDataRow(int index, dynamic req, int startIndex) {
     return Container(
       height: 46,
       color: index % 2 == 0 ? Colors.white : const Color(0xFFF8FAFC),
@@ -277,17 +239,6 @@ class _UpdateRequestsContentState extends State<UpdateRequestsContent> {
           _buildDataCell(req['Name'] ?? '-', 180, isBold: true),
           _buildDataCell(req['head_name'] ?? '-', 180),
           _buildDataCell(req['Familymembershipid'] ?? '-', 140, isBlue: true),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildScrollableDataRow(int index, dynamic req) {
-    return Container(
-      height: 46,
-      color: index % 2 == 0 ? Colors.white : const Color(0xFFF8FAFC),
-      child: Row(
-        children: [
           _buildDataCell(req['District'] ?? '-', 130),
           _buildDataCell(req['Taluk'] ?? '-', 130),
           _buildDataCell(req['Panchayat'] ?? '-', 130),
@@ -296,7 +247,7 @@ class _UpdateRequestsContentState extends State<UpdateRequestsContent> {
             onPressed: () {
               _showRequestDetails(req);
             },
-            icon: Icon(Icons.visibility),
+            icon: const Icon(Icons.visibility),
             color: const Color(0xFF5D1712),
             tooltip: 'View Details',
           )),

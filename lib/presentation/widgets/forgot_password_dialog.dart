@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../../utils/api_config.dart';
 import 'custom_dialog.dart';
+import 'custom_phone_field.dart';
 
 class ForgotPasswordDialog extends StatefulWidget {
   const ForgotPasswordDialog({super.key});
@@ -19,6 +20,8 @@ class _ForgotPasswordDialogState extends State<ForgotPasswordDialog> {
   final _otpController = TextEditingController();
   final _newPasswordController = TextEditingController();
   bool _isPasswordVisible = false;
+  int _selectedMinLength = 10;
+  int _selectedMaxLength = 10;
 
   @override
   void dispose() {
@@ -30,8 +33,11 @@ class _ForgotPasswordDialogState extends State<ForgotPasswordDialog> {
 
   Future<void> _requestOTP() async {
     final mobile = _mobileController.text.trim();
-    if (mobile.length != 10) {
-      showStatusDialog(context, title: 'Invalid Input', message: 'Please enter a valid 10-digit mobile number.', type: DialogType.warning);
+    if (mobile.length < _selectedMinLength || mobile.length > _selectedMaxLength) {
+      String digitMsg = _selectedMinLength == _selectedMaxLength 
+          ? '$_selectedMinLength-digit' 
+          : '$_selectedMinLength to $_selectedMaxLength digit';
+      showStatusDialog(context, title: 'Invalid Input', message: 'Please enter a valid $digitMsg mobile number.', type: DialogType.warning);
       return;
     }
 
@@ -145,16 +151,16 @@ class _ForgotPasswordDialogState extends State<ForgotPasswordDialog> {
                 style: TextStyle(color: Colors.black87, fontSize: 14),
               ),
               const SizedBox(height: 20),
-              TextField(
+              CustomPhoneField(
+                label: '',
+                hint: 'Mobile Number',
                 controller: _mobileController,
-                keyboardType: TextInputType.phone,
-                maxLength: 10,
-                decoration: InputDecoration(
-                  labelText: 'Mobile Number',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                  prefixIcon: const Icon(Icons.phone_android),
-                  counterText: "",
-                ),
+                onCountryChanged: (country) {
+                  setState(() {
+                    _selectedMinLength = country.minLength;
+                    _selectedMaxLength = country.maxLength;
+                  });
+                },
               ),
               const SizedBox(height: 24),
               SizedBox(

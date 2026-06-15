@@ -1079,7 +1079,9 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
            String successMsg = widget.submitterRole != 3 
               ? 'Family member added and verified successfully.' 
               : 'Family member added successfully and sent for approval.';
-           showStatusDialog(context, title: 'Success', message: successMsg, type: DialogType.success).then((_) => Navigator.pop(context, true));
+           showStatusDialog(context, title: 'Success', message: successMsg, type: DialogType.success).then((_) {
+             if (mounted) Navigator.pop(context, true);
+           });
         }
       } else {
          String errorMsg = 'Failed to add member';

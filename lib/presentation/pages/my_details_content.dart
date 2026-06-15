@@ -632,7 +632,7 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
           
           if (isSubHead(m)) {
              String mFmId = m['Familymembershipid']?.toString() ?? '';
-             var myKids = grandchildren.where((c) => c['Existfamilyid']?.toString().trim() == mFmId).toList();
+             var myKids = grandchildren.where((c) => c['Existfamilyid']?.toString().trim() == mFmId && c['Id']?.toString() != m['Id']?.toString()).toList();
              
              if (myKids.isNotEmpty) {
                  String uniqueBoxId = m['Familymembershipid']?.toString() ?? m['Id']?.toString() ?? '';
@@ -721,7 +721,7 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
           
           if (isSubHead(m)) {
              String mFmId = m['Familymembershipid']?.toString() ?? '';
-             var myKids = grandchildren.where((c) => c['Existfamilyid']?.toString().trim() == mFmId).toList();
+             var myKids = grandchildren.where((c) => c['Existfamilyid']?.toString().trim() == mFmId && c['Id']?.toString() != m['Id']?.toString()).toList();
              
              if (myKids.isNotEmpty) {
                  String uniqueBoxId = m['Familymembershipid']?.toString() ?? m['Id']?.toString() ?? '';

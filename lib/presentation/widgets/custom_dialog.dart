@@ -162,6 +162,7 @@ Future<void> showStatusDialog(BuildContext context, {
 
   if (shouldAutoDismiss) {
     Future.delayed(duration, () {
+      if (!context.mounted) return;
       if (Navigator.of(context).canPop()) {
         // We need to be careful here. Navigator.pop() might pop the wrong thing 
         // if the user already closed the dialog manually.

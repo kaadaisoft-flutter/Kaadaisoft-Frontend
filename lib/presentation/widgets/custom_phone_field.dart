@@ -10,6 +10,9 @@ class CustomPhoneField extends StatefulWidget {
   final Key? fieldKey;
   final FocusNode? focusNode;
   final String? hint;
+  final bool isDarkTheme;
+  final ValueChanged<Country>? onCountryChanged;
+  final bool showDropdownOnRight;
 
   const CustomPhoneField({
     Key? key,
@@ -19,6 +22,9 @@ class CustomPhoneField extends StatefulWidget {
     this.fieldKey,
     this.focusNode,
     this.hint,
+    this.isDarkTheme = false,
+    this.onCountryChanged,
+    this.showDropdownOnRight = false,
   }) : super(key: key);
 
   @override
@@ -78,6 +84,9 @@ class _CustomPhoneFieldState extends State<CustomPhoneField> {
                     initialCountry: _selectedCountry,
                     onSelect: (country) {
                       setState(() => _selectedCountry = country);
+                      if (widget.onCountryChanged != null) {
+                        widget.onCountryChanged!(country);
+                      }
                       _removeCountryOverlay();
                     },
                   ),
@@ -133,15 +142,17 @@ class _CustomPhoneFieldState extends State<CustomPhoneField> {
             controller: widget.controller,
             focusNode: widget.focusNode,
             keyboardType: TextInputType.phone,
-            autovalidateMode: AutovalidateMode.onUserInteraction,
+            autovalidateMode: widget.isDarkTheme ? AutovalidateMode.disabled : AutovalidateMode.onUserInteraction,
             inputFormatters: [
               FilteringTextInputFormatter.digitsOnly,
               LengthLimitingTextInputFormatter(_selectedCountry.maxLength),
             ],
             decoration: InputDecoration(
               hintText: widget.hint,
-              hintStyle: const TextStyle(fontSize: 13, color: Colors.grey),
-              prefixIcon: GestureDetector(
+              hintStyle: widget.isDarkTheme 
+                  ? const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w500)
+                  : const TextStyle(fontSize: 13, color: Colors.grey),
+              prefixIcon: widget.showDropdownOnRight ? null : GestureDetector(
                 onTap: _toggleCountryDropdown,
                 child: Container(
                   color: Colors.transparent,
@@ -152,42 +163,76 @@ class _CustomPhoneFieldState extends State<CustomPhoneField> {
                       const SizedBox(width: 4),
                       Text(
                         '${_selectedCountry.flag} +${_selectedCountry.dialCode}',
-                        style: const TextStyle(color: Colors.black87, fontSize: 15),
+                        style: TextStyle(color: widget.isDarkTheme ? Colors.white : Colors.black87, fontSize: 15),
                       ),
                       Icon(
                         _isCountryDropdownOpen ? Icons.arrow_drop_up : Icons.arrow_drop_down,
-                        color: Colors.black54,
+                        color: widget.isDarkTheme ? Colors.white : Colors.black54,
                       ),
                       Container(
                         height: 22,
                         width: 1,
-                        color: Colors.grey.shade400,
+                        color: widget.isDarkTheme ? Colors.white30 : Colors.grey.shade400,
                         margin: const EdgeInsets.only(left: 4, right: 8),
                       ),
                     ],
                   ),
                 ),
               ),
+              suffixIcon: widget.showDropdownOnRight ? GestureDetector(
+                onTap: _toggleCountryDropdown,
+                child: Container(
+                  color: Colors.transparent,
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        height: 22,
+                        width: 1,
+                        color: widget.isDarkTheme ? Colors.white30 : Colors.grey.shade400,
+                        margin: const EdgeInsets.only(left: 8, right: 4),
+                      ),
+                      Text(
+                        '${_selectedCountry.flag} +${_selectedCountry.dialCode}',
+                        style: TextStyle(color: widget.isDarkTheme ? Colors.white : Colors.black87, fontSize: 15),
+                      ),
+                      Icon(
+                        _isCountryDropdownOpen ? Icons.arrow_drop_up : Icons.arrow_drop_down,
+                        color: widget.isDarkTheme ? Colors.white : Colors.black54,
+                      ),
+                      const SizedBox(width: 4),
+                    ],
+                  ),
+                ),
+              ) : null,
               enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: const BorderSide(color: Color(0xFFE0E0E0), width: 1.5),
+                borderRadius: BorderRadius.circular(widget.isDarkTheme ? 30 : 10),
+                borderSide: widget.isDarkTheme ? BorderSide.none : const BorderSide(color: Color(0xFFE0E0E0), width: 1.5),
               ),
               focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: const BorderSide(color: Color(0xFFC5A028), width: 1.5),
+                borderRadius: BorderRadius.circular(widget.isDarkTheme ? 30 : 10),
+                borderSide: widget.isDarkTheme ? BorderSide.none : const BorderSide(color: Color(0xFFC5A028), width: 1.5),
               ),
               errorBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: const BorderSide(color: Colors.redAccent),
+                borderRadius: BorderRadius.circular(widget.isDarkTheme ? 30 : 10),
+                borderSide: widget.isDarkTheme ? BorderSide.none : const BorderSide(color: Colors.redAccent),
               ),
               focusedErrorBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: const BorderSide(color: Colors.redAccent, width: 2),
+                borderRadius: BorderRadius.circular(widget.isDarkTheme ? 30 : 10),
+                borderSide: widget.isDarkTheme ? BorderSide.none : const BorderSide(color: Colors.redAccent, width: 2),
               ),
-              filled: true,
-              fillColor: Colors.white.withOpacity(0.9),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              errorStyle: widget.isDarkTheme ? const TextStyle(height: 0, fontSize: 0, color: Colors.transparent) : null,
+              filled: widget.isDarkTheme ? false : true,
+              fillColor: widget.isDarkTheme ? Colors.transparent : Colors.white.withOpacity(0.9),
+              contentPadding: widget.isDarkTheme 
+                  ? const EdgeInsets.symmetric(horizontal: 20, vertical: 15)
+                  : const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             ),
+            style: TextStyle(
+              color: widget.isDarkTheme ? Colors.white : Colors.black87,
+            ),
+            cursorColor: widget.isDarkTheme ? Colors.white : null,
             validator: (value) {
               final val = widget.controller.text.replaceAll(' ', '').trim();
               if (val.isNotEmpty) {

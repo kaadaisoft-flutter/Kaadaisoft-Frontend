@@ -192,88 +192,164 @@ class _IdCardBenefitsContentState extends State<IdCardBenefitsContent> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Header & Language Toggle
-              Wrap(
-                alignment: WrapAlignment.spaceBetween,
-                crossAxisAlignment: WrapCrossAlignment.start,
-                spacing: 16,
-                runSpacing: 16,
-                children: [
-                  Container(
-                    constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width > 800 ? 600 : double.infinity),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Row(
+              MediaQuery.of(context).size.width > 800
+                ? Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Container(width: 40, height: 2, color: const Color(0xFFC49A3C)),
-                            const SizedBox(width: 12),
-                            Flexible(
-                              child: Text(
-                                _isTamil ? 'பிரத்தியேக சலுகைகள்' : 'EXCLUSIVE PRIVILEGES',
-                                style: const TextStyle(
-                                  color: const Color(0xFFC49A3C),
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 2.0,
-                                  fontSize: 12,
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(width: 40, height: 2, color: const Color(0xFFC49A3C)),
+                                const SizedBox(width: 12),
+                                Flexible(
+                                  child: Text(
+                                    _isTamil ? 'பிரத்தியேக சலுகைகள்' : 'EXCLUSIVE PRIVILEGES',
+                                    style: const TextStyle(
+                                      color: const Color(0xFFC49A3C),
+                                      fontWeight: FontWeight.bold,
+                                      letterSpacing: 2.0,
+                                      fontSize: 12,
+                                    ),
+                                  ),
                                 ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              _isTamil ? 'அடையாள அட்டை நன்மைகள்' : 'Advantages of the ID Card',
+                              style: TextStyle(
+                                fontSize: MediaQuery.of(context).size.width > 600 ? 42 : 28, // Responsive font size
+                                fontWeight: FontWeight.w900,
+                                color: const Color(0xFF2D1B18),
+                                height: 1.2,
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          _isTamil ? 'அடையாள அட்டை நன்மைகள்' : 'Advantages of the ID Card',
-                          style: TextStyle(
-                            fontSize: MediaQuery.of(context).size.width > 600 ? 42 : 28, // Responsive font size
-                            fontWeight: FontWeight.w900,
-                            color: const Color(0xFF2D1B18),
-                            height: 1.2,
+                      ),
+                      const SizedBox(width: 32),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (_userId != null)
+                            ElevatedButton.icon(
+                              onPressed: () {
+                                final url = '${ApiConfig.baseUrl}/api/download-id-card/$_userId';
+                                launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+                              },
+                              icon: const Icon(Icons.badge_outlined, size: 18),
+                              label: Text(_isTamil ? 'அடையாள அட்டையை பதிவிறக்க' : 'Download ID Card', style: const TextStyle(fontWeight: FontWeight.bold)),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF5D1712),
+                                foregroundColor: Colors.white,
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              ),
+                            ),
+                          const SizedBox(width: 16),
+                          OutlinedButton.icon(
+                            icon: const Icon(Icons.language, size: 18),
+                            label: Text(_isTamil ? 'English' : 'தமிழ்', style: const TextStyle(fontWeight: FontWeight.bold)),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: const Color(0xFF2D1B18),
+                              side: BorderSide(color: const Color(0xFFC49A3C).withOpacity(0.5)),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _isTamil = !_isTamil;
+                              });
+                            },
                           ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Wrap(
-                    spacing: 16,
-                    runSpacing: 16,
+                        ],
+                      ),
+                    ],
+                  )
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      if (_userId != null)
-                        ElevatedButton.icon(
-                          onPressed: () {
-                            final url = '${ApiConfig.baseUrl}/api/download-id-card/$_userId';
-                            launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-                          },
-                          icon: const Icon(Icons.badge_outlined, size: 18),
-                          label: Text(_isTamil ? 'அடையாள அட்டையை பதிவிறக்க' : 'Download ID Card', style: const TextStyle(fontWeight: FontWeight.bold)),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF5D1712),
-                            foregroundColor: Colors.white,
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(width: 40, height: 2, color: const Color(0xFFC49A3C)),
+                              const SizedBox(width: 12),
+                              Flexible(
+                                child: Text(
+                                  _isTamil ? 'பிரத்தியேக சலுகைகள்' : 'EXCLUSIVE PRIVILEGES',
+                                  style: const TextStyle(
+                                    color: const Color(0xFFC49A3C),
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 2.0,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                      OutlinedButton.icon(
-                        icon: const Icon(Icons.language, size: 18),
-                        label: Text(_isTamil ? 'English' : 'தமிழ்', style: const TextStyle(fontWeight: FontWeight.bold)),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: const Color(0xFF2D1B18),
-                          side: BorderSide(color: const Color(0xFFC49A3C).withOpacity(0.5)),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        ),
-                        onPressed: () {
-                          setState(() {
-                            _isTamil = !_isTamil;
-                          });
-                        },
+                          const SizedBox(height: 8),
+                          Text(
+                            _isTamil ? 'அடையாள அட்டை நன்மைகள்' : 'Advantages of the ID Card',
+                            style: TextStyle(
+                              fontSize: 28, // Responsive font size
+                              fontWeight: FontWeight.w900,
+                              color: const Color(0xFF2D1B18),
+                              height: 1.2,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      Wrap(
+                        spacing: 16,
+                        runSpacing: 16,
+                        children: [
+                          if (_userId != null)
+                            ElevatedButton.icon(
+                              onPressed: () {
+                                final url = '${ApiConfig.baseUrl}/api/download-id-card/$_userId';
+                                launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+                              },
+                              icon: const Icon(Icons.badge_outlined, size: 18),
+                              label: Text(_isTamil ? 'அடையாள அட்டையை பதிவிறக்க' : 'Download ID Card', style: const TextStyle(fontWeight: FontWeight.bold)),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF5D1712),
+                                foregroundColor: Colors.white,
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              ),
+                            ),
+                          OutlinedButton.icon(
+                            icon: const Icon(Icons.language, size: 18),
+                            label: Text(_isTamil ? 'English' : 'தமிழ்', style: const TextStyle(fontWeight: FontWeight.bold)),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: const Color(0xFF2D1B18),
+                              side: BorderSide(color: const Color(0xFFC49A3C).withOpacity(0.5)),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _isTamil = !_isTamil;
+                              });
+                            },
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
-              ),
               const SizedBox(height: 32),
               
               // Hero Section (Text + Flip Card)
