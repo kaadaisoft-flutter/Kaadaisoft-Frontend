@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../../utils/api_config.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
 class IdCardBenefitsContent extends StatefulWidget {
   const IdCardBenefitsContent({super.key});
@@ -240,10 +241,10 @@ class _IdCardBenefitsContentState extends State<IdCardBenefitsContent> {
                           if (_userId != null)
                             ElevatedButton.icon(
                               onPressed: () {
-                                final url = '${ApiConfig.baseUrl}/api/download-id-card/$_userId';
+                                final url = '${ApiConfig.baseUrl}/api/download-id-card/$_userId?origin=${Uri.base.origin}';
                                 launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
                               },
-                              icon: const Icon(Icons.badge_outlined, size: 18),
+                              icon: const Icon(Icons.file_download_outlined, size: 18),
                               label: Text(_isTamil ? 'அடையாள அட்டையை பதிவிறக்க' : 'Download ID Card', style: const TextStyle(fontWeight: FontWeight.bold)),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFF5D1712),
@@ -318,10 +319,10 @@ class _IdCardBenefitsContentState extends State<IdCardBenefitsContent> {
                           if (_userId != null)
                             ElevatedButton.icon(
                               onPressed: () {
-                                final url = '${ApiConfig.baseUrl}/api/download-id-card/$_userId';
+                                final url = '${ApiConfig.baseUrl}/api/download-id-card/$_userId?origin=${Uri.base.origin}';
                                 launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
                               },
-                              icon: const Icon(Icons.badge_outlined, size: 18),
+                              icon: const Icon(Icons.file_download_outlined, size: 18),
                               label: Text(_isTamil ? 'அடையாள அட்டையை பதிவிறக்க' : 'Download ID Card', style: const TextStyle(fontWeight: FontWeight.bold)),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFF5D1712),
@@ -377,48 +378,17 @@ class _IdCardBenefitsContentState extends State<IdCardBenefitsContent> {
                   Widget cardSection = Column(
                     children: [
                       _FlipCard(userData: _userData),
-                      const SizedBox(height: 16),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.touch_app, size: 16, color: Colors.grey),
-                          const SizedBox(width: 8),
-                          Flexible(
-                            child: Text(
-                              _isTamil ? 'அட்டையைத் திருப்ப அதன் மீது கர்சரை வைக்கவும் (அல்லது) அழுத்தவும்' : 'HOVER OR CLICK TO VIEW BACK',
-                              style: const TextStyle(
-                                color: Colors.grey,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 1.5,
-                                fontSize: 11,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                        ],
-                      )
                     ],
                   );
 
-                  if (isDesktop) {
-                    return Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Expanded(flex: 3, child: textSection),
-                        const SizedBox(width: 48),
-                        Expanded(flex: 2, child: Center(child: cardSection)),
-                      ],
-                    );
-                  } else {
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        textSection,
-                        const SizedBox(height: 48),
-                        Center(child: cardSection),
-                      ],
-                    );
-                  }
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      textSection,
+                      const SizedBox(height: 48),
+                      Center(child: cardSection),
+                    ],
+                  );
                 },
               ),
               
@@ -546,63 +516,17 @@ class _FlipCard extends StatefulWidget {
   State<_FlipCard> createState() => _FlipCardState();
 }
 
-class _FlipCardState extends State<_FlipCard> with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _animation;
-  bool _isFront = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(duration: const Duration(milliseconds: 600), vsync: this);
-    // Use pi to rotate 180 degrees
-    _animation = Tween<double>(begin: 0, end: 1).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  void _toggleCard() {
-    if (_isFront) {
-      _controller.forward();
-    } else {
-      _controller.reverse();
-    }
-    _isFront = !_isFront;
-  }
-
+class _FlipCardState extends State<_FlipCard> {
   @override
   Widget build(BuildContext context) {
-    return MouseRegion(
-      onEnter: (_) => _controller.forward(),
-      onExit: (_) => _controller.reverse(),
-      child: GestureDetector(
-        onTap: _toggleCard, // Keep tap for mobile devices
-        child: AnimatedBuilder(
-          animation: _animation,
-          builder: (context, child) {
-            final angle = _animation.value * 3.1415926535897932; // pi
-            bool isFrontVisible = angle <= 3.1415926535897932 / 2;
-
-            return Transform(
-              transform: Matrix4.identity()
-                ..setEntry(3, 2, 0.001) // perspective
-                ..rotateY(angle),
-              alignment: Alignment.center,
-              child: isFrontVisible 
-                ? _buildCardSide('assets/images/id card front.jpeg', true)
-                : Transform(
-                    transform: Matrix4.identity()..rotateY(3.1415926535897932), // pi
-                    alignment: Alignment.center,
-                    child: _buildCardSide('assets/images/id card back.jpeg', false),
-                  ),
-            );
-          },
-        ),
-      ),
+    return Wrap(
+      spacing: 24,
+      runSpacing: 24,
+      alignment: WrapAlignment.center,
+      children: [
+        _buildCardSide('assets/images/id card front.jpeg', true),
+        _buildCardSide('assets/images/id card back.jpeg', false),
+      ],
     );
   }
 
@@ -627,9 +551,57 @@ class _FlipCardState extends State<_FlipCard> with SingleTickerProviderStateMixi
               fit: BoxFit.cover,
             ),
           ),
-          child: isFront && widget.userData != null ? _buildFrontContent() : null,
+          child: widget.userData != null 
+              ? (isFront ? _buildFrontContent() : _buildBackContent()) 
+              : null,
         ),
       ),
+    );
+  }
+
+  Widget _buildBackContent() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final w = constraints.maxWidth;
+        final h = constraints.maxHeight;
+        
+        final String memberId = widget.userData?['Familymembershipid'] ?? widget.userData?['Id']?.toString() ?? '';
+        String qrData = '${Uri.base.origin}/?memberId=$memberId';
+
+        return Stack(
+          children: [
+            Positioned(
+              top: h * 0.08,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: SizedBox(
+                  width: w * 0.28,
+                  height: w * 0.28,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    padding: const EdgeInsets.all(4),
+                    child: QrImageView(
+                      data: qrData,
+                      version: QrVersions.auto,
+                      errorCorrectionLevel: QrErrorCorrectLevel.H,
+                      padding: EdgeInsets.zero,
+                      foregroundColor: const Color(0xFFC49A3C), // Gold color
+                      embeddedImage: const AssetImage('assets/images/poondurai kaadaikulam image.png'),
+                      embeddedImageStyle: QrEmbeddedImageStyle(
+                        size: Size(w * 0.07, w * 0.07),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -663,7 +635,7 @@ class _FlipCardState extends State<_FlipCard> with SingleTickerProviderStateMixi
             // Member ID Box (below photo)
             Positioned(
               left: w * 0.1233,
-              top: h * 0.7386,
+              top: h * 0.743,
               width: w * 0.1897,
               child: Center(
                 child: Text(

@@ -149,7 +149,14 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
     _relationship = d['MemberRole'];
     _gender = d['Gender'];
     _bloodGroup = d['Bloodgroup'];
-    _married = d['Married'];
+    final rawMarried = d['Married']?.toString().trim().toLowerCase();
+    if (rawMarried == 'yes') {
+      _married = 'Yes';
+    } else if (rawMarried == 'no') {
+      _married = 'No';
+    } else {
+      _married = null;
+    }
     _aliveStatus = (d['is_dead'] == 0 || d['is_dead'] == '0' || d['is_dead'] == null) ? 'Alive' : 'Dead';
     _kulam = d['Kulam'] ?? 'Poondurai Kaadai';
     _district = d['District'];

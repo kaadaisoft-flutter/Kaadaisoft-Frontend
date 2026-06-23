@@ -97,6 +97,24 @@ class _PaymentsContentState extends State<PaymentsContent> {
     if (widget.role == 3) {
       await _fetchMemberCoordinator();
     } else {
+      if (widget.role == 2 && widget.userId != null) {
+        await _fetchMemberCoordinator();
+        if (_memberData != null) {
+          _selectedDistrict = _memberData!['District'];
+          if (_selectedDistrict != null) {
+            await _fetchTaluks(_selectedDistrict!);
+            _selectedTaluk = _memberData!['Taluk'];
+            if (_selectedTaluk != null) {
+              await _fetchPanchayats(_selectedTaluk!);
+              _selectedPanchayat = _memberData!['Panchayat'];
+              if (_selectedPanchayat != null) {
+                await _fetchVillages(_selectedPanchayat!);
+                _selectedVillage = _memberData!['Village'];
+              }
+            }
+          }
+        }
+      }
       await Future.wait([
         _fetchYears(),
         _fetchDistricts(),
@@ -259,10 +277,12 @@ class _PaymentsContentState extends State<PaymentsContent> {
 
   void _clearFilters() {
     setState(() {
-      _selectedDistrict = null;
-      _selectedTaluk = null;
-      _selectedPanchayat = null;
-      _selectedVillage = null;
+      if (widget.role != 2) {
+        _selectedDistrict = null;
+        _selectedTaluk = null;
+        _selectedPanchayat = null;
+        _selectedVillage = null;
+      }
       _selectedYear = null;
       _selectedEventId = null;
       _selectedStatus = 'Paid';
@@ -967,26 +987,32 @@ class _PaymentsContentState extends State<PaymentsContent> {
         padding: const EdgeInsets.all(20.0),
         child: Column(
           children: [
-            Wrap(
-              spacing: 16,
-              runSpacing: 16,
-              children: [
-                _buildFilterField('District', _buildDropdown('District', _districts, _selectedDistrict, (val) {
-                  setState(() => _selectedDistrict = val);
-                  _fetchTaluks(val!);
-                }, icon: Icons.map, isStringList: true), isMobile),
-                _buildFilterField('Taluk', _buildDropdown('Taluk', _taluks, _selectedTaluk, (val) {
-                  setState(() => _selectedTaluk = val);
-                  _fetchPanchayats(val!);
-                }, icon: Icons.location_city, isStringList: true), isMobile),
-                _buildFilterField('Panchayat', _buildDropdown('Panchayat', _panchayats, _selectedPanchayat, (val) {
-                  setState(() => _selectedPanchayat = val);
-                  _fetchVillages(val!);
-                }, icon: Icons.business, isStringList: true), isMobile),
-                _buildFilterField('Village', _buildDropdown('Village', _villages, _selectedVillage, (val) {
-                  setState(() => _selectedVillage = val);
-                }, icon: Icons.home, isStringList: true), isMobile),
-              ],
+            Opacity(
+              opacity: widget.role == 2 ? 0.6 : 1.0,
+              child: AbsorbPointer(
+                absorbing: widget.role == 2,
+                child: Wrap(
+                  spacing: 16,
+                  runSpacing: 16,
+                  children: [
+                    _buildFilterField('District', _buildDropdown('District', _districts, _selectedDistrict, (val) {
+                      setState(() => _selectedDistrict = val);
+                      _fetchTaluks(val!);
+                    }, icon: Icons.map, isStringList: true), isMobile),
+                    _buildFilterField('Taluk', _buildDropdown('Taluk', _taluks, _selectedTaluk, (val) {
+                      setState(() => _selectedTaluk = val);
+                      _fetchPanchayats(val!);
+                    }, icon: Icons.location_city, isStringList: true), isMobile),
+                    _buildFilterField('Panchayat', _buildDropdown('Panchayat', _panchayats, _selectedPanchayat, (val) {
+                      setState(() => _selectedPanchayat = val);
+                      _fetchVillages(val!);
+                    }, icon: Icons.business, isStringList: true), isMobile),
+                    _buildFilterField('Village', _buildDropdown('Village', _villages, _selectedVillage, (val) {
+                      setState(() => _selectedVillage = val);
+                    }, icon: Icons.home, isStringList: true), isMobile),
+                  ],
+                ),
+              ),
             ),
             const SizedBox(height: 20),
             Wrap(
@@ -1398,7 +1424,9 @@ class _PaymentsContentState extends State<PaymentsContent> {
                             children: [
                               Expanded(
                                 child: Text(
-                                  'Member Financial Record', 
+                                  data['member'] != null && data['member']['Role'] == 2 
+                                      ? 'Coordinator Financial Record' 
+                                      : 'Member Financial Record', 
                                   style: TextStyle(
                                     fontSize: isMobile ? 18 : 22, 
                                     fontWeight: FontWeight.bold, 
@@ -1423,7 +1451,7 @@ class _PaymentsContentState extends State<PaymentsContent> {
                                   isMobile: true,
                                 ),
                                 const SizedBox(height: 16),
-                                if (data['coordinator'] != null && data['coordinator']['Name'] != null)
+                                if (widget.role != 2 && data['coordinator'] != null && data['coordinator']['Name'] != null && data['coordinator']['Familymembershipid'] != data['member']['Familymembershipid'])
                                   _buildProfileCard(
                                     title: 'Coordinator Details:',
                                     data: data['coordinator'],
@@ -1445,7 +1473,7 @@ class _PaymentsContentState extends State<PaymentsContent> {
                                     showPayNow: true,
                                   ),
                                 ),
-                                if (data['coordinator'] != null && data['coordinator']['Name'] != null)
+                                if (widget.role != 2 && data['coordinator'] != null && data['coordinator']['Name'] != null && data['coordinator']['Familymembershipid'] != data['member']['Familymembershipid'])
                                   SizedBox(
                                     width: 510,
                                     child: _buildProfileCard(

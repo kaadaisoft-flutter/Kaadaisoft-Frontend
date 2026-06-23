@@ -16,7 +16,9 @@ import 'terms_and_conditions_page.dart';
 import 'privacy_policy_page.dart';
 
 class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
+  final String? redirectMemberId;
+
+  const LoginPage({super.key, this.redirectMemberId});
 
   @override
   State<LoginPage> createState() => _LoginPageState();
@@ -85,6 +87,11 @@ class _LoginPageState extends State<LoginPage> {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         if (mounted) {
+          if (data['user']['is_first_login'] == true) {
+            _handleFirstLoginOTP(data['user'], mobile);
+            return;
+          }
+
           // Save session data
           final prefs = await SharedPreferences.getInstance();
           await prefs.setInt('userId', data['user']['id']);
@@ -100,6 +107,7 @@ class _LoginPageState extends State<LoginPage> {
                 userName: data['user']['name'] ?? 'User',
                 userRole: data['user']['role'] ?? 3,
                 userId: data['user']['id'],
+                initialViewMemberId: widget.redirectMemberId,
               ),
             ),
           );
@@ -137,6 +145,215 @@ class _LoginPageState extends State<LoginPage> {
     _mobileController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  Future<void> _handleFirstLoginOTP(Map<String, dynamic> user, String mobile) async {
+    setState(() { _isLoading = true; });
+    try {
+      final res = await http.post(
+        Uri.parse('${ApiConfig.baseUrl}/api/auth/forgot-password'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'mobile': mobile}),
+      );
+      
+      setState(() { _isLoading = false; });
+      
+      if (res.statusCode == 200) {
+        if (mounted) _showResetPasswordDialog(user, mobile);
+      } else {
+        String errorMsg = 'Could not send OTP.';
+        try {
+          final data = jsonDecode(res.body);
+          if (data['detail'] != null) errorMsg = data['detail'];
+        } catch (_) {}
+        if (mounted) {
+          showStatusDialog(context, title: 'Verification Error', message: errorMsg, type: DialogType.error);
+        }
+      }
+    } catch (e) {
+      setState(() { _isLoading = false; });
+      if (mounted) {
+        showStatusDialog(context, title: 'Connection Error', message: 'Could not connect to server to send OTP.', type: DialogType.error);
+      }
+    }
+  }
+
+  void _showResetPasswordDialog(Map<String, dynamic> user, String mobile) {
+    final TextEditingController otpController = TextEditingController();
+    final TextEditingController newPasswordController = TextEditingController();
+    final TextEditingController confirmPasswordController = TextEditingController();
+    bool isResetting = false;
+    String errorMsg = '';
+    bool isNewPasswordVisible = false;
+    bool isConfirmPasswordVisible = false;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: const Text('Set New Password', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF5D1712))),
+              content: SizedBox(
+                width: 400,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        'Welcome! Since this is your first time logging in, please set a new password for your account. An OTP has been sent to your registered email.',
+                        style: TextStyle(color: Colors.black87),
+                      ),
+                      const SizedBox(height: 20),
+                      TextField(
+                        controller: otpController,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: 'Enter OTP',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.password),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: newPasswordController,
+                        obscureText: !isNewPasswordVisible,
+                        decoration: InputDecoration(
+                          labelText: 'New Password',
+                          border: const OutlineInputBorder(),
+                          prefixIcon: const Icon(Icons.lock_outline),
+                          suffixIcon: IconButton(
+                            icon: Icon(isNewPasswordVisible ? Icons.visibility : Icons.visibility_off),
+                            onPressed: () {
+                              setDialogState(() {
+                                isNewPasswordVisible = !isNewPasswordVisible;
+                              });
+                            },
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: confirmPasswordController,
+                        obscureText: !isConfirmPasswordVisible,
+                        decoration: InputDecoration(
+                          labelText: 'Confirm Password',
+                          border: const OutlineInputBorder(),
+                          prefixIcon: const Icon(Icons.lock_outline),
+                          suffixIcon: IconButton(
+                            icon: Icon(isConfirmPasswordVisible ? Icons.visibility : Icons.visibility_off),
+                            onPressed: () {
+                              setDialogState(() {
+                                isConfirmPasswordVisible = !isConfirmPasswordVisible;
+                              });
+                            },
+                          ),
+                        ),
+                      ),
+                      if (errorMsg.isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        Text(errorMsg, style: const TextStyle(color: Colors.red, fontSize: 13)),
+                      ]
+                    ],
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isResetting ? null : () => Navigator.pop(dialogContext),
+                  child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+                ),
+                ElevatedButton(
+                  onPressed: isResetting ? null : () async {
+                    if (otpController.text.trim().isEmpty) {
+                      setDialogState(() => errorMsg = 'Please enter the OTP sent to your email.');
+                      return;
+                    }
+                    if (newPasswordController.text.length < 8) {
+                      setDialogState(() => errorMsg = 'Password must be at least 8 characters long.');
+                      return;
+                    }
+                    if (newPasswordController.text != confirmPasswordController.text) {
+                      setDialogState(() => errorMsg = 'Passwords do not match.');
+                      return;
+                    }
+
+                    setDialogState(() {
+                      isResetting = true;
+                      errorMsg = '';
+                    });
+
+                    try {
+                      final res = await http.post(
+                        Uri.parse('${ApiConfig.baseUrl}/api/auth/reset-password'),
+                        headers: {'Content-Type': 'application/json'},
+                        body: jsonEncode({
+                          'mobile': mobile,
+                          'otp': otpController.text.trim(),
+                          'new_password': newPasswordController.text,
+                        }),
+                      );
+
+                      if (res.statusCode == 200) {
+                        Navigator.pop(dialogContext); // Close dialog
+                        
+                        // Proceed to login completion
+                        if (mounted) {
+                          final prefs = await SharedPreferences.getInstance();
+                          await prefs.setInt('userId', user['id']);
+                          await prefs.setString('userName', user['name'] ?? 'User');
+                          await prefs.setInt('userRole', user['role'] ?? 3);
+                          await prefs.setBool('isLoggedIn', true);
+
+                          Navigator.pushReplacement(
+                            context, 
+                            MaterialPageRoute(
+                              builder: (_) => AdminDashboard(
+                                showLoginSuccess: true,
+                                userName: user['name'] ?? 'User',
+                                userRole: user['role'] ?? 3,
+                                userId: user['id'],
+                                initialViewMemberId: widget.redirectMemberId,
+                              ),
+                            ),
+                          );
+                        }
+                      } else {
+                        try {
+                          final errData = jsonDecode(res.body);
+                          if (errData['detail'] != null) {
+                            setDialogState(() => errorMsg = errData['detail']);
+                          } else {
+                            setDialogState(() => errorMsg = 'Failed to reset password. Please try again.');
+                          }
+                        } catch (_) {
+                          setDialogState(() => errorMsg = 'Failed to reset password. Please try again.');
+                        }
+                      }
+                    } catch (e) {
+                      setDialogState(() => errorMsg = 'Connection error. Check your internet.');
+                    } finally {
+                      if (mounted) {
+                        setDialogState(() => isResetting = false);
+                      }
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF5D1712),
+                    foregroundColor: Colors.white,
+                  ),
+                  child: isResetting
+                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                      : const Text('Save & Continue'),
+                ),
+              ],
+            );
+          }
+        );
+      }
+    );
   }
 
   @override

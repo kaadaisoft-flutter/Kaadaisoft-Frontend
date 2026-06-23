@@ -773,7 +773,7 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: groupedWidgets.asMap().entries.map((entry) {
+              children: groupedWidgets.asMap().entries.map<Widget>((entry) {
                 int index = entry.key;
                 Widget w = entry.value;
                 bool isFirst = index == 0;
@@ -1603,7 +1603,7 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
                     DataColumn(label: Text('Age', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
                     DataColumn(label: Text('Action', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
                   ],
-                  rows: tableMembers.asMap().entries.map((entry) {
+                  rows: tableMembers.asMap().entries.map<DataRow>((entry) {
                     final index = entry.key;
                     final fm = entry.value;
                     

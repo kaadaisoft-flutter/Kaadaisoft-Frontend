@@ -14,7 +14,8 @@ import '../widgets/custom_dropdown_search.dart';
 class CoordinatorsContent extends StatefulWidget {
   final bool initialShowAssign;
   final String? globalSearchQuery;
-  const CoordinatorsContent({super.key, this.initialShowAssign = false, this.globalSearchQuery});
+  final int role;
+  const CoordinatorsContent({super.key, this.initialShowAssign = false, this.globalSearchQuery, this.role = 1});
 
 
   @override
@@ -369,22 +370,24 @@ class _CoordinatorsContentState extends State<CoordinatorsContent> {
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                       ),
                     ),
-                    const SizedBox(width: 10),
-                    ElevatedButton.icon(
-                      onPressed: () {
-                        setState(() {
-                          _showAssignView = true;
-                        });
-                      },
-                      icon: const Icon(Icons.person_add_alt_1, color: Colors.white, size: 18),
-                      label: const Text('Assign', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF2D1B18),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                        elevation: 0,
+                    if (widget.role != 3) ...[
+                      const SizedBox(width: 10),
+                      ElevatedButton.icon(
+                        onPressed: () {
+                          setState(() {
+                            _showAssignView = true;
+                          });
+                        },
+                        icon: const Icon(Icons.person_add_alt_1, color: Colors.white, size: 18),
+                        label: const Text('Assign', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF2D1B18),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                          elevation: 0,
+                        ),
                       ),
-                    ),
+                    ],
                   ],
                 ),
               ],
@@ -634,7 +637,7 @@ class _CoordinatorsContentState extends State<CoordinatorsContent> {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: () => _showEditCoordinatorDialog(numericId),
+        onTap: widget.role != 3 ? () => _showEditCoordinatorDialog(numericId) : null,
         hoverColor: const Color(0xFFFDECEB).withOpacity(0.5),
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 4),
@@ -658,7 +661,7 @@ class _CoordinatorsContentState extends State<CoordinatorsContent> {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: () => _showEditCoordinatorDialog(numericId),
+        onTap: widget.role != 3 ? () => _showEditCoordinatorDialog(numericId) : null,
         hoverColor: const Color(0xFFFDECEB).withOpacity(0.5),
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 4),
@@ -675,8 +678,10 @@ class _CoordinatorsContentState extends State<CoordinatorsContent> {
               _buildDataCell('', 120, isLast: true, child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  _actionIcon(Icons.edit_outlined, const Color(0xFF5D1712), () => _showEditCoordinatorDialog(numericId), tooltip: 'Edit'),
-                  const SizedBox(width: 8),
+                  if (widget.role != 3) ...[
+                    _actionIcon(Icons.edit_outlined, const Color(0xFF5D1712), () => _showEditCoordinatorDialog(numericId), tooltip: 'Edit'),
+                    const SizedBox(width: 8),
+                  ],
                   _actionIcon(Icons.assignment_ind_outlined, Colors.orange, () => _showCoordinatorResponsibilitiesDialog(numericId, id), tooltip: 'Responsibilities'),
                   const SizedBox(width: 8),
                   _actionIcon(Icons.visibility_outlined, Colors.green, () => _showCoordinatorDetailsDialog(numericId, id), tooltip: 'View'),

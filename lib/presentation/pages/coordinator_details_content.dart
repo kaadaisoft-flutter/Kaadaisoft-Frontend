@@ -272,19 +272,25 @@ class _CoordinatorDetailsContentState extends State<CoordinatorDetailsContent> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Header
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Row(
-                children: [
-                  Icon(Icons.person, color: const Color(0xFF5D1712), size: 28),
-                  SizedBox(width: 12),
-                  Text('Coordinator Details:', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: const Color(0xFF2D1B18))),
-                ],
-              ),
+          SizedBox(
+            width: double.infinity,
+            child: Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 16,
+              runSpacing: 16,
+              children: [
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: const [
+                    Icon(Icons.person, color: Color(0xFF5D1712), size: 28),
+                    SizedBox(width: 12),
+                    Text('Coordinator Details:', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF2D1B18))),
+                  ],
+                ),
               ElevatedButton.icon(
                 onPressed: () {
-                  final url = '${ApiConfig.baseUrl}/api/download-id-card/${widget.numericId}';
+                  final url = '${ApiConfig.baseUrl}/api/download-id-card/${widget.numericId}?origin=${Uri.base.origin}';
                   launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
                 },
                 icon: const Icon(Icons.badge_outlined, size: 18),
@@ -297,6 +303,7 @@ class _CoordinatorDetailsContentState extends State<CoordinatorDetailsContent> {
               ),
             ],
           ),
+        ),
           const SizedBox(height: 32),
 
           // Profile Section

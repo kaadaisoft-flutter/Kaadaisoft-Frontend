@@ -187,7 +187,15 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
     _selectedRelationship = found ?? (_relationships.contains(normalizedRole) ? normalizedRole : null);
     _selectedGender = d['Gender'];
     _selectedBloodGroup = d['Bloodgroup'];
-    _selectedMarried = d['Married'];
+    final rawMarried = d['Married']?.toString().trim().toLowerCase();
+    if (rawMarried == 'yes') {
+      _selectedMarried = 'Yes';
+    } else if (rawMarried == 'no') {
+      _selectedMarried = 'No';
+    } else {
+      _selectedMarried = null;
+    }
+    
     _selectedEducation = d['Education'];
     _selectedProfession = d['Profession'];
     

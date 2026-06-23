@@ -14,6 +14,7 @@ import 'payments_content.dart';
 import 'reports_content.dart';
 import 'update_requests_content.dart';
 import 'id_card_benefits_content.dart';
+import 'member_details_content.dart';
 import '../widgets/loading_spinner.dart';
 import '../widgets/custom_dialog.dart';
 import '../widgets/payment_form.dart';
@@ -24,12 +25,14 @@ class AdminDashboard extends StatefulWidget {
   final String userName;
   final int userRole;
   final dynamic userId;
+  final String? initialViewMemberId;
   const AdminDashboard({
     super.key, 
     this.showLoginSuccess = false,
     this.userName = 'Guest',
     this.userRole = 3, // Default to member
     this.userId,
+    this.initialViewMemberId,
   });
 
   @override
@@ -54,6 +57,9 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
   final ScrollController _dashboardScrollController = ScrollController();
   final TextEditingController _globalSearchController = TextEditingController();
   Timer? _statsTimer;
+  
+  Map<String, dynamic>? _myCoordinator;
+  bool _isLoadingCoordinator = true;
 
   void _navigateTo(String item) {
     setState(() {
@@ -126,6 +132,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
 
     _fetchStats();
     _fetchPaymentDetails();
+    _fetchMyCoordinator();
     _loadActiveItem();
     
     // Set up polling for stats
@@ -135,13 +142,9 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
       }
     });
     
-    if (widget.showLoginSuccess) {
+    if (widget.initialViewMemberId != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        showStatusDialog(
-          context,
-          title: 'Success',
-          message: 'Login successful',
-        );
+        _showViewMemberDialog(widget.initialViewMemberId!);
       });
     }
   }
@@ -175,6 +178,43 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
       if (mounted) {
         setState(() { _isLoadingStats = false; });
       }
+    }
+  }
+
+  Future<void> _fetchMyCoordinator() async {
+    if (widget.userRole != 3) {
+      if (mounted) setState(() => _isLoadingCoordinator = false);
+      return;
+    }
+    
+    try {
+      final userResponse = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/user-details/${widget.userId}'));
+      if (userResponse.statusCode == 200) {
+        final userData = jsonDecode(userResponse.body)['data'];
+        final fid = userData['Familymembershipid'];
+
+        if (fid != null && fid.toString().isNotEmpty) {
+          final response = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/member-coordinator-by-fid/$fid'));
+          if (response.statusCode == 200) {
+            final data = jsonDecode(response.body);
+            if (mounted) {
+              setState(() {
+                _myCoordinator = data['coordinator'];
+                _isLoadingCoordinator = false;
+              });
+            }
+          } else {
+             if (mounted) setState(() => _isLoadingCoordinator = false);
+          }
+        } else {
+           if (mounted) setState(() => _isLoadingCoordinator = false);
+        }
+      } else {
+         if (mounted) setState(() => _isLoadingCoordinator = false);
+      }
+    } catch (e) {
+      print('Error fetching coordinator details: $e');
+      if (mounted) setState(() => _isLoadingCoordinator = false);
     }
   }
 
@@ -292,6 +332,42 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
       if (mounted) Navigator.pop(context); // Close loading
       showStatusDialog(context, title: 'Error', message: 'Connection error', type: DialogType.error);
     }
+  }
+
+  void _showViewMemberDialog(String memberId) {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+        child: Container(
+          width: 1100,
+          constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.9),
+          child: Column(
+            children: [
+              Align(
+                alignment: Alignment.topRight,
+                child: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ),
+              ),
+              Expanded(
+                child: MemberDetailsContent(
+                  numericId: memberId,
+                  familyId: '', // Fetched internally
+                  onBack: () => Navigator.pop(context),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   List<Map<String, dynamic>> get _menuItems {
@@ -559,6 +635,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
           key: ValueKey('Coordinators'),
           initialShowAssign: showAssign,
           globalSearchQuery: _globalSearchController.text,
+          role: widget.userRole,
         ),
       );
     }
@@ -644,13 +721,18 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
         children: [
           _buildSummaryCards(),
           const SizedBox(height: 32),
+          if (widget.userRole == 3) ...[
+            _buildMyCoordinatorCard(),
+            const SizedBox(height: 32),
+          ],
           const Center(
             child: Text(
               'Payment Pending Details',
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
-                color: const Color(0xFF2D1B18),
+                color: Color(0xFF2D1B18),
+                letterSpacing: -0.5,
               ),
             ),
           ),
@@ -1190,6 +1272,92 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
           ],
         ));
       },
+    );
+  }
+
+  Widget _buildMyCoordinatorCard() {
+    if (_isLoadingCoordinator) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_myCoordinator == null) {
+      return const Center(
+        child: Text('No coordinator assigned yet.', style: TextStyle(color: Colors.black54)),
+      );
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF5D1712), Color(0xFF8B2B24)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF5D1712).withOpacity(0.3),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.person_pin, color: Colors.white, size: 28),
+              const SizedBox(width: 12),
+              const Text(
+                'Coordinator Details',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Wrap(
+            spacing: 32,
+            runSpacing: 16,
+            children: [
+              _buildCoordinatorInfo('Name', _myCoordinator!['Name']?.toString() ?? 'N/A'),
+              _buildCoordinatorInfo('Mobile', _myCoordinator!['Phonenumber']?.toString() ?? 'N/A'),
+              _buildCoordinatorInfo('Village', _myCoordinator!['Village']?.toString() ?? 'N/A'),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCoordinatorInfo(String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            color: Colors.white70,
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
     );
   }
 

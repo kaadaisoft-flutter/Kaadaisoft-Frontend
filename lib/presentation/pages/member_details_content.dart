@@ -114,7 +114,7 @@ class _MemberDetailsContentState extends State<MemberDetailsContent> {
                           DataColumn(label: Text('Status', style: TextStyle(fontWeight: FontWeight.bold))),
                           DataColumn(label: Text('Payment Date', style: TextStyle(fontWeight: FontWeight.bold))),
                         ],
-                        rows: data.asMap().entries.map((entry) {
+                        rows: data.asMap().entries.map<DataRow>((entry) {
                           final i = entry.key;
                           final row = entry.value;
                           final bool isPaid = row['status'] == 'PAID';
@@ -254,12 +254,14 @@ class _MemberDetailsContentState extends State<MemberDetailsContent> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Header
-          Wrap(
-            alignment: WrapAlignment.spaceBetween,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            spacing: 16,
-            runSpacing: 16,
-            children: [
+          SizedBox(
+            width: double.infinity,
+            child: Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 16,
+              runSpacing: 16,
+              children: [
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: const [
@@ -270,7 +272,7 @@ class _MemberDetailsContentState extends State<MemberDetailsContent> {
               ),
               ElevatedButton.icon(
                 onPressed: () {
-                  final url = '${ApiConfig.baseUrl}/api/download-id-card/${widget.numericId}';
+                  final url = '${ApiConfig.baseUrl}/api/download-id-card/${widget.numericId}?origin=${Uri.base.origin}';
                   launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
                 },
                 icon: const Icon(Icons.badge_outlined, size: 18),
@@ -283,6 +285,7 @@ class _MemberDetailsContentState extends State<MemberDetailsContent> {
               ),
             ],
           ),
+        ),
           const SizedBox(height: 32),
 
           // Profile Section
@@ -641,7 +644,7 @@ class _MemberDetailsContentState extends State<MemberDetailsContent> {
                 DataColumn(label: Text('Gender', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
                 DataColumn(label: Text('Age', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
               ],
-              rows: tableMembers.asMap().entries.map((entry) {
+              rows: tableMembers.asMap().entries.map<DataRow>((entry) {
                 final index = entry.key;
                 final fm = entry.value;
                 

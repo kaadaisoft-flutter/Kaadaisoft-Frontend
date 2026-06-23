@@ -110,7 +110,8 @@ class _CustomPhoneFieldState extends State<CustomPhoneField> {
 
   @override
   void dispose() {
-    _removeCountryOverlay();
+    _countryOverlayEntry?.remove();
+    _countryOverlayEntry = null;
     super.dispose();
   }
 

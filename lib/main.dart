@@ -50,6 +50,10 @@ class _MyAppState extends State<MyApp> {
       );
     }
 
+    // Extract URL parameters
+    final uri = Uri.base;
+    final String? viewMemberId = uri.queryParameters['memberId'];
+
     return ToastificationWrapper(
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
@@ -63,8 +67,9 @@ class _MyAppState extends State<MyApp> {
                 userId: _userId,
                 userName: _userName ?? 'User',
                 userRole: _userRole ?? 3,
+                initialViewMemberId: viewMemberId,
               )
-            : const LoginPage(),
+            : LoginPage(redirectMemberId: viewMemberId),
       ),
     );
   }
