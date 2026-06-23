@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart';
 class ApiConfig {
   // Use 127.0.0.1 for Web and Desktop
   // Use 10.0.2.2 for Android Emulator to access host localhost
-  static String get baseUrl ='https://kaadaisoft-backend.onrender.com';
+  static String get baseUrl => 'https://kaadaisoft-backend.onrender.com';
   // {
   //   if (kIsWeb) {
   //     return 'http://localhost:8000';
