@@ -3,14 +3,15 @@ import 'package:flutter/foundation.dart';
 class ApiConfig {
   // Use 127.0.0.1 for Web and Desktop
   // Use 10.0.2.2 for Android Emulator to access host localhost
-  static String get baseUrl {
-    if (kIsWeb) {
-      return 'http://localhost:8000';
-    } else {
-      // Laptop local IP for physical/wireless mobile debugging access
-      return 'http://192.168.68.110:8000';
-    }
-  }
+  static String get baseUrl ='https://kaadaisoft-backend.onrender.com';
+  // {
+  //   if (kIsWeb) {
+  //     return 'http://localhost:8000';
+  //   } else {
+  //     // Laptop local IP for physical/wireless mobile debugging access
+  //     return 'http://192.168.68.110:8000';
+  //   }
+  // }
 
   // Common endpoints
   static String get login => '$baseUrl/api/login';
