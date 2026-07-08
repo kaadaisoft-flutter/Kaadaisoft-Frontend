@@ -76,6 +76,12 @@ class _MyAppState extends State<MyApp> {
         theme: ThemeData(
           useMaterial3: true,
           colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF5D1712)),
+          scrollbarTheme: ScrollbarThemeData(
+            thumbColor: MaterialStateProperty.all(const Color(0xFF5D1712)),
+            trackColor: MaterialStateProperty.all(const Color(0x225D1712)),
+            radius: const Radius.circular(8),
+            thickness: MaterialStateProperty.all(6),
+          ),
         ),
         home: _isLoggedIn!
             ? AdminDashboard(

@@ -743,7 +743,7 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
               spouseWidgets.add(SizedBox(
                 width: 50,
                 child: Center(
-                  child: Text('↔', style: TextStyle(fontSize: 32, color: Colors.grey.shade500, fontWeight: FontWeight.w300)),
+                  child: const Icon(Icons.compare_arrows, size: 32, color: Color(0xFF5D1712)),
                 ),
               ));
             spouseWidgets.add(_buildTreeNodeCard(s));
@@ -841,7 +841,7 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
                  SizedBox(
                    width: 50,
                    child: Center(
-                     child: Text('↔', style: TextStyle(fontSize: 32, color: Colors.grey.shade500, fontWeight: FontWeight.w300)),
+                     child: const Icon(Icons.compare_arrows, size: 32, color: Color(0xFF5D1712)),
                    ),
                  ),
                  husbandNode,
