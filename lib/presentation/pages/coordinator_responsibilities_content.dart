@@ -90,14 +90,30 @@ class _CoordinatorResponsibilitiesContentState extends State<CoordinatorResponsi
             ],
           ),
           const SizedBox(height: 24),
-          Row(
-            children: [
-              SizedBox(width: 200, child: Text('Assigned Villages:', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black54))),
-              Text(
+          Builder(
+            builder: (context) {
+              bool isMobile = MediaQuery.of(context).size.width < 800;
+              final labelWidget = SizedBox(
+                width: isMobile ? double.infinity : 200,
+                child: Text('Assigned Villages:', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black54)),
+              );
+              final valueWidget = Text(
                 _userData!['AssignedVillages'] ?? 'None',
                 style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Colors.black87),
-              ),
-            ],
+              );
+
+              if (isMobile) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [labelWidget, const SizedBox(height: 8), valueWidget],
+                );
+              }
+
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [labelWidget, Expanded(child: valueWidget)],
+              );
+            },
           ),
           const SizedBox(height: 32),
           Row(
@@ -124,10 +140,16 @@ class _CoordinatorResponsibilitiesContentState extends State<CoordinatorResponsi
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(12),
-        child: DataTable(
-          border: TableBorder(verticalInside: BorderSide(color: Colors.grey.shade300, width: 1)),
-          headingRowHeight: 50,
-          headingRowColor: MaterialStateProperty.all(const Color(0xFF2D1B18)),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minWidth: constraints.maxWidth),
+                child: DataTable(
+                  border: TableBorder(verticalInside: BorderSide(color: Colors.grey.shade300, width: 1)),
+            headingRowHeight: 50,
+          headingRowColor: MaterialStateProperty.all(const Color(0xFF5D1712)),
           columns: const [
             DataColumn(label: Text('S.NO', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
             DataColumn(label: Text('NAME', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
@@ -160,6 +182,10 @@ class _CoordinatorResponsibilitiesContentState extends State<CoordinatorResponsi
               DataCell(Text(m['Village'] ?? '-')),
             ]);
           }).toList(),
+                ),
+              ),
+            );
+          },
         ),
       ),
     );

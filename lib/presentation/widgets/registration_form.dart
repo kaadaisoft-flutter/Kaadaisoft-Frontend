@@ -13,6 +13,7 @@ import 'custom_dialog.dart';
 import 'custom_phone_field.dart';
 import '../../utils/api_config.dart';
 import '../../services/geo_data_service.dart';
+import '../../l10n/app_localizations.dart';
 
 class RegistrationForm extends StatefulWidget {
   final int? submitterRole;
@@ -494,7 +495,7 @@ class _RegistrationFormState extends State<RegistrationForm> {
       
       showStatusDialog(
         context,
-        title: 'Missing Document',
+        title: AppLocalizations.of(context)?.missingDocumentTitle ?? 'Missing Document',
         message: 'Please upload your $missingDoc.',
         type: DialogType.warning,
       );
@@ -504,8 +505,8 @@ class _RegistrationFormState extends State<RegistrationForm> {
     if (!_isAgreed) {
       showStatusDialog(
         context,
-        title: 'Agreement Required',
-        message: 'Please agree to the Terms and Conditions to proceed.',
+        title: AppLocalizations.of(context)?.agreementRequiredTitle ?? 'Agreement Required',
+        message: AppLocalizations.of(context)?.pleaseAgreeToTerms ?? 'Please agree to the Terms and Conditions to proceed.',
         type: DialogType.warning,
       );
       return;
@@ -686,9 +687,9 @@ class _RegistrationFormState extends State<RegistrationForm> {
               ),
               child: Row(
                 children: [
-                  const Expanded(
+                  Expanded(
                     child: Text(
-                      'Poondurai Kaadaikulam.org / Registration Form',
+                      AppLocalizations.of(context)?.registrationFormTitle ?? 'Poondurai Kaadaikulam.org / Registration Form',
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.w700,
@@ -714,9 +715,9 @@ class _RegistrationFormState extends State<RegistrationForm> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Note: * Indicates Mandatory.',
-                        style: TextStyle(color: Colors.red, fontSize: 13, fontStyle: FontStyle.italic),
+                      Text(
+                        AppLocalizations.of(context)?.indicatesMandatory ?? 'Note: * Indicates Mandatory.',
+                        style: const TextStyle(color: Colors.red, fontSize: 13, fontStyle: FontStyle.italic),
                       ),
                       const SizedBox(height: 24),
                       
@@ -870,16 +871,16 @@ class _RegistrationFormState extends State<RegistrationForm> {
                       const SizedBox(height: 32),
 
                       // Section: Current Address
-                      Row(
-                        children: [
-                          Expanded(child: _buildSectionTitle(Icons.home_outlined, 'Current Address *')),
-                          if (_selectedCurrentAddressType == 'Tamil Nadu')
-                            TextButton.icon(
+                      _buildSectionTitle(
+                        Icons.home_outlined, 
+                        'Current Address *',
+                        trailing: _selectedCurrentAddressType == 'Tamil Nadu'
+                          ? TextButton.icon(
                               onPressed: _copyNativeToCurrent,
                               icon: const Icon(Icons.copy_all, size: 16, color: mediumBrown),
                               label: const Text('Same as Native', style: TextStyle(color: mediumBrown, fontSize: 12, fontWeight: FontWeight.bold)),
-                            ),
-                        ],
+                            )
+                          : null,
                       ),
                       const SizedBox(height: 16),
                         _buildRadioField('Current Address Type *', ['Tamil Nadu', 'Other State', 'NRI'], isMobile,
@@ -1065,7 +1066,7 @@ class _RegistrationFormState extends State<RegistrationForm> {
                             cursor: SystemMouseCursors.click,
                             child: GestureDetector(
                               onTap: () => setState(() => _isAgreed = !_isAgreed),
-                              child: const Text('I agree to the ', style: TextStyle(fontSize: 13)),
+                              child: Text(AppLocalizations.of(context)?.iAgreeToThe ?? 'I agree to the ', style: const TextStyle(fontSize: 13)),
                             ),
                           ),
                           TextButton(
@@ -1077,9 +1078,9 @@ class _RegistrationFormState extends State<RegistrationForm> {
                               minimumSize: Size.zero,
                               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                             ),
-                            child: const Text('Terms and Conditions', style: TextStyle(decoration: TextDecoration.underline, fontSize: 13, color: mediumBrown, fontWeight: FontWeight.bold)),
+                            child: Text(AppLocalizations.of(context)?.termsAndConditionsTitle ?? 'Terms and Conditions', style: const TextStyle(decoration: TextDecoration.underline, fontSize: 13, color: mediumBrown, fontWeight: FontWeight.bold)),
                           ),
-                          const Text(' and ', style: TextStyle(fontSize: 13)),
+                          Text(AppLocalizations.of(context)?.andText ?? ' and ', style: const TextStyle(fontSize: 13)),
                           TextButton(
                             onPressed: () {
                               Navigator.push(context, MaterialPageRoute(builder: (context) => const PrivacyPolicyPage()));
@@ -1089,7 +1090,7 @@ class _RegistrationFormState extends State<RegistrationForm> {
                               minimumSize: Size.zero,
                               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                             ),
-                            child: const Text('Privacy Policy', style: TextStyle(decoration: TextDecoration.underline, fontSize: 13, color: mediumBrown, fontWeight: FontWeight.bold)),
+                            child: Text(AppLocalizations.of(context)?.privacyPolicy ?? 'Privacy Policy', style: const TextStyle(decoration: TextDecoration.underline, fontSize: 13, color: mediumBrown, fontWeight: FontWeight.bold)),
                           ),
                         ],
                       ),
@@ -1105,7 +1106,7 @@ class _RegistrationFormState extends State<RegistrationForm> {
                             elevation: 4,
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           ),
-                          child: const Text('Register', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+                          child: Text(AppLocalizations.of(context)?.registerBtn ?? 'Register', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
                         ),
                       ),
                       const SizedBox(height: 20),
@@ -1147,7 +1148,18 @@ class _RegistrationFormState extends State<RegistrationForm> {
     );
   }
 
-  Widget _buildSectionTitle(IconData icon, String title) {
+  Widget _buildSectionTitle(IconData icon, String title, {Widget? trailing}) {
+    String translatedTitle = title;
+    final loc = AppLocalizations.of(context);
+    if (loc != null) {
+      if (title == 'Family Member Details' || title == 'Basic Details') translatedTitle = loc.basicDetails ?? title;
+      else if (title == 'Education & Career Details') translatedTitle = loc.educationCareerDetails ?? title;
+      else if (title == 'Native Address') translatedTitle = loc.nativeAddress ?? title;
+      else if (title == 'Current Address') translatedTitle = loc.currentAddress ?? title;
+      else if (title == 'Family Details') translatedTitle = loc.familyDetails ?? title;
+      else if (title == 'Documents') translatedTitle = loc.documents ?? title;
+      else if (title == 'Terms and Conditions') translatedTitle = loc.termsAndConditionsTitle ?? title;
+    }
     return Container(
       padding: const EdgeInsets.only(left: 0, bottom: 8),
       margin: const EdgeInsets.only(bottom: 16),
@@ -1166,7 +1178,7 @@ class _RegistrationFormState extends State<RegistrationForm> {
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              title,
+              translatedTitle,
               style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
@@ -1174,6 +1186,7 @@ class _RegistrationFormState extends State<RegistrationForm> {
               ),
             ),
           ),
+          if (trailing != null) trailing,
         ],
       ),
     );
@@ -1182,6 +1195,7 @@ class _RegistrationFormState extends State<RegistrationForm> {
   Widget _buildResponsiveRow(bool isMobile, List<Widget> children) {
     if (isMobile) {
       return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: children
             .where((c) => c is! Spacer)
             .map((c) => Padding(padding: const EdgeInsets.only(bottom: 16), child: c))
@@ -1209,16 +1223,7 @@ class _RegistrationFormState extends State<RegistrationForm> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        RichText(
-          text: TextSpan(
-            text: label.replaceAll('*', ''),
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: const Color(0xFF333333)),
-            children: [
-              if (label.contains('*'))
-                const TextSpan(text: ' *', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
-            ],
-          ),
-        ),
+        _buildLabelText(label),
         const SizedBox(height: 6),
         TextFormField(
           key: fieldKey,
@@ -1269,16 +1274,7 @@ class _RegistrationFormState extends State<RegistrationForm> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        RichText(
-          text: TextSpan(
-            text: label.replaceAll('*', ''),
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: const Color(0xFF333333)),
-            children: [
-              if (label.contains('*'))
-                const TextSpan(text: ' *', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
-            ],
-          ),
-        ),
+        _buildLabelText(label),
         const SizedBox(height: 6),
         CustomPhoneField(
           fieldKey: fieldKey,
@@ -1301,16 +1297,7 @@ class _RegistrationFormState extends State<RegistrationForm> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        RichText(
-          text: TextSpan(
-            text: label.replaceAll('*', ''),
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: const Color(0xFF333333)),
-            children: [
-              if (label.contains('*'))
-                const TextSpan(text: ' *', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
-            ],
-          ),
-        ),
+        _buildLabelText(label),
         const SizedBox(height: 6),
         TextFormField(
           controller: controller,
@@ -1359,15 +1346,7 @@ class _RegistrationFormState extends State<RegistrationForm> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          RichText(
-            text: const TextSpan(
-              text: 'Gender',
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: const Color(0xFF333333)),
-              children: [
-                TextSpan(text: ' *', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
-              ],
-            ),
-          ),
+          _buildLabelText('Gender *'),
           const SizedBox(height: 4),
           Wrap(
             spacing: 12,
@@ -1411,8 +1390,32 @@ class _RegistrationFormState extends State<RegistrationForm> {
   }
 
   Widget _buildDropdownField(String label, List<String> options, bool isMobile, {String? value, ValueChanged<String?>? onChanged, FocusNode? focusNode}) {
+    bool hasAsterisk = label.contains('*');
+    String baseLabel = label.replaceAll('*', '').trim();
+    String translatedLabel = baseLabel;
+    
+    final loc = AppLocalizations.of(context);
+    if (loc != null) {
+      if (baseLabel == 'Relationship') translatedLabel = loc.relationshipHeader ?? baseLabel;
+      else if (baseLabel == 'Gender') translatedLabel = loc.genderHeader ?? baseLabel;
+      else if (baseLabel == 'Blood Group') translatedLabel = loc.bloodGroupLabel ?? baseLabel;
+      else if (baseLabel == 'Married') translatedLabel = loc.marriedStatusLabel ?? baseLabel;
+      else if (baseLabel == 'Kulam') translatedLabel = loc.kulamLabel ?? baseLabel;
+      else if (baseLabel == 'Education') translatedLabel = loc.educationLabel ?? baseLabel;
+      else if (baseLabel == 'Profession') translatedLabel = loc.professionLabel ?? baseLabel;
+      else if (baseLabel == 'District') translatedLabel = loc.districtHeader ?? baseLabel;
+      else if (baseLabel == 'Taluk') translatedLabel = loc.talukHeader ?? baseLabel;
+      else if (baseLabel == 'Panchayat') translatedLabel = loc.panchayatHeader ?? baseLabel;
+      else if (baseLabel == 'Village') translatedLabel = loc.villageUpperHeader ?? baseLabel;
+      else if (baseLabel == 'State') translatedLabel = loc.stateLabel ?? baseLabel;
+      else if (baseLabel == 'Country') translatedLabel = loc.countryLabel ?? baseLabel;
+      else if (baseLabel == 'City') translatedLabel = loc.cityVillageLabel ?? baseLabel;
+    }
+
+    String finalLabel = hasAsterisk ? '$translatedLabel *' : translatedLabel;
+
     return CustomDropdownSearch(
-      label: label,
+      label: finalLabel,
       dropdownItems: options,
       value: value,
       onChanged: onChanged,
@@ -1430,12 +1433,7 @@ class _RegistrationFormState extends State<RegistrationForm> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        RichText(
-          text: const TextSpan(
-            text: 'Email',
-            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: const Color(0xFF333333)),
-          ),
-        ),
+        _buildLabelText('Email'),
         const SizedBox(height: 6),
         TextFormField(
           controller: _emailController,
@@ -1473,15 +1471,7 @@ class _RegistrationFormState extends State<RegistrationForm> {
           alignment: WrapAlignment.start,
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
-            RichText(
-              text: const TextSpan(
-                text: 'WhatsApp Number',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: const Color(0xFF333333)),
-                children: [
-                  TextSpan(text: ' *', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
-                ],
-              ),
-            ),
+            _buildLabelText('WhatsApp Number *'),
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -1522,16 +1512,7 @@ class _RegistrationFormState extends State<RegistrationForm> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          RichText(
-            text: TextSpan(
-              text: label.replaceAll('*', ''),
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: const Color(0xFF333333)),
-              children: [
-                if (label.contains('*'))
-                  const TextSpan(text: ' *', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
-              ],
-            ),
-          ),
+          _buildLabelText(label),
           const SizedBox(height: 4),
           Wrap(
             spacing: 16,
@@ -1550,7 +1531,25 @@ class _RegistrationFormState extends State<RegistrationForm> {
                       onChanged: onChanged,
                       activeColor: primaryBrown,
                     ),
-                    Text(o, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                      Builder(
+                        builder: (context) {
+                          String display = o;
+                          final loc = AppLocalizations.of(context);
+                          if (loc != null) {
+                            if (o == 'Male') display = loc.maleLabel ?? o;
+                            else if (o == 'Female') display = loc.femaleLabel ?? o;
+                            else if (o == 'Others' || o == 'Other') display = loc.otherLabel ?? o;
+                            else if (o == 'Yes') display = loc.yesLabel ?? o;
+                            else if (o == 'No') display = loc.noLabel ?? o;
+                            else if (o == 'Alive') display = loc.aliveLabel ?? o;
+                            else if (o == 'Dead') display = loc.deadLabel ?? o;
+                            else if (o == 'Tamil Nadu') display = loc.tamilNaduLabel ?? o;
+                            else if (o == 'Other State') display = loc.otherStateLabel ?? o;
+                            else if (o == 'NRI') display = loc.nriLabel ?? o;
+                          }
+                          return Text(display, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500));
+                        }
+                      ),
                   ],
                 ),
               ),
@@ -1574,16 +1573,7 @@ class _RegistrationFormState extends State<RegistrationForm> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        RichText(
-          text: TextSpan(
-            text: label.replaceAll('*', ''),
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: const Color(0xFF333333)),
-            children: [
-              if (label.contains('*'))
-                const TextSpan(text: ' *', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
-            ],
-          ),
-        ),
+        _buildLabelText(label),
         const SizedBox(height: 6),
         MouseRegion(
           cursor: SystemMouseCursors.click,
@@ -1644,16 +1634,7 @@ class _RegistrationFormState extends State<RegistrationForm> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          RichText(
-            text: TextSpan(
-              text: label.replaceAll('*', ''),
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: const Color(0xFF333333)),
-              children: [
-                if (label.contains('*'))
-                  const TextSpan(text: ' *', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
-              ],
-            ),
-          ),
+          _buildLabelText(label),
           const SizedBox(height: 6),
           TextFormField(
             controller: controller,
@@ -1695,4 +1676,56 @@ class _RegistrationFormState extends State<RegistrationForm> {
     _currFullAddressController.dispose();
     super.dispose();
   }
+
+  Widget _buildLabelText(String label, {double fontSize = 14}) {
+    bool hasAsterisk = label.contains('*');
+    String baseLabel = label.replaceAll('*', '').trim();
+    String translatedLabel = baseLabel;
+    
+    final loc = AppLocalizations.of(context);
+    if (loc != null) {
+      if (baseLabel == 'Relationship' || baseLabel == 'Husband Relationship') translatedLabel = loc.relationshipHeader ?? baseLabel;
+      else if (baseLabel == 'Name' || baseLabel == 'Husband Name') translatedLabel = loc.nameHeader ?? baseLabel;
+      else if (baseLabel == 'Phone Number' || baseLabel == 'Husband Phone') translatedLabel = loc.phoneNumberLabel ?? baseLabel;
+      else if (baseLabel == 'Date Of Birth' || baseLabel == 'Husband Date Of Birth') translatedLabel = loc.dateOfBirthLabel ?? baseLabel;
+      else if (baseLabel == 'Gender') translatedLabel = loc.genderHeader ?? baseLabel;
+      else if (baseLabel == 'Blood Group') translatedLabel = loc.bloodGroupLabel ?? baseLabel;
+      else if (baseLabel == 'Email') translatedLabel = loc.emailLabel ?? baseLabel;
+      else if (baseLabel == 'WhatsApp Number') translatedLabel = loc.whatsappNumberLabel ?? baseLabel;
+      else if (baseLabel == 'Married') translatedLabel = loc.marriedStatusLabel ?? baseLabel;
+      else if (baseLabel == 'Alive Status') translatedLabel = loc.aliveStatusLabel ?? baseLabel;
+      else if (baseLabel == 'Valuvu') translatedLabel = loc.valuvuLabel ?? baseLabel;
+      else if (baseLabel == 'Thottam') translatedLabel = loc.thottamLabel ?? baseLabel;
+      else if (baseLabel == 'Kulam' || baseLabel == 'Husband Kulam') translatedLabel = loc.kulamLabel ?? baseLabel;
+      else if (baseLabel == 'Education') translatedLabel = loc.educationLabel ?? baseLabel;
+      else if (baseLabel == 'Profession') translatedLabel = loc.professionLabel ?? baseLabel;
+      else if (baseLabel == 'District') translatedLabel = loc.districtHeader ?? baseLabel;
+      else if (baseLabel == 'Taluk') translatedLabel = loc.talukHeader ?? baseLabel;
+      else if (baseLabel == 'Panchayat') translatedLabel = loc.panchayatHeader ?? baseLabel;
+      else if (baseLabel == 'Village') translatedLabel = loc.villageUpperHeader ?? baseLabel;
+      else if (baseLabel == 'Door No & Street Name') translatedLabel = loc.streetNameLabel ?? baseLabel;
+      else if (baseLabel == 'Pin Code' || baseLabel == 'Zip / Postal Code' || baseLabel == 'Zip/Postal Code') translatedLabel = loc.pincodeLabel ?? baseLabel;
+      else if (baseLabel == 'Current Address Type') translatedLabel = loc.currentAddressTypeLabel ?? baseLabel;
+      else if (baseLabel == 'State') translatedLabel = loc.stateLabel ?? baseLabel;
+      else if (baseLabel == 'Country') translatedLabel = loc.countryLabel ?? baseLabel;
+      else if (baseLabel == 'City') translatedLabel = loc.cityVillageLabel ?? baseLabel;
+      else if (baseLabel == 'Full Address') translatedLabel = loc.fullAddressLabel ?? baseLabel;
+      else if (baseLabel == 'Passport size photo' || baseLabel == 'Passport Photo') translatedLabel = loc.passportPhotoLabel ?? baseLabel;
+      else if (baseLabel == 'Community Certificate') translatedLabel = loc.communityCertificateLabel ?? baseLabel;
+    }
+
+    if (hasAsterisk) {
+      return Text.rich(
+        TextSpan(
+          text: '$translatedLabel ',
+          children: const [
+            TextSpan(text: '*', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        style: TextStyle(fontSize: fontSize, fontWeight: FontWeight.w700, color: const Color(0xFF333333)),
+      );
+    }
+    return Text(translatedLabel, style: TextStyle(fontSize: fontSize, fontWeight: FontWeight.w700, color: const Color(0xFF333333)));
+  }
 }
+

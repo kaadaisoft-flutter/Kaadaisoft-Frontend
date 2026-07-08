@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../widgets/loading_spinner.dart';
 import '../widgets/custom_dialog.dart';
+import '../widgets/image_load_state.dart';
 import '../../utils/api_config.dart';
 import 'update_details_content.dart';
 
@@ -85,6 +86,8 @@ class _CoordinatorDetailsContentState extends State<CoordinatorDetailsContent> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -122,15 +125,15 @@ class _CoordinatorDetailsContentState extends State<CoordinatorDetailsContent> {
                         constraints: BoxConstraints(minWidth: constraints.maxWidth),
                         child: DataTable(
                           border: TableBorder(verticalInside: BorderSide(color: Colors.grey.shade300, width: 1)),
-                          headingRowColor: MaterialStateProperty.all(Colors.grey[50]),
+                          headingRowColor: MaterialStateProperty.all(const Color(0xFF5D1712)),
                           columns: const [
-                            DataColumn(label: Text('SNo', style: TextStyle(fontWeight: FontWeight.bold))),
-                            DataColumn(label: Text('Event Name', style: TextStyle(fontWeight: FontWeight.bold))),
-                            DataColumn(label: Text('Tax Amount', style: TextStyle(fontWeight: FontWeight.bold))),
-                            DataColumn(label: Text('Paid Amount', style: TextStyle(fontWeight: FontWeight.bold))),
-                            DataColumn(label: Text('Balance Amount', style: TextStyle(fontWeight: FontWeight.bold))),
-                            DataColumn(label: Text('Status', style: TextStyle(fontWeight: FontWeight.bold))),
-                            DataColumn(label: Text('Payment Date', style: TextStyle(fontWeight: FontWeight.bold))),
+                            DataColumn(label: Text('SNo', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white))),
+                            DataColumn(label: Text('Event Name', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white))),
+                            DataColumn(label: Text('Tax Amount', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white))),
+                            DataColumn(label: Text('Paid Amount', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white))),
+                            DataColumn(label: Text('Balance Amount', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white))),
+                            DataColumn(label: Text('Status', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white))),
+                            DataColumn(label: Text('Payment Date', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white))),
                           ],
                           rows: data.asMap().entries.map((entry) {
                             final i = entry.key;
@@ -275,7 +278,7 @@ class _CoordinatorDetailsContentState extends State<CoordinatorDetailsContent> {
           SizedBox(
             width: double.infinity,
             child: Wrap(
-              alignment: WrapAlignment.spaceBetween,
+              alignment: isMobile ? WrapAlignment.center : WrapAlignment.spaceBetween,
               crossAxisAlignment: WrapCrossAlignment.center,
               spacing: 16,
               runSpacing: 16,
@@ -290,7 +293,7 @@ class _CoordinatorDetailsContentState extends State<CoordinatorDetailsContent> {
                 ),
               ElevatedButton.icon(
                 onPressed: () {
-                  final url = '${ApiConfig.baseUrl}/api/download-id-card/${widget.numericId}?origin=${Uri.base.origin}';
+                  final url = '${ApiConfig.baseUrl}/api/download-id-card/${widget.numericId}?origin=${ApiConfig.webOrigin}';
                   launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
                 },
                 icon: const Icon(Icons.badge_outlined, size: 18),
@@ -307,7 +310,9 @@ class _CoordinatorDetailsContentState extends State<CoordinatorDetailsContent> {
           const SizedBox(height: 32),
 
           // Profile Section
-          _buildProfileSection(isMobile),
+          Center(
+            child: _buildProfileSection(isMobile),
+          ),
           const SizedBox(height: 48),
 
           // Family Members Section
@@ -336,42 +341,70 @@ class _CoordinatorDetailsContentState extends State<CoordinatorDetailsContent> {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Colors.grey.shade200),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Wrap(
+        alignment: WrapAlignment.center,
+        crossAxisAlignment: WrapCrossAlignment.start,
+        spacing: 60,
+        runSpacing: 32,
         children: [
           // Avatar & Quick Actions
           Column(
             children: [
-              GestureDetector(
-                onTap: () => _showImageViewer(_userData?['Memberimage'], 'Profile Photo'),
-                child: MouseRegion(
-                  cursor: SystemMouseCursors.click,
-                  child: Container(
-                    width: 150,
-                    height: 150,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.grey.shade300, width: 2),
-                      image: _userData?['Memberimage'] != null
-                          ? DecorationImage(
-                              image: NetworkImage('${ApiConfig.baseUrl}/assets/uploads/${_userData!['Memberimage']}'),
-                              fit: BoxFit.cover,
-                            )
-                          : null,
+              ImageLoadState(
+                builder: (context, profileImageFailed, setImgState) {
+                  final bool hasString = _userData?['Memberimage'] != null && _userData!['Memberimage'].toString().isNotEmpty && _userData!['Memberimage'].toString() != 'null';
+                  final bool isValidImage = hasString && !profileImageFailed;
+                  
+                  return Tooltip(
+                    message: !isValidImage ? 'Profile Image Not Found' : '',
+                    waitDuration: const Duration(milliseconds: 300),
+                    child: GestureDetector(
+                      onTap: isValidImage ? () => _showImageViewer(_userData?['Memberimage'], 'Profile Photo') : null,
+                      child: MouseRegion(
+                        cursor: isValidImage ? SystemMouseCursors.click : SystemMouseCursors.basic,
+                        child: Container(
+                          width: 150,
+                          height: 150,
+                          decoration: BoxDecoration(
+                            color: isValidImage ? Colors.white : Colors.grey[200],
+                            shape: BoxShape.circle,
+                            border: Border.all(color: isValidImage ? Colors.black38 : Colors.grey[400]!),
+                            boxShadow: [
+                              BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4)),
+                            ],
+                          ),
+                          child: ClipOval(
+                            child: hasString
+                                ? Image.network(
+                                    '${ApiConfig.baseUrl}/assets/uploads/${_userData!['Memberimage']}',
+                                    fit: BoxFit.cover,
+                                    width: 150,
+                                    height: 150,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                                        setImgState();
+                                      });
+                                      return Icon(Icons.person, size: 80, color: Colors.grey.shade400);
+                                    },
+                                  )
+                                : Icon(Icons.person, size: 80, color: Colors.grey.shade400),
+                          ),
+                        ),
+                      ),
                     ),
-                    child: _userData?['Memberimage'] == null
-                        ? Icon(Icons.person, size: 80, color: Colors.grey.shade400)
-                        : null,
-                  ),
-                ),
+                  );
+                },
               ),
               const SizedBox(height: 16),
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  _roundIcon(Icons.contact_page_outlined, 'Community Certificate', onTap: () => _showImageViewer(_userData?['Communitycertificateimage'], 'Community Certificate')),
+                  _roundIcon(
+                    Icons.contact_page_outlined, 
+                    'Community Certificate', 
+                    onTap: () => _showImageViewer(_userData?['Communitycertificateimage'], 'Community Certificate'),
+                    disabled: _userData?['Communitycertificateimage'] == null || _userData!['Communitycertificateimage'].toString().isEmpty || _userData!['Communitycertificateimage'].toString() == 'null',
+                  ),
                 ],
               ),
               const SizedBox(height: 16),
@@ -380,89 +413,108 @@ class _CoordinatorDetailsContentState extends State<CoordinatorDetailsContent> {
               _actionButton('Update Details', Icons.edit_note, const Color(0xFFFFF3E0), Colors.orange, onTap: _showUpdateDetailsDialog),
             ],
           ),
-          const SizedBox(width: 60),
           // Details
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-                _detailItem('Name:', _userData!['Name'] ?? 'N/A', isBlue: true, isBold: true),
-                const SizedBox(height: 24),
-                _detailItem('Family Membership ID:', _userData!['Familymembershipid'] ?? 'N/A', isPill: true),
-                const SizedBox(height: 24),
-                _detailItem('Phone Number:', _userData!['Phonenumber']?.toString() ?? 'N/A'),
-                const SizedBox(height: 24),
-                _addressItem('Address:', _userData!),
-              ],
-            ),
+          Container(
+            constraints: const BoxConstraints(maxWidth: 450),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                  _detailItem('Name:', _userData!['Name'] ?? 'N/A', isBlue: true, isBold: true),
+                  const SizedBox(height: 24),
+                  _detailItem('Family Membership ID:', _userData!['Familymembershipid'] ?? 'N/A', isPill: true),
+                  const SizedBox(height: 24),
+                  _detailItem('Phone Number:', _userData!['Phonenumber']?.toString() ?? 'N/A'),
+                  const SizedBox(height: 24),
+                  _addressItem('Address:', _userData!),
+                ],
+              ),
+          ),
         ],
       ),
     );
   }
 
   Widget _detailItem(String label, String value, {bool isBlue = false, bool isBold = false, bool isPill = false}) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        SizedBox(width: 200, child: Text(label, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black54))),
-        isPill
-            ? Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                decoration: BoxDecoration(color: const Color(0xFF5D1712), borderRadius: BorderRadius.circular(20)),
-                child: Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
-              )
-            : Text(
-                value,
-                style: TextStyle(
-                  fontSize: 17,
-                  fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
-                  color: isBlue ? const Color(0xFF5D1712) : Colors.black87,
-                ),
-              ),
-      ],
+    bool isMobile = MediaQuery.of(context).size.width < 800;
+
+    final labelWidget = SizedBox(
+      width: isMobile ? double.infinity : 150,
+      child: Text(label, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black54)),
     );
+
+    final valueWidget = isPill
+        ? Align(
+            alignment: Alignment.centerLeft,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              decoration: BoxDecoration(color: const Color(0xFF5D1712), borderRadius: BorderRadius.circular(20)),
+              child: Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+            ),
+          )
+        : Text(
+            value,
+            style: TextStyle(
+              fontSize: 17,
+              fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+              color: isBlue ? const Color(0xFF5D1712) : Colors.black87,
+            ),
+          );
+
+    if (isMobile) {
+      return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [labelWidget, const SizedBox(height: 8), valueWidget]);
+    }
+
+    return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [labelWidget, Expanded(child: valueWidget)]);
   }
 
   Widget _addressItem(String label, Map<String, dynamic> data) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
+    bool isMobile = MediaQuery.of(context).size.width < 800;
+
+    final labelWidget = SizedBox(
+      width: isMobile ? double.infinity : 150,
+      child: Text(label, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black54)),
+    );
+
+    final contentWidget = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SizedBox(width: 200, child: Text(label, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black54))),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-              _addressLine(Icons.home_outlined, '${data['Street'] ?? ''}'),
-              const SizedBox(height: 6),
-              _addressLine(Icons.location_on_outlined, '${data['Village'] ?? ''}, ${data['Taluk'] ?? ''}'),
-              const SizedBox(height: 6),
-              _addressLine(Icons.push_pin_outlined, '${data['District'] ?? ''} - ${data['Pincode'] ?? ''}'),
-              const SizedBox(height: 6),
-              _addressLine(Icons.map_outlined, data['State'] ?? 'Tamil Nadu'),
-            ],
-          ),
+        _addressLine(Icons.home_outlined, '${data['Street'] ?? ''}'),
+        const SizedBox(height: 6),
+        _addressLine(Icons.location_on_outlined, '${data['Village'] ?? ''}, ${data['Taluk'] ?? ''}'),
+        const SizedBox(height: 6),
+        _addressLine(Icons.push_pin_outlined, '${data['District'] ?? ''} - ${data['Pincode'] ?? ''}'),
+        const SizedBox(height: 6),
+        _addressLine(Icons.map_outlined, data['State'] ?? 'Tamil Nadu'),
       ],
     );
+
+    if (isMobile) {
+      return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [labelWidget, const SizedBox(height: 12), contentWidget]);
+    }
+
+    return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [labelWidget, Expanded(child: contentWidget)]);
   }
 
   Widget _addressLine(IconData icon, String text) {
     if (text.trim().isEmpty || text == 'null' || text == ', ') return const SizedBox.shrink();
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Icon(icon, color: const Color(0xFF5D1712), size: 18),
         const SizedBox(width: 12),
-        Text(text, style: const TextStyle(fontSize: 16, color: Colors.black87)),
+        Expanded(child: Text(text, style: const TextStyle(fontSize: 16, color: Colors.black87))),
       ],
     );
   }
 
-  Widget _roundIcon(IconData icon, String tooltip, {VoidCallback? onTap}) {
+  Widget _roundIcon(IconData icon, String tooltip, {VoidCallback? onTap, bool disabled = false}) {
     return Container(
-      decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: const Color(0xFF5D1712).withOpacity(0.5))),
+      decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: disabled ? Colors.grey.withOpacity(0.5) : const Color(0xFF5D1712).withOpacity(0.5))),
       child: IconButton(
-        icon: Icon(icon, color: const Color(0xFF5D1712), size: 20),
-        onPressed: onTap ?? () {},
-        tooltip: tooltip,
+        icon: Icon(icon, color: disabled ? Colors.grey : const Color(0xFF5D1712), size: 20),
+        onPressed: disabled ? null : (onTap ?? () {}),
+        tooltip: disabled ? '$tooltip Not Found' : tooltip,
       ),
     );
   }
@@ -569,50 +621,60 @@ class _CoordinatorDetailsContentState extends State<CoordinatorDetailsContent> {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(12),
-        child: DataTable(
-          border: TableBorder(verticalInside: BorderSide(color: Colors.grey.shade300, width: 1)),
-          headingRowHeight: 50,
-          headingRowColor: MaterialStateProperty.all(const Color(0xFF2D1B18)),
-          columns: const [
-            DataColumn(label: Text('S.NO', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
-            DataColumn(label: Text('NAME', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
-            DataColumn(label: Text('RELATIONSHIP', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
-            DataColumn(label: Text('GENDER', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
-            DataColumn(label: Text('AGE', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
-          ],
-          rows: tableMembers.asMap().entries.map((entry) {
-            final i = entry.key;
-            final m = entry.value;
-            return DataRow(cells: [
-              DataCell(Text('${i + 1}')),
-              DataCell(Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(m['Name'] ?? 'N/A', style: const TextStyle(fontWeight: FontWeight.w600)),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(color: const Color(0xFFFDECEB), borderRadius: BorderRadius.circular(4)),
-                    child: Text(m['Familymembershipid'] ?? '', style: const TextStyle(fontSize: 10, color: const Color(0xFF5D1712), fontWeight: FontWeight.bold)),
-                  ),
-                ],
-              )),
-              DataCell(Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(4), border: Border.all(color: Colors.grey.shade300)),
-                child: Text(_getDisplayRole(m), style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-              )),
-              DataCell(Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(m['Gender'] == 'Male' ? Icons.male : Icons.female, size: 16, color: const Color(0xFF5D1712)),
-                  const SizedBox(width: 4),
-                  Text(m['Gender'] ?? 'N/A'),
-                ],
-              )),
-              DataCell(Text(_calculateAge(m['Dob']))),
-            ]);
-          }).toList(),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minWidth: constraints.maxWidth),
+                child: DataTable(
+            border: TableBorder(verticalInside: BorderSide(color: Colors.grey.shade300, width: 1)),
+            headingRowHeight: 50,
+            headingRowColor: MaterialStateProperty.all(const Color(0xFF5D1712)),
+            columns: const [
+              DataColumn(label: Text('S.NO', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
+              DataColumn(label: Text('NAME', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
+              DataColumn(label: Text('RELATIONSHIP', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
+              DataColumn(label: Text('GENDER', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
+              DataColumn(label: Text('AGE', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
+            ],
+            rows: tableMembers.asMap().entries.map((entry) {
+              final i = entry.key;
+              final m = entry.value;
+              return DataRow(cells: [
+                DataCell(Text('${i + 1}')),
+                DataCell(Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(m['Name'] ?? 'N/A', style: const TextStyle(fontWeight: FontWeight.w600)),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(color: const Color(0xFFFDECEB), borderRadius: BorderRadius.circular(4)),
+                      child: Text(m['Familymembershipid'] ?? '', style: const TextStyle(fontSize: 10, color: const Color(0xFF5D1712), fontWeight: FontWeight.bold)),
+                    ),
+                  ],
+                )),
+                DataCell(Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(4), border: Border.all(color: Colors.grey.shade300)),
+                  child: Text(_getDisplayRole(m), style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                )),
+                DataCell(Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(m['Gender'] == 'Male' ? Icons.male : Icons.female, size: 16, color: const Color(0xFF5D1712)),
+                    const SizedBox(width: 4),
+                    Text(m['Gender'] ?? 'N/A'),
+                  ],
+                )),
+                DataCell(Text(_calculateAge(m['Dob']))),
+              ]);
+            }).toList(),
+                ),
+              ),
+            );
+          },
         ),
       ),
     );

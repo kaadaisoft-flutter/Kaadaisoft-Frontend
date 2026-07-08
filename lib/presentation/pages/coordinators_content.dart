@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import '../../l10n/app_localizations.dart';
 import 'package:http/http.dart' as http;
 import '../widgets/loading_spinner.dart';
 import '../widgets/assign_coordinator_view.dart';
@@ -171,6 +172,8 @@ class _CoordinatorsContentState extends State<CoordinatorsContent> {
       context: context,
       barrierDismissible: true,
       builder: (context) => Dialog(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
         child: Container(
@@ -208,6 +211,8 @@ class _CoordinatorsContentState extends State<CoordinatorsContent> {
       context: context,
       barrierDismissible: false,
       builder: (context) => Dialog(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
         child: Container(
@@ -337,62 +342,120 @@ class _CoordinatorsContentState extends State<CoordinatorsContent> {
             // Top bar: Title + Buttons
             SizedBox(
               width: double.infinity,
-              child: Wrap(
-                alignment: WrapAlignment.spaceBetween,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                runSpacing: 10,
-                spacing: 12,
-                children: [
-                const Text(
-                  'Coordinators Management',
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: const Color(0xFF2D1B18),
-                  ),
-                ),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    OutlinedButton.icon(
-                      onPressed: () {
-                        setState(() {
-                          _showFilters = !_showFilters;
-                        });
-                      },
-                      icon: const Icon(Icons.filter_alt_outlined, size: 18),
-                      label: const Text('Filter', style: TextStyle(fontWeight: FontWeight.bold)),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: _showFilters ? Colors.white : const Color(0xFF5D1712),
-                        backgroundColor: _showFilters ? const Color(0xFF5D1712) : Colors.transparent,
-                        side: const BorderSide(color: const Color(0xFF5D1712)),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                      ),
-                    ),
-                    if (widget.role != 3) ...[
-                      const SizedBox(width: 10),
-                      ElevatedButton.icon(
-                        onPressed: () {
-                          setState(() {
-                            _showAssignView = true;
-                          });
-                        },
-                        icon: const Icon(Icons.person_add_alt_1, color: Colors.white, size: 18),
-                        label: const Text('Assign', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF2D1B18),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                          elevation: 0,
+              child: isMobile
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Text(
+                          AppLocalizations.of(context)?.coordinatorsManagement ?? 'Coordinators Management',
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF2D1B18),
+                          ),
+                          textAlign: TextAlign.center,
                         ),
-                      ),
-                    ],
-                  ],
-                ),
-              ],
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: () {
+                                  setState(() {
+                                    _showFilters = !_showFilters;
+                                  });
+                                },
+                                icon: const Icon(Icons.filter_alt_outlined, size: 18),
+                                label: const Text('Filter', style: TextStyle(fontWeight: FontWeight.bold)),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: _showFilters ? Colors.white : const Color(0xFF5D1712),
+                                  backgroundColor: _showFilters ? const Color(0xFF5D1712) : Colors.transparent,
+                                  side: const BorderSide(color: Color(0xFF5D1712)),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                                  padding: const EdgeInsets.symmetric(vertical: 10),
+                                ),
+                              ),
+                            ),
+                            if (widget.role != 3) ...[
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  onPressed: () {
+                                    setState(() {
+                                      _showAssignView = true;
+                                    });
+                                  },
+                                  icon: const Icon(Icons.person_add_alt_1, color: Colors.white, size: 18),
+                                  label: Text(AppLocalizations.of(context)?.assignBtn ?? 'Assign', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF2D1B18),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                                    padding: const EdgeInsets.symmetric(vertical: 10),
+                                    elevation: 0,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ],
+                    )
+                  : Wrap(
+                      alignment: WrapAlignment.spaceBetween,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      runSpacing: 10,
+                      spacing: 12,
+                      children: [
+                        Text(
+                          AppLocalizations.of(context)?.coordinatorsManagement ?? 'Coordinators Management',
+                          style: const TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF2D1B18),
+                          ),
+                        ),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            OutlinedButton.icon(
+                              onPressed: () {
+                                setState(() {
+                                  _showFilters = !_showFilters;
+                                });
+                              },
+                              icon: const Icon(Icons.filter_alt_outlined, size: 18),
+                              label: Text(AppLocalizations.of(context)?.filterBtn ?? 'Filter', style: const TextStyle(fontWeight: FontWeight.bold)),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: _showFilters ? Colors.white : const Color(0xFF5D1712),
+                                backgroundColor: _showFilters ? const Color(0xFF5D1712) : Colors.transparent,
+                                side: const BorderSide(color: Color(0xFF5D1712)),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                              ),
+                            ),
+                            if (widget.role != 3) ...[
+                              const SizedBox(width: 10),
+                              ElevatedButton.icon(
+                                onPressed: () {
+                                  setState(() {
+                                    _showAssignView = true;
+                                  });
+                                },
+                                icon: const Icon(Icons.person_add_alt_1, color: Colors.white, size: 18),
+                                label: Text(AppLocalizations.of(context)?.assignBtn ?? 'Assign', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF2D1B18),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                  elevation: 0,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ],
+                    ),
             ),
-          ),
         if (_showFilters) ...[
           const SizedBox(height: 8),
           _buildFilterBar(),
@@ -403,9 +466,9 @@ class _CoordinatorsContentState extends State<CoordinatorsContent> {
           crossAxisAlignment: WrapCrossAlignment.center,
           spacing: 8,
           children: [
-            const Text(
-              'Total Coordinators: ',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF2D1B18)),
+            Text(
+              AppLocalizations.of(context)?.totalCoordinators ?? 'Total Coordinators: ',
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF2D1B18)),
             ),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -445,12 +508,12 @@ class _CoordinatorsContentState extends State<CoordinatorsContent> {
                           padding: const EdgeInsets.symmetric(vertical: 8),
                           child: Row(
                             children: [
-                              _buildHeaderCell('DISTRICT', 100),
-                              _buildHeaderCell('TALUK', 100),
-                               _buildHeaderCell('PANCHAYAT', 130),
-                              _buildHeaderCell('VILLAGE', 130),
-                              _buildHeaderCell('ASSIGNED VILLAGE', 150),
-                              _buildHeaderCell('ACTIONS', 120, isLast: true),
+                              _buildHeaderCell(AppLocalizations.of(context)?.districtHeader ?? 'DISTRICT', 100),
+                              _buildHeaderCell(AppLocalizations.of(context)?.talukHeader ?? 'TALUK', 100),
+                               _buildHeaderCell(AppLocalizations.of(context)?.panchayatHeader ?? 'PANCHAYAT', 130),
+                              _buildHeaderCell(AppLocalizations.of(context)?.villageUpperHeader ?? 'VILLAGE', 130),
+                              _buildHeaderCell(AppLocalizations.of(context)?.assignedVillageHeader ?? 'ASSIGNED VILLAGE', 150),
+                              _buildHeaderCell(AppLocalizations.of(context)?.actionHeader?.toUpperCase() ?? 'ACTIONS', 120, isLast: true),
                             ],
                           ),
                         ),
@@ -493,10 +556,10 @@ class _CoordinatorsContentState extends State<CoordinatorsContent> {
                                 padding: const EdgeInsets.symmetric(vertical: 8),
                                 child: Row(
                                   children: [
-                                    _buildHeaderCell('S.NO', 50),
-                                    _buildHeaderCell('USER ID', 110),
-                                    _buildHeaderCell('NAME', 110),
-                                    _buildHeaderCell('MOBILE', 120),
+                                    _buildHeaderCell(AppLocalizations.of(context)?.sNo?.toUpperCase() ?? 'S.NO', 50),
+                                    _buildHeaderCell(AppLocalizations.of(context)?.userIdHeader ?? 'USER ID', 110),
+                                    _buildHeaderCell(AppLocalizations.of(context)?.nameHeader?.toUpperCase() ?? 'NAME', 110),
+                                    _buildHeaderCell(AppLocalizations.of(context)?.mobileLabel?.toUpperCase() ?? 'MOBILE', 120),
                                   ],
                                 ),
                               ),
@@ -619,7 +682,7 @@ class _CoordinatorsContentState extends State<CoordinatorsContent> {
                             ),
                           ],
                         ),
-                        Text('Showing page $_currentPage of $totalPages', style: const TextStyle(color: Colors.black45, fontSize: 12)),
+                        Text('${AppLocalizations.of(context)?.showingPage ?? 'Showing page'} $_currentPage ${AppLocalizations.of(context)?.ofPage ?? 'of'} $totalPages', style: const TextStyle(color: Colors.black45, fontSize: 12)),
                       ],
                     ),
                   ),
@@ -770,7 +833,7 @@ class _CoordinatorsContentState extends State<CoordinatorsContent> {
         builder: (context, constraints) {
           final isWide = constraints.maxWidth > 800;
 
-          Widget district = _buildDropdown('District', _selectedDistrict, _districts, (val) {
+          Widget district = _buildDropdown(AppLocalizations.of(context)?.districtHeader ?? 'District', _selectedDistrict, _districts, (val) {
             setState(() {
               _selectedDistrict = val!;
               _taluks = ['All Taluks'];
@@ -784,7 +847,7 @@ class _CoordinatorsContentState extends State<CoordinatorsContent> {
             _fetchCoordinators();
           });
 
-          Widget taluk = _buildDropdown('Taluk', _selectedTaluk, _taluks, (val) {
+          Widget taluk = _buildDropdown(AppLocalizations.of(context)?.talukHeader ?? 'Taluk', _selectedTaluk, _taluks, (val) {
             setState(() {
               _selectedTaluk = val!;
               _panchayats = ['All Panchayats'];
@@ -796,7 +859,7 @@ class _CoordinatorsContentState extends State<CoordinatorsContent> {
             _fetchCoordinators();
           });
 
-          Widget panchayat = _buildDropdown('Panchayat', _selectedPanchayat, _panchayats, (val) {
+          Widget panchayat = _buildDropdown(AppLocalizations.of(context)?.panchayatHeader ?? 'Panchayat', _selectedPanchayat, _panchayats, (val) {
             setState(() {
               _selectedPanchayat = val!;
               _villages = ['All Villages'];
@@ -806,19 +869,17 @@ class _CoordinatorsContentState extends State<CoordinatorsContent> {
             _fetchCoordinators();
           });
 
-          Widget village = _buildDropdown('Village', _selectedVillage, _villages, (val) {
+          Widget village = _buildDropdown(AppLocalizations.of(context)?.villageLabel ?? 'Village', _selectedVillage, _villages, (val) {
             setState(() {
               _selectedVillage = val!;
             });
             _fetchCoordinators();
           });
 
-          Widget searchField = SizedBox(
-            width: 250,
-            child: Column(
+          Widget searchField = Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Search Name/ID/Mobile', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black54)),
+                Text(AppLocalizations.of(context)?.searchHintText ?? 'Search Name/ID/Mobile', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black54)),
                 const SizedBox(height: 6),
                 SizedBox(
                   height: 40,
@@ -849,8 +910,7 @@ class _CoordinatorsContentState extends State<CoordinatorsContent> {
                   ),
                 ),
               ],
-            ),
-          );
+            );
 
           if (isWide) {
             return Row(
@@ -864,19 +924,21 @@ class _CoordinatorsContentState extends State<CoordinatorsContent> {
                 const SizedBox(width: 16),
                 Expanded(child: village),
                 const SizedBox(width: 16),
-                searchField,
+                SizedBox(width: 250, child: searchField),
               ],
             );
           } else {
-            return Wrap(
-              crossAxisAlignment: WrapCrossAlignment.end,
-              spacing: 16,
-              runSpacing: 16,
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                SizedBox(width: 160, child: district),
-                SizedBox(width: 160, child: taluk),
-                SizedBox(width: 160, child: panchayat),
-                SizedBox(width: 160, child: village),
+                district,
+                const SizedBox(height: 16),
+                taluk,
+                const SizedBox(height: 16),
+                panchayat,
+                const SizedBox(height: 16),
+                village,
+                const SizedBox(height: 16),
                 searchField,
               ],
             );

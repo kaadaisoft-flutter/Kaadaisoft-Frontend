@@ -5,9 +5,19 @@ import 'presentation/pages/admin_dashboard.dart';
 import 'presentation/widgets/loading_spinner.dart';
 
 import 'package:toastification/toastification.dart';
-
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:provider/provider.dart';
+import 'l10n/app_localizations.dart';
+import 'providers/locale_provider.dart';
 void main() {
-  runApp(const MyApp());
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => LocaleProvider()),
+      ],
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatefulWidget {
@@ -54,10 +64,15 @@ class _MyAppState extends State<MyApp> {
     final uri = Uri.base;
     final String? viewMemberId = uri.queryParameters['memberId'];
 
+    final localeProvider = Provider.of<LocaleProvider>(context);
+
     return ToastificationWrapper(
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
         title: 'Poondurai Kaadai Kulam',
+        locale: localeProvider.locale,
+        supportedLocales: AppLocalizations.supportedLocales,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
         theme: ThemeData(
           useMaterial3: true,
           colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF5D1712)),

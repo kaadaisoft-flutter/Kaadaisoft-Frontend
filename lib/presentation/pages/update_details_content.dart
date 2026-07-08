@@ -5,6 +5,8 @@ import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:file_picker/file_picker.dart' as fp_pkg;
 import 'package:cross_file/cross_file.dart';
+import 'dart:io';
+import '../../l10n/app_localizations.dart';
 import '../widgets/custom_dropdown_search.dart';
 import '../widgets/custom_phone_field.dart';
 import '../widgets/loading_spinner.dart';
@@ -157,7 +159,7 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
     } else {
       _married = null;
     }
-    _aliveStatus = (d['is_dead'] == 0 || d['is_dead'] == '0' || d['is_dead'] == null) ? 'Alive' : 'Dead';
+    _aliveStatus = (d['is_dead'] == 0 || d['is_dead'] == '0' || d['is_dead'] == null || d['is_dead'].toString().toLowerCase() == 'alive') ? 'Alive' : 'Dead';
     _kulam = d['Kulam'] ?? 'Poondurai Kaadai';
     _district = d['District'];
     _taluk = d['Taluk'];
@@ -511,18 +513,21 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
   Widget build(BuildContext context) {
     final bool isMobile = MediaQuery.of(context).size.width < 800;
 
-    return SingleChildScrollView(
-      physics: const BouncingScrollPhysics(),
-      child: Column(
-        children: [
-          // Header
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.only(topLeft: Radius.circular(12), topRight: Radius.circular(12)),
-              boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 1)],
-            ),
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        color: Colors.white,
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          child: Column(
+            children: [
+              // Header
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 1)],
+                ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -532,7 +537,7 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
                     children: [
                       const Icon(Icons.account_circle, color: _darkBrown, size: 28),
                       const SizedBox(width: 12),
-                      Text(widget.title ?? 'Update My Details: ', style: const TextStyle(color: _darkBrown, fontWeight: FontWeight.bold, fontSize: 18)),
+                      Text(widget.title?.contains('Member Details') == true ? (AppLocalizations.of(context)?.updateMemberDetailsTitle ?? 'Update Member Details: ') : (AppLocalizations.of(context)?.updateMyDetailsTitle ?? 'Update My Details: '), style: const TextStyle(color: _darkBrown, fontWeight: FontWeight.bold, fontSize: 18)),
                       Text(widget.userData['Familymembershipid'] ?? '', style: const TextStyle(color: _gold, fontWeight: FontWeight.bold, fontSize: 18)),
                     ],
                   ),
@@ -584,9 +589,9 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
                         onChanged: (v) => setState(() => _isConfirmed = v!),
                         activeColor: _darkBrown,
                       ),
-                      const Expanded(
-                        child: Text('I confirm that the above details are correct.', 
-                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: _darkBrown)),
+                      Expanded(
+                        child: Text(AppLocalizations.of(context)?.confirmDetailsCorrect ?? 'I confirm that the above details are correct.', 
+                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: _darkBrown)),
                       ),
                     ],
                   ),
@@ -606,7 +611,7 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
                         ),
                         child: _isSaving 
                           ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) 
-                          : const Text('UPDATE DETAILS', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+                          : Text(AppLocalizations.of(context)?.saveDetailsBtn ?? 'Save Details', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, letterSpacing: 0.5)),
                       ),
                     ),
                   ),
@@ -616,10 +621,22 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
           ),
         ],
       ),
+      ),
+      ),
     );
   }
 
   Widget _sectionTitle(String title, IconData icon) {
+    String translatedTitle = title;
+    final loc = AppLocalizations.of(context);
+    if (loc != null) {
+      if (title == 'Basic Details') translatedTitle = loc.basicDetails ?? title;
+      else if (title == 'Education & Career Details') translatedTitle = loc.educationCareerDetails ?? title;
+      else if (title == 'Native Address') translatedTitle = loc.nativeAddress ?? title;
+      else if (title == 'Current Address') translatedTitle = loc.currentAddress ?? title;
+      else if (title == 'Documents') translatedTitle = loc.documents ?? title;
+    }
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Row(children: [
@@ -627,7 +644,7 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
         const SizedBox(width: 12),
         Icon(icon, size: 20, color: _darkBrown),
         const SizedBox(width: 8),
-        Expanded(child: Text(title, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: _darkBrown))),
+        Expanded(child: Text(translatedTitle, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: _darkBrown))),
       ]),
     );
   }
@@ -636,7 +653,7 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.grey.shade200)),
-      child: Column(children: [
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         // Row 1: Relationship, Name, Phone
         _row(isMobile, [
           _dropField('Relationship *', _relationships, _relationship, (v) => setState(() => _relationship = v)),
@@ -676,10 +693,12 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
                             _whatsappSameAsPhone = v!;
                             if (v) _whatsappCtrl.text = _phoneCtrl.text;
                           }),
+                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
                         ),
                       ),
-                      const SizedBox(width: 4),
-                      const Text('Same as Phone', style: TextStyle(fontSize: 10)),
+                      const SizedBox(width: 6),
+                      Text(AppLocalizations.of(context)?.sameAsPhone ?? 'Same as Phone', style: const TextStyle(fontSize: 10)),
                     ],
                   ),
                 ],
@@ -717,7 +736,7 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.grey.shade200)),
-      child: Column(children: [
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         _row(isMobile, [
           _dropField('Education *', _educations, _education, (v) => setState(() => _education = v)),
           _dropField('Profession *', _professions, _profession, (v) => setState(() => _profession = v)),
@@ -905,15 +924,15 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
       decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.grey.shade200)),
       child: Column(children: [
         _row(isMobile, [
-          _fileUploadField('Passport Photo', _memberImage, (file) => setState(() => _memberImage = file)),
-          _fileUploadField('Community Certificate', _communityCert, (file) => setState(() => _communityCert = file)),
+          _fileUploadField(AppLocalizations.of(context)?.passportPhotoLabel ?? 'Passport Photo', _memberImage, (file) => setState(() => _memberImage = file)),
+          _fileUploadField(AppLocalizations.of(context)?.communityCertificateLabel ?? 'Community Certificate', _communityCert, (file) => setState(() => _communityCert = file)),
         ]),
       ]),
     );
   }
 
   Widget _fileUploadField(String label, dynamic file, ValueChanged<dynamic> onPicked) {
-    String fileName = 'Choose file...';
+    String fileName = AppLocalizations.of(context)?.chooseFile ?? 'Choose file...';
     if (file != null) {
        if (file is String) {
          fileName = file.split('/').last;
@@ -997,7 +1016,10 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
 
   Widget _row(bool isMobile, List<Widget> children) {
     if (isMobile) {
-      return Column(children: children.map((w) => Padding(padding: const EdgeInsets.only(bottom: 12), child: w is Expanded ? w.child : w)).toList());
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: children.map((w) => Padding(padding: const EdgeInsets.only(bottom: 12), child: w is Expanded ? w.child : w)).toList()
+      );
     }
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1120,28 +1142,91 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
       _buildLabelText(label),
       const SizedBox(height: 8),
       Wrap(
+        spacing: 16,
+        runSpacing: 8,
         children: options.map((o) => Row(mainAxisSize: MainAxisSize.min, children: [
-          Radio<String>(value: o, groupValue: value, onChanged: onChanged, activeColor: _darkBrown, materialTapTargetSize: MaterialTapTargetSize.shrinkWrap),
-          Text(o, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: _darkBrown)),
-          const SizedBox(width: 8),
+          SizedBox(
+            width: 24,
+            height: 24,
+            child: Radio<String>(
+              value: o, 
+              groupValue: value, 
+              onChanged: onChanged, 
+              activeColor: _darkBrown, 
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
+            ),
+          ),
+          const SizedBox(width: 6),
+          Builder(
+            builder: (context) {
+              String display = o;
+              final loc = AppLocalizations.of(context);
+              if (loc != null) {
+                if (o == 'Male') display = loc.maleLabel ?? o;
+                else if (o == 'Female') display = loc.femaleLabel ?? o;
+                else if (o == 'Other') display = loc.otherLabel ?? o;
+                else if (o == 'Yes') display = loc.yesLabel ?? o;
+                else if (o == 'No') display = loc.noLabel ?? o;
+                else if (o == 'Alive') display = loc.aliveLabel ?? o;
+                else if (o == 'Dead') display = loc.deadLabel ?? o;
+                else if (o == 'Tamil Nadu') display = loc.tamilNaduLabel ?? o;
+                else if (o == 'Other State') display = loc.otherStateLabel ?? o;
+                else if (o == 'NRI') display = loc.nriLabel ?? o;
+              }
+              return Text(display, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: _darkBrown));
+            }
+          ),
         ])).toList(),
       ),
     ]);
   }
   Widget _buildLabelText(String label) {
-    if (label.contains('*')) {
-      final parts = label.split('*');
+    bool hasAsterisk = label.contains('*');
+    String baseLabel = label.replaceAll('*', '').trim();
+    String translatedLabel = baseLabel;
+    
+    final loc = AppLocalizations.of(context);
+    if (loc != null) {
+      if (baseLabel == 'Relationship') translatedLabel = loc.relationshipHeader ?? baseLabel;
+      else if (baseLabel == 'Name') translatedLabel = loc.nameHeader ?? baseLabel;
+      else if (baseLabel == 'Phone Number') translatedLabel = loc.phoneNumberLabel ?? baseLabel;
+      else if (baseLabel == 'Date Of Birth') translatedLabel = loc.dateOfBirthLabel ?? baseLabel;
+      else if (baseLabel == 'Gender') translatedLabel = loc.genderHeader ?? baseLabel;
+      else if (baseLabel == 'Blood Group') translatedLabel = loc.bloodGroupLabel ?? baseLabel;
+      else if (baseLabel == 'Email') translatedLabel = loc.emailLabel ?? baseLabel;
+      else if (baseLabel == 'WhatsApp Number') translatedLabel = loc.whatsappNumberLabel ?? baseLabel;
+      else if (baseLabel == 'Married') translatedLabel = loc.marriedStatusLabel ?? baseLabel;
+      else if (baseLabel == 'Alive Status') translatedLabel = loc.aliveStatusLabel ?? baseLabel;
+      else if (baseLabel == 'Valuvu') translatedLabel = loc.valuvuLabel ?? baseLabel;
+      else if (baseLabel == 'Thottam') translatedLabel = loc.thottamLabel ?? baseLabel;
+      else if (baseLabel == 'Kulam') translatedLabel = loc.kulamLabel ?? baseLabel;
+      else if (baseLabel == 'Education') translatedLabel = loc.educationLabel ?? baseLabel;
+      else if (baseLabel == 'Profession') translatedLabel = loc.professionLabel ?? baseLabel;
+      else if (baseLabel == 'District') translatedLabel = loc.districtHeader ?? baseLabel;
+      else if (baseLabel == 'Taluk') translatedLabel = loc.talukHeader ?? baseLabel;
+      else if (baseLabel == 'Panchayat') translatedLabel = loc.panchayatHeader ?? baseLabel;
+      else if (baseLabel == 'Village') translatedLabel = loc.villageUpperHeader ?? baseLabel;
+      else if (baseLabel == 'Door No & Street Name') translatedLabel = loc.streetNameLabel ?? baseLabel;
+      else if (baseLabel == 'Pin Code' || baseLabel == 'Zip / Postal Code') translatedLabel = loc.pincodeLabel ?? baseLabel;
+      else if (baseLabel == 'Current Address Type') translatedLabel = loc.currentAddressTypeLabel ?? baseLabel;
+      else if (baseLabel == 'State') translatedLabel = loc.stateLabel ?? baseLabel;
+      else if (baseLabel == 'Country') translatedLabel = loc.countryLabel ?? baseLabel;
+      else if (baseLabel == 'City') translatedLabel = loc.cityVillageLabel ?? baseLabel;
+      else if (baseLabel == 'Full Address') translatedLabel = loc.fullAddressLabel ?? baseLabel;
+    }
+
+    if (hasAsterisk) {
       return Text.rich(
         TextSpan(
-          text: parts[0],
-          children: [
-            const TextSpan(text: '*', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
-            if (parts.length > 1) TextSpan(text: parts.sublist(1).join('*')),
+          text: '$translatedLabel ',
+          children: const [
+            TextSpan(text: '*', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
           ],
         ),
         style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: _darkBrown),
       );
     }
-    return Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: _darkBrown));
+    return Text(translatedLabel, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: _darkBrown));
   }
 }

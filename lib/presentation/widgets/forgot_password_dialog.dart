@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../../utils/api_config.dart';
+import '../../l10n/app_localizations.dart';
 import 'custom_dialog.dart';
 import 'custom_phone_field.dart';
 
@@ -19,7 +20,9 @@ class _ForgotPasswordDialogState extends State<ForgotPasswordDialog> {
   final _mobileController = TextEditingController();
   final _otpController = TextEditingController();
   final _newPasswordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
   bool _isPasswordVisible = false;
+  bool _isConfirmPasswordVisible = false;
   int _selectedMinLength = 10;
   int _selectedMaxLength = 10;
 
@@ -28,6 +31,7 @@ class _ForgotPasswordDialogState extends State<ForgotPasswordDialog> {
     _mobileController.dispose();
     _otpController.dispose();
     _newPasswordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
@@ -76,13 +80,33 @@ class _ForgotPasswordDialogState extends State<ForgotPasswordDialog> {
     final mobile = _mobileController.text.trim();
     final otp = _otpController.text.trim();
     final newPassword = _newPasswordController.text.trim();
+    final confirmPassword = _confirmPasswordController.text.trim();
 
     if (otp.length != 6) {
       showStatusDialog(context, title: 'Invalid OTP', message: 'Please enter a valid 6-digit OTP.', type: DialogType.warning);
       return;
     }
-    if (newPassword.length < 6) {
-      showStatusDialog(context, title: 'Invalid Password', message: 'Password must be at least 6 characters.', type: DialogType.warning);
+    bool isValidPassword(String p) {
+      if (p.length < 8) return false;
+      if (p.contains(' ')) return false;
+      if (!p.contains(RegExp(r'[A-Z]'))) return false;
+      if (!p.contains(RegExp(r'[a-z]'))) return false;
+      if (!p.contains(RegExp(r'[0-9]'))) return false;
+      if (!p.contains(RegExp(r'[^A-Za-z0-9\s]'))) return false;
+      return true;
+    }
+
+    if (!isValidPassword(newPassword)) {
+      showStatusDialog(
+        context, 
+        title: 'Invalid Password', 
+        message: 'Password must be at least 8 characters long, contain an uppercase letter, a lowercase letter, a number, a special character, and no spaces.', 
+        type: DialogType.warning
+      );
+      return;
+    }
+    if (newPassword != confirmPassword) {
+      showStatusDialog(context, title: 'Password Mismatch', message: 'Passwords do not match.', type: DialogType.warning);
       return;
     }
 
@@ -120,6 +144,7 @@ class _ForgotPasswordDialogState extends State<ForgotPasswordDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context);
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       elevation: 5,
@@ -133,12 +158,19 @@ class _ForgotPasswordDialogState extends State<ForgotPasswordDialog> {
           children: [
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  _step == 1 ? 'Forgot Password' : 'Reset Password',
-                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF2D1B18)),
+                Expanded(
+                  child: Text(
+                    _step == 1 
+                        ? (localizations?.forgotPasswordTitle ?? 'Forgot Password') 
+                        : (localizations?.resetPasswordTitle ?? 'Reset Password'),
+                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF2D1B18)),
+                  ),
                 ),
                 IconButton(
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
                   icon: const Icon(Icons.close, color: Colors.grey),
                   onPressed: () => Navigator.of(context).pop(),
                 )
@@ -146,14 +178,14 @@ class _ForgotPasswordDialogState extends State<ForgotPasswordDialog> {
             ),
             const SizedBox(height: 16),
             if (_step == 1) ...[
-              const Text(
-                'Enter your registered mobile number. We will send an OTP to the email address linked to your account.',
-                style: TextStyle(color: Colors.black87, fontSize: 14),
+              Text(
+                localizations?.forgotPasswordInstruction ?? 'Enter your registered mobile number. We will send an OTP to the email address linked to your account.',
+                style: const TextStyle(color: Colors.black87, fontSize: 14),
               ),
               const SizedBox(height: 20),
               CustomPhoneField(
                 label: '',
-                hint: 'Mobile Number',
+                hint: localizations?.mobileNumber ?? 'Mobile Number',
                 controller: _mobileController,
                 onCountryChanged: (country) {
                   setState(() {
@@ -175,13 +207,13 @@ class _ForgotPasswordDialogState extends State<ForgotPasswordDialog> {
                   ),
                   child: _isLoading 
                       ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                      : const Text('Send OTP', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      : Text(localizations?.sendOtp ?? 'Send OTP', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                 ),
               ),
             ] else ...[
-              const Text(
-                'Please enter the 6-digit OTP sent to your email and your new password.',
-                style: TextStyle(color: Colors.black87, fontSize: 14),
+              Text(
+                localizations?.resetPasswordInstruction ?? 'Please enter the 6-digit OTP sent to your email and your new password.',
+                style: const TextStyle(color: Colors.black87, fontSize: 14),
               ),
               const SizedBox(height: 20),
               TextField(
@@ -189,7 +221,7 @@ class _ForgotPasswordDialogState extends State<ForgotPasswordDialog> {
                 keyboardType: TextInputType.number,
                 maxLength: 6,
                 decoration: InputDecoration(
-                  labelText: 'OTP',
+                  labelText: localizations?.otpHint ?? 'OTP',
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                   prefixIcon: const Icon(Icons.password),
                   counterText: "",
@@ -200,12 +232,26 @@ class _ForgotPasswordDialogState extends State<ForgotPasswordDialog> {
                 controller: _newPasswordController,
                 obscureText: !_isPasswordVisible,
                 decoration: InputDecoration(
-                  labelText: 'New Password',
+                  labelText: localizations?.newPasswordHint ?? 'New Password',
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                   prefixIcon: const Icon(Icons.lock),
                   suffixIcon: IconButton(
                     icon: Icon(_isPasswordVisible ? Icons.visibility : Icons.visibility_off),
                     onPressed: () => setState(() => _isPasswordVisible = !_isPasswordVisible),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _confirmPasswordController,
+                obscureText: !_isConfirmPasswordVisible,
+                decoration: InputDecoration(
+                  labelText: 'Confirm Password',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  prefixIcon: const Icon(Icons.lock_outline),
+                  suffixIcon: IconButton(
+                    icon: Icon(_isConfirmPasswordVisible ? Icons.visibility : Icons.visibility_off),
+                    onPressed: () => setState(() => _isConfirmPasswordVisible = !_isConfirmPasswordVisible),
                   ),
                 ),
               ),
@@ -222,7 +268,7 @@ class _ForgotPasswordDialogState extends State<ForgotPasswordDialog> {
                   ),
                   child: _isLoading 
                       ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                      : const Text('Reset Password', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      : Text(localizations?.resetPasswordButton ?? 'Reset Password', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                 ),
               ),
             ],

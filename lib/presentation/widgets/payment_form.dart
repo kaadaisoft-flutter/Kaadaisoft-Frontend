@@ -38,6 +38,16 @@ class _PaymentFormState extends State<PaymentForm> {
   final _chequeNoController = TextEditingController();
   final _upiIdController = TextEditingController();
 
+  // Focus Nodes
+  final _eventFocus = FocusNode();
+  final _amountFocus = FocusNode();
+  final _bankFocus = FocusNode();
+  final _otherBankFocus = FocusNode();
+  final _upiIdFocus = FocusNode();
+  final _refNoFocus = FocusNode();
+  final _chequeNoFocus = FocusNode();
+  final _receiverFocus = FocusNode();
+
   // State
   List<int> _years = [];
   List<dynamic> _events = [];
@@ -47,6 +57,7 @@ class _PaymentFormState extends State<PaymentForm> {
   bool _isConfirmed = false;
   bool _isLoading = false;
   bool _isSummaryLoading = false;
+  bool _autoValidate = false;
   String? _selectedBank;
   bool _showOtherBank = false;
   final _otherBankController = TextEditingController();
@@ -87,6 +98,14 @@ class _PaymentFormState extends State<PaymentForm> {
     _chequeNoController.dispose();
     _upiIdController.dispose();
     _otherBankController.dispose();
+    _eventFocus.dispose();
+    _amountFocus.dispose();
+    _bankFocus.dispose();
+    _otherBankFocus.dispose();
+    _upiIdFocus.dispose();
+    _refNoFocus.dispose();
+    _chequeNoFocus.dispose();
+    _receiverFocus.dispose();
     super.dispose();
   }
 
@@ -157,7 +176,40 @@ class _PaymentFormState extends State<PaymentForm> {
   }
 
   Future<void> _saveReceipt() async {
-    if (!_formKey.currentState!.validate()) return;
+    setState(() => _autoValidate = true);
+    bool isValid = _formKey.currentState!.validate();
+    if (!isValid) {
+      FocusNode? firstErrorNode;
+      if (_selectedEventId == null) {
+        firstErrorNode = _eventFocus;
+      } else if (_amountController.text.isEmpty || (int.tryParse(_amountController.text) ?? 0) <= 0 || (int.tryParse(_amountController.text) ?? 0) > _balance) {
+        firstErrorNode = _amountFocus;
+      } else if ((_paymentMethod == 'Bank' || _paymentMethod == 'Cheque') && (_selectedBank == null || _selectedBank!.isEmpty)) {
+        firstErrorNode = _bankFocus;
+      } else if ((_paymentMethod == 'Bank' || _paymentMethod == 'Cheque') && _showOtherBank && _otherBankController.text.isEmpty) {
+        firstErrorNode = _otherBankFocus;
+      } else if (_paymentMethod == 'UPI' && _upiIdController.text.isEmpty) {
+        firstErrorNode = _upiIdFocus;
+      } else if (_paymentMethod == 'Bank' && _refNoController.text.isEmpty) {
+        firstErrorNode = _refNoFocus;
+      } else if (_paymentMethod == 'Cheque' && _chequeNoController.text.isEmpty) {
+        firstErrorNode = _chequeNoFocus;
+      } else if (_receiverController.text.isEmpty) {
+        firstErrorNode = _receiverFocus;
+      }
+
+      if (firstErrorNode != null && firstErrorNode.context != null) {
+        Scrollable.ensureVisible(
+          firstErrorNode.context!,
+          duration: const Duration(milliseconds: 500),
+          curve: Curves.easeInOut,
+          alignment: 0.5,
+        );
+        firstErrorNode.requestFocus();
+      }
+      return;
+    }
+
     if (!_isConfirmed) {
       showStatusDialog(context, title: 'Confirmation Required', message: 'Please confirm the details before saving.', type: DialogType.warning);
       return;
@@ -316,7 +368,7 @@ class _PaymentFormState extends State<PaymentForm> {
 
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFFFDF8F5),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
@@ -329,6 +381,7 @@ class _PaymentFormState extends State<PaymentForm> {
       padding: EdgeInsets.all(isMobile ? 16 : 32),
       child: Form(
         key: _formKey,
+        autovalidateMode: _autoValidate ? AutovalidateMode.onUserInteraction : AutovalidateMode.disabled,
         child: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -340,7 +393,7 @@ class _PaymentFormState extends State<PaymentForm> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      'Payment Details', 
+                      'My Payment Details', 
                       style: TextStyle(
                         fontSize: isMobile ? 18 : 22, 
                         fontWeight: FontWeight.bold, 
@@ -508,26 +561,30 @@ class _PaymentFormState extends State<PaymentForm> {
           const SizedBox(height: 16),
           const Text('Event', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF64748B))),
           const SizedBox(height: 6),
-          CustomDropdownSearch(
-            label: '',
-            hint: 'Choose Event',
-            dropdownMap: {
-              for (var e in _events) e['Id'].toString(): e['EventName'].toString(),
-            },
-            value: _selectedEventId?.toString(),
-            height: 45,
-            validator: (v) => v == null ? 'Required' : null,
-            onChanged: (val) {
-              final intVal = val == null ? null : int.tryParse(val);
-              setState(() => _selectedEventId = intVal);
-              if (intVal != null) _fetchSummary(intVal);
-            },
+          Focus(
+            focusNode: _eventFocus,
+            child: CustomDropdownSearch(
+              label: '',
+              hint: 'Choose Event',
+              dropdownMap: {
+                for (var e in _events) e['Id'].toString(): e['EventName'].toString(),
+              },
+              value: _selectedEventId?.toString(),
+              height: 45,
+              validator: (v) => v == null ? 'Required' : null,
+              onChanged: (val) {
+                final intVal = val == null ? null : int.tryParse(val);
+                setState(() => _selectedEventId = intVal);
+                if (intVal != null) _fetchSummary(intVal);
+              },
+            ),
           ),
           const SizedBox(height: 16),
           const Text('Pay Amount *', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF64748B))),
           const SizedBox(height: 6),
           TextFormField(
             controller: _amountController,
+            focusNode: _amountFocus,
             keyboardType: TextInputType.number,
             inputFormatters: [
               FilteringTextInputFormatter.digitsOnly,
@@ -644,6 +701,7 @@ class _PaymentFormState extends State<PaymentForm> {
                     onTap: _showBankSearchDialog,
                     child: IgnorePointer(
                       child: TextFormField(
+                        focusNode: _bankFocus,
                         controller: TextEditingController(text: _selectedBank ?? ''),
                         decoration: InputDecoration(
                           hintText: 'Choose bank',
@@ -661,7 +719,7 @@ class _PaymentFormState extends State<PaymentForm> {
               ),
               if (_showOtherBank) ...[
                 const SizedBox(height: 16),
-                _textField('Other Bank Name *', _otherBankController),
+                _textField('Other Bank Name *', _otherBankController, focusNode: _otherBankFocus),
               ],
               const SizedBox(height: 16),
             ],
@@ -703,7 +761,7 @@ class _PaymentFormState extends State<PaymentForm> {
                     const SizedBox(height: 24),
                     Container(
                       constraints: const BoxConstraints(maxWidth: 400),
-                      child: _textField('UPI Transaction ID *', _upiIdController),
+                      child: _textField('UPI Transaction ID *', _upiIdController, focusNode: _upiIdFocus),
                     ),
                   ],
                 ),
@@ -714,9 +772,9 @@ class _PaymentFormState extends State<PaymentForm> {
               Row(
                 children: [
                   if (_paymentMethod == 'Bank')
-                    Expanded(child: _textField('Reference ID *', _refNoController)),
+                    Expanded(child: _textField('Reference ID *', _refNoController, focusNode: _refNoFocus)),
                   if (_paymentMethod == 'Cheque')
-                    Expanded(child: _textField('Cheque Number *', _chequeNoController)),
+                    Expanded(child: _textField('Cheque Number *', _chequeNoController, focusNode: _chequeNoFocus)),
                 ],
               ),
           ],
@@ -746,7 +804,7 @@ class _PaymentFormState extends State<PaymentForm> {
     );
   }
 
-  Widget _textField(String label, TextEditingController controller) {
+  Widget _textField(String label, TextEditingController controller, {FocusNode? focusNode}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -754,6 +812,7 @@ class _PaymentFormState extends State<PaymentForm> {
         const SizedBox(height: 6),
         TextFormField(
           controller: controller,
+          focusNode: focusNode,
           decoration: InputDecoration(
             contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
@@ -777,6 +836,7 @@ class _PaymentFormState extends State<PaymentForm> {
               const SizedBox(height: 6),
               TextFormField(
                 controller: _receiverController,
+                focusNode: _receiverFocus,
                 decoration: InputDecoration(
                   hintText: 'Enter name of receiver',
                   contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),

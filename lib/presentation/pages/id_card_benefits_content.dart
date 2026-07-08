@@ -241,7 +241,7 @@ class _IdCardBenefitsContentState extends State<IdCardBenefitsContent> {
                           if (_userId != null)
                             ElevatedButton.icon(
                               onPressed: () {
-                                final url = '${ApiConfig.baseUrl}/api/download-id-card/$_userId?origin=${Uri.base.origin}';
+                                final url = '${ApiConfig.baseUrl}/api/download-id-card/$_userId?origin=${ApiConfig.webOrigin}';
                                 launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
                               },
                               icon: const Icon(Icons.file_download_outlined, size: 18),
@@ -312,14 +312,13 @@ class _IdCardBenefitsContentState extends State<IdCardBenefitsContent> {
                         ],
                       ),
                       const SizedBox(height: 16),
-                      Wrap(
-                        spacing: 16,
-                        runSpacing: 16,
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          if (_userId != null)
+                          if (_userId != null) ...[
                             ElevatedButton.icon(
                               onPressed: () {
-                                final url = '${ApiConfig.baseUrl}/api/download-id-card/$_userId?origin=${Uri.base.origin}';
+                                final url = '${ApiConfig.baseUrl}/api/download-id-card/$_userId?origin=${ApiConfig.webOrigin}';
                                 launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
                               },
                               icon: const Icon(Icons.file_download_outlined, size: 18),
@@ -332,6 +331,8 @@ class _IdCardBenefitsContentState extends State<IdCardBenefitsContent> {
                                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                               ),
                             ),
+                            const SizedBox(height: 12),
+                          ],
                           OutlinedButton.icon(
                             icon: const Icon(Icons.language, size: 18),
                             label: Text(_isTamil ? 'English' : 'தமிழ்', style: const TextStyle(fontWeight: FontWeight.bold)),
@@ -566,7 +567,7 @@ class _FlipCardState extends State<_FlipCard> {
         final h = constraints.maxHeight;
         
         final String memberId = widget.userData?['Familymembershipid'] ?? widget.userData?['Id']?.toString() ?? '';
-        String qrData = '${Uri.base.origin}/?memberId=$memberId';
+        String qrData = '${ApiConfig.webOrigin}/?memberId=$memberId';
 
         return Stack(
           children: [

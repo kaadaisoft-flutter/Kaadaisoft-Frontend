@@ -6,6 +6,7 @@ import 'dart:convert';
 import 'package:file_picker/file_picker.dart' as fp_pkg;
 import 'package:cross_file/cross_file.dart';
 import 'package:flutter/services.dart';
+import '../../l10n/app_localizations.dart';
 import 'custom_dropdown_search.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
 import 'custom_phone_field.dart';
@@ -538,16 +539,16 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
                         ]),
 
                         const SizedBox(height: 32),
-                        Row(
-                          children: [
-                            Expanded(child: _buildSectionTitle(Icons.home_outlined, 'Current Address')),
-                            if (_selectedCurrentAddressType == 'Tamil Nadu')
-                              TextButton.icon(
+                        _buildSectionTitle(
+                          Icons.home_outlined, 
+                          'Current Address',
+                          trailing: _selectedCurrentAddressType == 'Tamil Nadu'
+                            ? TextButton.icon(
                                 onPressed: _copyNativeToCurrent,
                                 icon: const Icon(Icons.copy_all, size: 16, color: const Color(0xFFC5A028)),
                                 label: const Text('Same as Native', style: TextStyle(color: const Color(0xFFC5A028), fontSize: 12, fontWeight: FontWeight.bold)),
-                              ),
-                          ],
+                              )
+                            : null,
                         ),
                         const SizedBox(height: 16),
                         _buildResponsiveRow(isMobile, [
@@ -656,25 +657,40 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
       padding: const EdgeInsets.all(20),
       child: Row(
         children: [
-          const Expanded(child: Text('Add Family Member', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: primaryBrown))),
+          Expanded(child: Text(AppLocalizations.of(context)?.addFamilyMember ?? 'Add Family Member', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: primaryBrown))),
           IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close)),
         ],
       ),
     );
   }
 
-  Widget _buildSectionTitle(IconData icon, String title) {
+  Widget _buildSectionTitle(IconData icon, String title, {Widget? trailing}) {
+    String translatedTitle = title;
+    final loc = AppLocalizations.of(context);
+    if (loc != null) {
+      if (title == 'Family Member Details' || title == 'Basic Details') translatedTitle = loc.basicDetails ?? title;
+      else if (title == 'Education & Career Details') translatedTitle = loc.educationCareerDetails ?? title;
+      else if (title == 'Native Address') translatedTitle = loc.nativeAddress ?? title;
+      else if (title == 'Current Address') translatedTitle = loc.currentAddress ?? title;
+      else if (title == 'Documents') translatedTitle = loc.documents ?? title;
+    }
     return Row(children: [
       Container(width: 4, height: 20, decoration: BoxDecoration(color: accentGold, borderRadius: BorderRadius.circular(2))),
       const SizedBox(width: 12),
       Icon(icon, color: primaryBrown, size: 20),
       const SizedBox(width: 8),
-      Expanded(child: Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: primaryBrown))),
+      Expanded(
+        child: Text(
+          translatedTitle, 
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: primaryBrown),
+        ),
+      ),
+      if (trailing != null) trailing,
     ]);
   }
 
   Widget _buildResponsiveRow(bool isMobile, List<Widget> children) {
-    if (isMobile) return Column(children: children.map((c) => Padding(padding: const EdgeInsets.only(bottom: 16), child: c)).toList());
+    if (isMobile) return Column(crossAxisAlignment: CrossAxisAlignment.start, children: children.map((c) => Padding(padding: const EdgeInsets.only(bottom: 16), child: c)).toList());
     return Padding(
       padding: const EdgeInsets.only(bottom: 20),
       child: Row(
@@ -738,8 +754,32 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
   }
 
   Widget _buildDropdownField(String label, List<String> options, bool isMobile, {String? value, ValueChanged<String?>? onChanged, String? Function(String?)? validator}) {
+    bool hasAsterisk = label.contains('*');
+    String baseLabel = label.replaceAll('*', '').trim();
+    String translatedLabel = baseLabel;
+    
+    final loc = AppLocalizations.of(context);
+    if (loc != null) {
+      if (baseLabel == 'Relationship') translatedLabel = loc.relationshipHeader ?? baseLabel;
+      else if (baseLabel == 'Gender') translatedLabel = loc.genderHeader ?? baseLabel;
+      else if (baseLabel == 'Blood Group') translatedLabel = loc.bloodGroupLabel ?? baseLabel;
+      else if (baseLabel == 'Married') translatedLabel = loc.marriedStatusLabel ?? baseLabel;
+      else if (baseLabel == 'Kulam') translatedLabel = loc.kulamLabel ?? baseLabel;
+      else if (baseLabel == 'Education') translatedLabel = loc.educationLabel ?? baseLabel;
+      else if (baseLabel == 'Profession') translatedLabel = loc.professionLabel ?? baseLabel;
+      else if (baseLabel == 'District') translatedLabel = loc.districtHeader ?? baseLabel;
+      else if (baseLabel == 'Taluk') translatedLabel = loc.talukHeader ?? baseLabel;
+      else if (baseLabel == 'Panchayat') translatedLabel = loc.panchayatHeader ?? baseLabel;
+      else if (baseLabel == 'Village') translatedLabel = loc.villageUpperHeader ?? baseLabel;
+      else if (baseLabel == 'State') translatedLabel = loc.stateLabel ?? baseLabel;
+      else if (baseLabel == 'Country') translatedLabel = loc.countryLabel ?? baseLabel;
+      else if (baseLabel == 'City') translatedLabel = loc.cityVillageLabel ?? baseLabel;
+    }
+
+    String finalLabel = hasAsterisk ? '$translatedLabel *' : translatedLabel;
+
     return CustomDropdownSearch(
-      label: label,
+      label: finalLabel,
       dropdownItems: options,
       value: value,
       onChanged: onChanged,
@@ -780,28 +820,43 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
       children: [
         _buildLabelText('Gender *', fontSize: 14),
         Wrap(
-          spacing: 12,
+          spacing: 16,
           runSpacing: 8,
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Radio<String>(value: 'Male', groupValue: _selectedGender, onChanged: (v) => setState(() => _selectedGender = v), activeColor: primaryBrown),
+                SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: Radio<String>(value: 'Male', groupValue: _selectedGender, onChanged: (v) => setState(() => _selectedGender = v), activeColor: primaryBrown, materialTapTargetSize: MaterialTapTargetSize.shrinkWrap, visualDensity: const VisualDensity(horizontal: -4, vertical: -4)),
+                ),
+                const SizedBox(width: 6),
                 const Text('Male'),
               ],
             ),
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Radio<String>(value: 'Female', groupValue: _selectedGender, onChanged: (v) => setState(() => _selectedGender = v), activeColor: primaryBrown),
+                SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: Radio<String>(value: 'Female', groupValue: _selectedGender, onChanged: (v) => setState(() => _selectedGender = v), activeColor: primaryBrown, materialTapTargetSize: MaterialTapTargetSize.shrinkWrap, visualDensity: const VisualDensity(horizontal: -4, vertical: -4)),
+                ),
+                const SizedBox(width: 6),
                 const Text('Female'),
               ],
             ),
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Radio<String>(value: 'Other', groupValue: _selectedGender, onChanged: (v) => setState(() => _selectedGender = v), activeColor: primaryBrown),
+                SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: Radio<String>(value: 'Other', groupValue: _selectedGender, onChanged: (v) => setState(() => _selectedGender = v), activeColor: primaryBrown, materialTapTargetSize: MaterialTapTargetSize.shrinkWrap, visualDensity: const VisualDensity(horizontal: -4, vertical: -4)),
+                ),
+                const SizedBox(width: 6),
                 const Text('Other'),
               ],
             ),
@@ -835,10 +890,10 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
                   child: Checkbox(value: _whatsappSameAsPhone, onChanged: (v) => setState(() {
                     _whatsappSameAsPhone = v!;
                     if (v) _whatsappController.text = _phoneController.text;
-                  })),
+                  }), materialTapTargetSize: MaterialTapTargetSize.shrinkWrap, visualDensity: const VisualDensity(horizontal: -4, vertical: -4)),
                 ),
-                const SizedBox(width: 4),
-                const Text('Same as Phone', style: TextStyle(fontSize: 10)),
+                const SizedBox(width: 6),
+                Text(AppLocalizations.of(context)?.sameAsPhone ?? 'Same as Phone', style: const TextStyle(fontSize: 10)),
               ],
             ),
           ],
@@ -879,15 +934,37 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
       children: [
         _buildLabelText(label, fontSize: 14),
         Wrap(
-          spacing: 12,
+          spacing: 16,
           runSpacing: 8,
           crossAxisAlignment: WrapCrossAlignment.center,
           children: options.map((o) => Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Radio<String>(value: o, groupValue: value, onChanged: onChanged, activeColor: primaryBrown),
-              Text(o),
-              const SizedBox(width: 4),
+              SizedBox(
+                width: 24,
+                height: 24,
+                child: Radio<String>(value: o, groupValue: value, onChanged: onChanged, activeColor: primaryBrown, materialTapTargetSize: MaterialTapTargetSize.shrinkWrap, visualDensity: const VisualDensity(horizontal: -4, vertical: -4)),
+              ),
+              const SizedBox(width: 6),
+              Builder(
+                builder: (context) {
+                  String display = o;
+                  final loc = AppLocalizations.of(context);
+                  if (loc != null) {
+                    if (o == 'Male') display = loc.maleLabel ?? o;
+                    else if (o == 'Female') display = loc.femaleLabel ?? o;
+                    else if (o == 'Other') display = loc.otherLabel ?? o;
+                    else if (o == 'Yes') display = loc.yesLabel ?? o;
+                    else if (o == 'No') display = loc.noLabel ?? o;
+                    else if (o == 'Alive') display = loc.aliveLabel ?? o;
+                    else if (o == 'Dead') display = loc.deadLabel ?? o;
+                    else if (o == 'Tamil Nadu') display = loc.tamilNaduLabel ?? o;
+                    else if (o == 'Other State') display = loc.otherStateLabel ?? o;
+                    else if (o == 'NRI') display = loc.nriLabel ?? o;
+                  }
+                  return Text(display);
+                }
+              ),
             ],
           )).toList(),
         ),
@@ -922,7 +999,7 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
             child: Row(children: [
               Icon(Icons.upload_file, size: 18, color: mediumBrown),
               const SizedBox(width: 8),
-              Expanded(child: Text(file?.name ?? 'Choose file...', style: const TextStyle(fontSize: 12, color: Colors.grey), overflow: TextOverflow.ellipsis)),
+              Expanded(child: Text(file?.name ?? AppLocalizations.of(context)?.chooseFile ?? 'Choose file...', style: const TextStyle(fontSize: 12, color: Colors.grey), overflow: TextOverflow.ellipsis)),
             ]),
           ),
         ),
@@ -934,7 +1011,7 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
     return Row(
       children: [
         Checkbox(value: _isAgreed, onChanged: (v) => setState(() => _isAgreed = v!)),
-        const Expanded(child: Text('I confirm that the above details are correct.', style: TextStyle(fontSize: 13))),
+        Expanded(child: Text(AppLocalizations.of(context)?.confirmDetailsCorrect ?? 'I confirm that the above details are correct.', style: const TextStyle(fontSize: 13))),
       ],
     );
   }
@@ -951,7 +1028,7 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
             padding: const EdgeInsets.symmetric(horizontal: 48),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))
           ),
-          child: _isSaving ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5)) : const Text('ADD FAMILY MEMBER', style: TextStyle(fontWeight: FontWeight.bold)),
+          child: _isSaving ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5)) : Text(AppLocalizations.of(context)?.addFamilyMember?.toUpperCase() ?? 'ADD FAMILY MEMBER', style: const TextStyle(fontWeight: FontWeight.bold)),
         ),
       ),
     );
@@ -1108,19 +1185,53 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
     }
   }
   Widget _buildLabelText(String label, {double fontSize = 14}) {
-    if (label.contains('*')) {
-      final parts = label.split('*');
+    bool hasAsterisk = label.contains('*');
+    String baseLabel = label.replaceAll('*', '').trim();
+    String translatedLabel = baseLabel;
+    
+    final loc = AppLocalizations.of(context);
+    if (loc != null) {
+      if (baseLabel == 'Relationship' || baseLabel == 'Husband Relationship') translatedLabel = loc.relationshipHeader ?? baseLabel;
+      else if (baseLabel == 'Name' || baseLabel == 'Husband Name') translatedLabel = loc.nameHeader ?? baseLabel;
+      else if (baseLabel == 'Phone Number' || baseLabel == 'Husband Phone') translatedLabel = loc.phoneNumberLabel ?? baseLabel;
+      else if (baseLabel == 'Date Of Birth' || baseLabel == 'Husband Date Of Birth') translatedLabel = loc.dateOfBirthLabel ?? baseLabel;
+      else if (baseLabel == 'Gender') translatedLabel = loc.genderHeader ?? baseLabel;
+      else if (baseLabel == 'Blood Group') translatedLabel = loc.bloodGroupLabel ?? baseLabel;
+      else if (baseLabel == 'Email') translatedLabel = loc.emailLabel ?? baseLabel;
+      else if (baseLabel == 'WhatsApp Number') translatedLabel = loc.whatsappNumberLabel ?? baseLabel;
+      else if (baseLabel == 'Married') translatedLabel = loc.marriedStatusLabel ?? baseLabel;
+      else if (baseLabel == 'Alive Status') translatedLabel = loc.aliveStatusLabel ?? baseLabel;
+      else if (baseLabel == 'Valuvu') translatedLabel = loc.valuvuLabel ?? baseLabel;
+      else if (baseLabel == 'Thottam') translatedLabel = loc.thottamLabel ?? baseLabel;
+      else if (baseLabel == 'Kulam' || baseLabel == 'Husband Kulam') translatedLabel = loc.kulamLabel ?? baseLabel;
+      else if (baseLabel == 'Education') translatedLabel = loc.educationLabel ?? baseLabel;
+      else if (baseLabel == 'Profession') translatedLabel = loc.professionLabel ?? baseLabel;
+      else if (baseLabel == 'District') translatedLabel = loc.districtHeader ?? baseLabel;
+      else if (baseLabel == 'Taluk') translatedLabel = loc.talukHeader ?? baseLabel;
+      else if (baseLabel == 'Panchayat') translatedLabel = loc.panchayatHeader ?? baseLabel;
+      else if (baseLabel == 'Village') translatedLabel = loc.villageUpperHeader ?? baseLabel;
+      else if (baseLabel == 'Door No & Street Name') translatedLabel = loc.streetNameLabel ?? baseLabel;
+      else if (baseLabel == 'Pin Code' || baseLabel == 'Zip / Postal Code' || baseLabel == 'Zip/Postal Code') translatedLabel = loc.pincodeLabel ?? baseLabel;
+      else if (baseLabel == 'Current Address Type') translatedLabel = loc.currentAddressTypeLabel ?? baseLabel;
+      else if (baseLabel == 'State') translatedLabel = loc.stateLabel ?? baseLabel;
+      else if (baseLabel == 'Country') translatedLabel = loc.countryLabel ?? baseLabel;
+      else if (baseLabel == 'City') translatedLabel = loc.cityVillageLabel ?? baseLabel;
+      else if (baseLabel == 'Full Address') translatedLabel = loc.fullAddressLabel ?? baseLabel;
+      else if (baseLabel == 'Passport size photo' || baseLabel == 'Passport Photo') translatedLabel = loc.passportPhotoLabel ?? baseLabel;
+      else if (baseLabel == 'Community Certificate') translatedLabel = loc.communityCertificateLabel ?? baseLabel;
+    }
+
+    if (hasAsterisk) {
       return Text.rich(
         TextSpan(
-          text: parts[0],
-          children: [
-            const TextSpan(text: '*', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
-            if (parts.length > 1) TextSpan(text: parts.sublist(1).join('*')),
+          text: '$translatedLabel ',
+          children: const [
+            TextSpan(text: '*', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
           ],
         ),
         style: TextStyle(fontSize: fontSize, fontWeight: FontWeight.bold, color: Colors.black87),
       );
     }
-    return Text(label, style: TextStyle(fontSize: fontSize, fontWeight: FontWeight.bold, color: Colors.black87));
+    return Text(translatedLabel, style: TextStyle(fontSize: fontSize, fontWeight: FontWeight.bold, color: Colors.black87));
   }
 }

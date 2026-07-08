@@ -653,7 +653,7 @@ class _CustomDropdownSearchState extends State<CustomDropdownSearch> with Widget
                                   isDense: true,
                                   filled: false,
                                   fillColor: Colors.transparent,
-                                  hintText: widget.hint ?? 'Select ${widget.label.replaceAll('*', '').trim()}',
+                                  hintText: widget.hint ?? (Localizations.localeOf(context).languageCode == 'ta' ? '${widget.label.replaceAll('*', '').trim()} தேர்ந்தெடு' : 'Select ${widget.label.replaceAll('*', '').trim()}'),
                                   hintStyle: AppTypography.inter(
                                     color: Colors.grey.shade400,
                                     fontSize: 13,

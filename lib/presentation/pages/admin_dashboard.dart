@@ -1,5 +1,8 @@
 import 'dart:convert';
 import 'dart:async';
+import '../../l10n/app_localizations.dart';
+import 'package:provider/provider.dart';
+import '../../providers/locale_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
@@ -339,6 +342,8 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
       context: context,
       barrierDismissible: true,
       builder: (context) => Dialog(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
         child: Container(
@@ -420,6 +425,8 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.transparent,
           title: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -527,7 +534,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
                       ),
                       child: isChanging 
-                        ? const LoadingSpinner()
+                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
                         : const Text('Change Password'),
                     ),
                   ),
@@ -568,7 +575,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
           children: [
             if (isDesktop)
               SizedBox(
-                width: 260,
+                width: 280,
                 child: _buildSidebar(),
               ),
             Expanded(
@@ -721,14 +728,11 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
         children: [
           _buildSummaryCards(),
           const SizedBox(height: 32),
-          if (widget.userRole == 3) ...[
-            _buildMyCoordinatorCard(),
-            const SizedBox(height: 32),
-          ],
-          const Center(
+
+          Center(
             child: Text(
-              'Payment Pending Details',
-              style: TextStyle(
+              AppLocalizations.of(context)?.paymentPendingDetails ?? 'My Payment Pending Details',
+              style: const TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
                 color: Color(0xFF2D1B18),
@@ -794,6 +798,10 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: _buildProfileMenu(inDrawer: true),
               ),
+              Padding(
+                padding: const EdgeInsets.only(left: 16, right: 16, bottom: 8),
+                child: _buildLanguageSwitcher(context, inDrawer: true),
+              ),
               const SizedBox(height: 8),
             ],
             const Divider(color: Colors.white24, height: 1),
@@ -823,6 +831,23 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
         ),
       ),
     );
+  }
+
+  String _getTranslatedSidebarLabel(BuildContext context, String title) {
+    final loc = AppLocalizations.of(context);
+    switch(title) {
+      case 'Dashboard': return loc?.dashboard ?? title;
+      case 'ID Card Benefits': return loc?.idCardBenefits ?? title;
+      case 'My Details': return loc?.myDetails ?? title;
+      case 'Coordinators': return loc?.coordinators ?? title;
+      case 'Members': return loc?.members ?? title;
+      case 'Events': return loc?.events ?? title;
+      case 'Payments': return loc?.payments ?? title;
+      case 'Reports': return loc?.reports ?? title;
+      case 'Update Requests': return loc?.updateRequests ?? title;
+      case 'Logout': return loc?.logout ?? title;
+      default: return title;
+    }
   }
 
   Widget _buildMenuItem(Map<String, dynamic> item) {
@@ -900,11 +925,14 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          item['title'],
+                          _getTranslatedSidebarLabel(context, item['title']),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             color: textColor,
-                            fontSize: 15,
+                            fontSize: Localizations.localeOf(context).languageCode == 'ta' ? 13 : 15,
                             fontWeight: isHighlighted ? FontWeight.bold : FontWeight.w500,
+                            height: 1.2,
                           ),
                         ),
                       ),
@@ -1017,7 +1045,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
                                     controller: _globalSearchController,
                                     style: TextStyle(color: Colors.white),
                                     decoration: InputDecoration(
-                                      hintText: 'Search ...',
+                                      hintText: AppLocalizations.of(context)?.searchPlaceholder ?? 'Search ...',
                                       hintStyle: TextStyle(color: Colors.white54),
                                       border: InputBorder.none,
                                       isDense: true,
@@ -1049,57 +1077,61 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
             ),
           ),
           padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Stack(
-            alignment: Alignment.center,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // Search Bar - Centered
-              Align(
-                  alignment: Alignment.center,
-                  child: Container(
-                    width: 320,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: _globalSearchController,
-                            style: const TextStyle(color: Colors.white),
-                            decoration: const InputDecoration(
-                              hintText: 'Search ...',
-                              hintStyle: TextStyle(color: Colors.white54),
-                              border: InputBorder.none,
-                              isDense: true,
-                            ),
+              // Flexible spacer on the left to help center
+              const Spacer(),
+              
+              // Search Bar
+              Flexible(
+                flex: 2,
+                child: Container(
+                  constraints: const BoxConstraints(maxWidth: 320),
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _globalSearchController,
+                          style: const TextStyle(color: Colors.white),
+                          decoration: InputDecoration(
+                            hintText: AppLocalizations.of(context)?.searchPlaceholder ?? 'Search ...',
+                            hintStyle: const TextStyle(color: Colors.white54),
+                            border: InputBorder.none,
+                            isDense: true,
                           ),
                         ),
-                        const Icon(Icons.search, color: Colors.white54, size: 20),
-                      ],
-                    ),
+                      ),
+                      const Icon(Icons.search, color: Colors.white54, size: 20),
+                    ],
                   ),
                 ),
+              ),
+              
+              const Spacer(),
               
               // Right Side Actions
-              Align(
-                alignment: Alignment.centerRight,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (widget.userRole != 3) ...[
-                      _buildNotificationIcon(Icons.person_add_alt_1, Colors.orange, _notificationsCount, 'Update Requests'),
-                      const SizedBox(width: 8),
-                      _buildNotificationIcon(Icons.notifications_none, Colors.red, _approvalsCount, 'Received Applications'),
-                      const SizedBox(width: 12),
-                    ],
-                    Container(width: 1, height: 30, color: Colors.white24),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildLanguageSwitcher(context),
+                  const SizedBox(width: 12),
+                  if (widget.userRole != 3) ...[
+                    _buildNotificationIcon(Icons.person_add_alt_1, Colors.orange, _notificationsCount, 'Update Requests'),
+                    const SizedBox(width: 8),
+                    _buildNotificationIcon(Icons.notifications_none, Colors.red, _approvalsCount, 'Received Applications'),
                     const SizedBox(width: 12),
-                    _buildProfileMenu(),
                   ],
-                ),
+                  Container(width: 1, height: 30, color: Colors.white24),
+                  const SizedBox(width: 12),
+                  _buildProfileMenu(),
+                ],
               ),
             ],
           ),
@@ -1117,6 +1149,43 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
         icon: Icon(icon, color: color, size: 30),
         onPressed: () => _navigateTo(targetPage),
         tooltip: targetPage,
+      ),
+    );
+  }
+
+  Widget _buildLanguageSwitcher(BuildContext context, {bool inDrawer = false}) {
+    final localeProvider = Provider.of<LocaleProvider>(context);
+    final isEnglish = localeProvider.locale.languageCode == 'en';
+
+    return InkWell(
+      onTap: () {
+        localeProvider.setLocale(Locale(isEnglish ? 'ta' : 'en'));
+      },
+      borderRadius: BorderRadius.circular(inDrawer ? 8 : 20),
+      child: Container(
+        width: inDrawer ? double.infinity : null,
+        padding: EdgeInsets.symmetric(horizontal: 12, vertical: inDrawer ? 10 : 6),
+        decoration: BoxDecoration(
+          color: inDrawer ? Colors.white.withOpacity(0.05) : Colors.black45,
+          borderRadius: BorderRadius.circular(inDrawer ? 8 : 20),
+          border: Border.all(color: Colors.white30),
+        ),
+        child: Row(
+          mainAxisSize: inDrawer ? MainAxisSize.max : MainAxisSize.min,
+          mainAxisAlignment: inDrawer ? MainAxisAlignment.center : MainAxisAlignment.start,
+          children: [
+            Icon(Icons.language, color: Colors.white, size: inDrawer ? 18 : 16),
+            const SizedBox(width: 8),
+            Text(
+              isEnglish ? 'தமிழ்' : 'English',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: inDrawer ? 14 : 12,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1189,8 +1258,8 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        widget.userRole == 2 ? 'COORDINATOR' : (widget.userRole == 3 ? 'MEMBER' : 'MANAGER'), 
-                        style: const TextStyle(color: Colors.cyan, fontSize: 11, fontWeight: FontWeight.bold)
+                        widget.userRole == 2 ? 'COORDINATOR' : (widget.userRole == 3 ? (AppLocalizations.of(context)?.memberRole?.toUpperCase() ?? 'MEMBER') : 'MANAGER'), 
+                        style: TextStyle(color: Colors.cyan, fontSize: 11, fontWeight: FontWeight.bold)
                       ),
                     ],
                   ),
@@ -1244,7 +1313,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
           children: [
             if (widget.userRole != 2)
               _StatCard(
-                title: 'COORDINATORS',
+                title: AppLocalizations.of(context)?.statCoordinators ?? 'COORDINATORS',
                 value: _isLoadingStats ? '...' : _coordinatorsCount.toString(),
                 color: const Color(0xFF5D1712),
                 width: cardWidth,
@@ -1252,7 +1321,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
                 onTap: () => _navigateTo('Coordinators'),
               ),
             _StatCard(
-              title: 'TOTAL MEMBERS',
+              title: AppLocalizations.of(context)?.statTotalMembers ?? 'TOTAL MEMBERS',
               value: _isLoadingStats ? '...' : _membersCount.toString(),
               color: const Color(0xFF0EA5E9),
               width: cardWidth,
@@ -1260,7 +1329,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
               onTap: () => _navigateTo('Members'),
             ),
             _StatCard(
-              title: 'APPROVALS',
+              title: AppLocalizations.of(context)?.statApprovals ?? 'APPROVALS',
               value: _isLoadingStats ? '...' : _approvalsCount.toString(),
               color: const Color(0xFF06B6D4),
               width: cardWidth,
@@ -1286,78 +1355,79 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
       );
     }
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF5D1712), Color(0xFF8B2B24)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+    final isDesktop = MediaQuery.of(context).size.width >= 800;
+
+    return Align(
+      alignment: isDesktop ? Alignment.centerLeft : Alignment.center,
+      child: Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey.shade200),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF5D1712).withOpacity(0.3),
-            blurRadius: 15,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.person_pin, color: Colors.white, size: 28),
-              const SizedBox(width: 12),
-              const Text(
-                'Coordinator Details',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.person_pin, color: Color(0xFF5D1712), size: 28),
+                const SizedBox(width: 12),
+                Text(
+                  AppLocalizations.of(context)?.coordinatorDetails ?? 'My Coordinator Details',
+                  style: TextStyle(
+                    color: Color(0xFF5D1712),
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          Wrap(
-            spacing: 32,
-            runSpacing: 16,
-            children: [
-              _buildCoordinatorInfo('Name', _myCoordinator!['Name']?.toString() ?? 'N/A'),
-              _buildCoordinatorInfo('Mobile', _myCoordinator!['Phonenumber']?.toString() ?? 'N/A'),
-              _buildCoordinatorInfo('Village', _myCoordinator!['Village']?.toString() ?? 'N/A'),
-            ],
-          ),
-        ],
+              ],
+            ),
+            const SizedBox(height: 20),
+            Wrap(
+              spacing: 32,
+              runSpacing: 16,
+              children: [
+                _buildCoordinatorInfo(AppLocalizations.of(context)?.nameHeader ?? 'Name', _myCoordinator!['Name']?.toString() ?? 'N/A'),
+                _buildCoordinatorInfo(AppLocalizations.of(context)?.mobileLabel ?? 'Mobile', _myCoordinator!['Phonenumber']?.toString() ?? 'N/A'),
+                _buildCoordinatorInfo(AppLocalizations.of(context)?.villageLabel ?? 'Village', _myCoordinator!['Village']?.toString() ?? 'N/A'),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildCoordinatorInfo(String label, String value) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            color: Colors.white70,
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-          ),
+    return Text.rich(
+      TextSpan(
+        text: '$label: ',
+        style: TextStyle(
+          color: Colors.grey.shade600,
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
         ),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
+        children: [
+          TextSpan(
+            text: value,
+            style: const TextStyle(
+              color: Color(0xFF2D1B18),
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -1381,8 +1451,8 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _buildFilterTab('UNPAID', 'Unpaid Details', Icons.pending_actions_outlined),
-            _buildFilterTab('PAID', 'Paid Events', Icons.check_circle_outline),
+            _buildFilterTab('UNPAID', AppLocalizations.of(context)?.unpaidDetails ?? 'Unpaid Details', Icons.pending_actions_outlined),
+            _buildFilterTab('PAID', AppLocalizations.of(context)?.paidEvents ?? 'Paid Events', Icons.check_circle_outline),
           ],
         ),
       ),
@@ -1458,14 +1528,17 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
         .fold(0.0, (sum, item) => sum + (item['balanceamount'] ?? 0.0));
 
     final totalPaid = _pendingPayments
-        .where((payment) => (payment['balanceamount'] ?? 0.0) <= 0)
+        .where((payment) {
+          final bal = double.tryParse(payment['balanceamount']?.toString() ?? '0.0') ?? 0.0;
+          return bal <= 0;
+        })
         .fold(0.0, (sum, item) {
           final double tax = double.tryParse(item['TaxAmount']?.toString() ?? '0.0') ?? 0.0;
           return sum + tax;
         });
 
     final filteredPayments = _pendingPayments.where((payment) {
-      final balance = payment['balanceamount'] ?? 0.0;
+      final balance = double.tryParse(payment['balanceamount']?.toString() ?? '0.0') ?? 0.0;
       final isPaid = balance <= 0;
       
       bool matchesFilter = false;
@@ -1553,8 +1626,12 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
   Widget _buildTotalPendingCard(double totalPending, double totalPaid) {
     final isPaidFilter = _paymentFilter == 'PAID';
     final amount = isPaidFilter ? totalPaid : totalPending;
-    final title = isPaidFilter ? 'TOTAL PAID AMOUNT' : 'TOTAL PENDING AMOUNT';
-    final subtitle = isPaidFilter ? 'Total amount received from paid events' : 'Pending balance from all events';
+    final title = isPaidFilter ? (AppLocalizations.of(context)?.totalPaidAmount ?? 'TOTAL PAID AMOUNT') : (AppLocalizations.of(context)?.totalPendingAmount ?? 'TOTAL PENDING AMOUNT');
+    final subtitle = isPaidFilter ? (AppLocalizations.of(context)?.paidBalanceFromAllEvents ?? 'Total amount received from paid events') : (AppLocalizations.of(context)?.pendingBalanceFromAllEvents ?? 'Pending balance from all events');
+
+    if (amount <= 0) {
+      return const SizedBox.shrink();
+    }
 
     return Container(
       width: double.infinity,
@@ -1635,9 +1712,11 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
   }
 
   Widget _buildPaymentCard(Map<String, dynamic> payment, int index, double width) {
-    final balance = payment['balanceamount'] ?? 0.0;
+    final balance = double.tryParse(payment['balanceamount']?.toString() ?? '0.0') ?? 0.0;
+    final tax = double.tryParse(payment['TaxAmount']?.toString() ?? '0.0') ?? 0.0;
+    final paidAmount = tax - balance;
     final isPaid = balance <= 0;
-    final isPartial = balance > 0 && balance < (payment['TaxAmount'] ?? 0.0);
+    final isPartial = balance > 0 && balance < tax;
     final eventId = payment['Id'];
     final year = payment['year'];
 
@@ -1647,7 +1726,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
     final Color badgeTextColor = isPaid
         ? const Color(0xFF2E7D32)
         : (isPartial ? const Color(0xFF1565C0) : const Color(0xFFC62828));
-    final String statusText = isPaid ? 'PAID' : (isPartial ? 'PARTIALLY PAID' : 'UN PAID');
+    final String statusText = isPaid ? (AppLocalizations.of(context)?.paidLabel ?? 'PAID') : (isPartial ? 'PARTIALLY PAID' : (AppLocalizations.of(context)?.unPaidLabel ?? 'UN PAID'));
 
     return MouseRegion(
       cursor: SystemMouseCursors.click,
@@ -1743,24 +1822,22 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
                     ),
                   ),
                   const Divider(height: 24, color: const Color(0xFFE2E8F0)),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  Column(
                     children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text(
-                            'TAX AMOUNT',
-                            style: TextStyle(
+                          Text(
+                            AppLocalizations.of(context)?.taxAmount ?? 'TAX AMOUNT',
+                            style: const TextStyle(
                               fontSize: 11,
                               color: Colors.black45,
                               fontWeight: FontWeight.w600,
                               letterSpacing: 0.5,
                             ),
                           ),
-                          const SizedBox(height: 4),
                           Text(
-                            '₹${payment['TaxAmount'] ?? '0.00'}',
+                            '₹${tax.toStringAsFixed(2)}',
                             style: const TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.bold,
@@ -1769,19 +1846,42 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
                           ),
                         ],
                       ),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text(
-                            'BALANCE AMOUNT',
-                            style: TextStyle(
+                          Text(
+                            AppLocalizations.of(context)?.paidAmount ?? 'PAID AMOUNT',
+                            style: const TextStyle(
                               fontSize: 11,
                               color: Colors.black45,
                               fontWeight: FontWeight.w600,
                               letterSpacing: 0.5,
                             ),
                           ),
-                          const SizedBox(height: 4),
+                          Text(
+                            '₹${paidAmount.toStringAsFixed(2)}',
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.blue,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            AppLocalizations.of(context)?.balanceAmount ?? 'BALANCE AMOUNT',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: Colors.black45,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
                           Text(
                             '₹${balance.toStringAsFixed(2)}',
                             style: TextStyle(

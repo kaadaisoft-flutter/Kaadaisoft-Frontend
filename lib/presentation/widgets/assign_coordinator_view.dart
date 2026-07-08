@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import '../../l10n/app_localizations.dart';
 import 'package:http/http.dart' as http;
 import 'custom_dropdown_search.dart';
 import '../../utils/api_config.dart';
@@ -494,20 +495,20 @@ class _AssignCoordinatorViewState extends State<AssignCoordinatorView> {
             children: [
               InkWell(
                 onTap: widget.onBack,
-                child: const Text('Coordinators', style: TextStyle(color: const Color(0xFF5D1712), fontWeight: FontWeight.w500)),
+                child: Text(AppLocalizations.of(context)?.coordinators ?? 'Coordinators', style: const TextStyle(color: Color(0xFF5D1712), fontWeight: FontWeight.w500)),
               ),
-              const Text(' / Assigncoordinators', style: TextStyle(color: Colors.black54)),
+              Text(AppLocalizations.of(context)?.assignCoordinatorsBreadcrumb ?? ' / Assigncoordinators', style: const TextStyle(color: Colors.black54)),
             ],
           ),
           const SizedBox(height: 24),
 
           // 1. Assign Coordinator Form
           _buildFormCard(
-            title: 'Assign Coordinator',
+            title: AppLocalizations.of(context)?.assignCoordinatorHeader ?? 'Assign Coordinator',
             icon: Icons.person_add_alt_1,
             accentColor: const Color(0xFF5D1712),
             child: _buildAssignFormContent(),
-            buttonText: 'Assign',
+            buttonText: AppLocalizations.of(context)?.assignAction ?? 'Assign',
             onButtonPressed: _assignCoordinator,
             isLoading: _isAssigning,
           ),
@@ -516,11 +517,11 @@ class _AssignCoordinatorViewState extends State<AssignCoordinatorView> {
 
           // 2. Reassign Coordinator Form
           _buildFormCard(
-            title: 'Reassign Coordinator',
+            title: AppLocalizations.of(context)?.reassignCoordinatorHeader ?? 'Reassign Coordinator',
             icon: Icons.person_add_alt_1,
             accentColor: Colors.red,
             child: _buildReassignFormContent(),
-            buttonText: 'Reassign',
+            buttonText: AppLocalizations.of(context)?.reassignAction ?? 'Reassign',
             onButtonPressed: _reassignCoordinator,
             isLoading: _isReassigning,
           ),
@@ -529,11 +530,11 @@ class _AssignCoordinatorViewState extends State<AssignCoordinatorView> {
 
           // 3. Remove Coordinator Form (Updated with Table)
           _buildFormCard(
-            title: 'Remove Coordinator',
+            title: AppLocalizations.of(context)?.removeCoordinatorHeader ?? 'Remove Coordinator',
             icon: Icons.person_remove_alt_1,
             accentColor: Colors.grey.shade700,
             child: _buildRemoveCoordFormContent(),
-            buttonText: 'Remove Coordinator',
+            buttonText: AppLocalizations.of(context)?.removeCoordinatorAction ?? 'Remove Coordinator',
             onButtonPressed: _removeCoordinator,
             isLoading: _isRemovingCoord,
           ),
@@ -542,11 +543,11 @@ class _AssignCoordinatorViewState extends State<AssignCoordinatorView> {
 
           // 4. Add Village Form
           _buildFormCard(
-            title: 'Add Village',
+            title: AppLocalizations.of(context)?.addVillageHeader ?? 'Add Village',
             icon: Icons.add_location_alt,
             accentColor: Colors.teal,
             child: _buildAddVillageFormContent(),
-            buttonText: 'Add Village',
+            buttonText: AppLocalizations.of(context)?.addVillageAction ?? 'Add Village',
             onButtonPressed: _addVillage,
             isLoading: _isAddingVillage,
           ),
@@ -555,11 +556,11 @@ class _AssignCoordinatorViewState extends State<AssignCoordinatorView> {
 
           // 5. Remove Village Form
           _buildFormCard(
-            title: 'Remove Village',
+            title: AppLocalizations.of(context)?.removeVillageHeader ?? 'Remove Village',
             icon: Icons.location_off,
             accentColor: Colors.redAccent,
             child: _buildRemoveVillageFormContent(),
-            buttonText: 'Remove Village',
+            buttonText: AppLocalizations.of(context)?.removeVillageAction ?? 'Remove Village',
             onButtonPressed: _removeVillageAction,
             isLoading: _isRemovingVillage,
           ),
@@ -613,19 +614,21 @@ class _AssignCoordinatorViewState extends State<AssignCoordinatorView> {
                 // Action Button
                 Align(
                   alignment: Alignment.centerLeft,
-                  child: SizedBox(
-                    width: 150,
-                    height: 45,
-                    child: ElevatedButton(
-                      onPressed: isLoading ? null : onButtonPressed,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: accentColor,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                      ),
-                      child: isLoading 
-                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                        : Text(buttonText, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  child: ElevatedButton(
+                    onPressed: isLoading ? null : onButtonPressed,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: accentColor,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      minimumSize: const Size(150, 45),
                     ),
+                    child: isLoading 
+                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                      : Text(
+                          buttonText, 
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                        ),
                   ),
                 ),
               ],
@@ -644,12 +647,12 @@ class _AssignCoordinatorViewState extends State<AssignCoordinatorView> {
           spacing: 24, runSpacing: 24,
           children: [
             _buildField(
-              label: 'Search Member',
+              label: AppLocalizations.of(context)?.searchMember ?? 'Search Member',
               child: _buildSearchField(type: 'member'),
               width: 200,
             ),
             _buildField(
-              label: 'Districts:',
+              label: AppLocalizations.of(context)?.districtsLabel ?? 'Districts:',
               child: _buildDropdown(
                 value: _assignDistrict,
                 items: _districts,
@@ -668,7 +671,7 @@ class _AssignCoordinatorViewState extends State<AssignCoordinatorView> {
               width: 180,
             ),
             _buildField(
-              label: 'Taluks:',
+              label: AppLocalizations.of(context)?.taluksLabel ?? 'Taluks:',
               child: _buildDropdown(
                 value: _assignTaluk,
                 items: _assignTaluks,
@@ -685,7 +688,7 @@ class _AssignCoordinatorViewState extends State<AssignCoordinatorView> {
               width: 180,
             ),
             _buildField(
-              label: 'Panchayats:',
+              label: AppLocalizations.of(context)?.panchayatsLabel ?? 'Panchayats:',
               child: _buildDropdown(
                 value: _assignPanchayat,
                 items: _assignPanchayats,
@@ -703,7 +706,7 @@ class _AssignCoordinatorViewState extends State<AssignCoordinatorView> {
         ),
         const SizedBox(height: 24),
         _buildField(
-          label: 'Villages:',
+          label: AppLocalizations.of(context)?.villagesLabel ?? 'Villages:',
           child: _buildVillageSelection(isAssign: true),
           width: double.infinity,
         ),
@@ -719,17 +722,17 @@ class _AssignCoordinatorViewState extends State<AssignCoordinatorView> {
           spacing: 24, runSpacing: 24,
           children: [
             _buildField(
-              label: 'Search Coordinator',
+              label: AppLocalizations.of(context)?.searchCoordinator ?? 'Search Coordinator',
               child: _buildSearchField(type: 'coordinator'),
               width: 200,
             ),
             _buildField(
-              label: 'Search New Member',
+              label: AppLocalizations.of(context)?.searchNewMember ?? 'Search New Member',
               child: _buildSearchField(type: 'reassign_member'),
               width: 200,
             ),
             _buildField(
-              label: 'Districts:',
+              label: AppLocalizations.of(context)?.districtsLabel ?? 'Districts:',
               child: _buildDropdown(
                 value: _reassignDistrict,
                 items: _districts,
@@ -748,7 +751,7 @@ class _AssignCoordinatorViewState extends State<AssignCoordinatorView> {
               width: 180,
             ),
             _buildField(
-              label: 'Taluks:',
+              label: AppLocalizations.of(context)?.taluksLabel ?? 'Taluks:',
               child: _buildDropdown(
                 value: _reassignTaluk,
                 items: _reassignTaluks,
@@ -765,7 +768,7 @@ class _AssignCoordinatorViewState extends State<AssignCoordinatorView> {
               width: 180,
             ),
             _buildField(
-              label: 'Panchayats:',
+              label: AppLocalizations.of(context)?.panchayatsLabel ?? 'Panchayats:',
               child: _buildDropdown(
                 value: _reassignPanchayat,
                 items: _reassignPanchayats,
@@ -783,7 +786,7 @@ class _AssignCoordinatorViewState extends State<AssignCoordinatorView> {
         ),
         const SizedBox(height: 24),
         _buildField(
-          label: 'Villages:',
+          label: AppLocalizations.of(context)?.villagesLabel ?? 'Villages:',
           child: _buildVillageSelection(isAssign: false),
           width: double.infinity,
         ),
@@ -800,7 +803,7 @@ class _AssignCoordinatorViewState extends State<AssignCoordinatorView> {
           crossAxisAlignment: WrapCrossAlignment.end,
           children: [
             _buildField(
-              label: 'Search Coordinator',
+              label: AppLocalizations.of(context)?.searchCoordinator ?? 'Search Coordinator',
               child: _buildSearchField(type: 'remove_coord'),
               width: 250,
             ),
@@ -863,7 +866,7 @@ class _AssignCoordinatorViewState extends State<AssignCoordinatorView> {
       spacing: 24, runSpacing: 24,
       children: [
         _buildField(
-          label: 'Districts:',
+          label: AppLocalizations.of(context)?.districtsLabel ?? 'Districts:',
           child: _buildDropdown(
             value: _addDistrict,
             items: _districts,
@@ -884,7 +887,7 @@ class _AssignCoordinatorViewState extends State<AssignCoordinatorView> {
           width: 180,
         ),
         _buildField(
-          label: 'Taluks:',
+          label: AppLocalizations.of(context)?.taluksLabel ?? 'Taluks:',
           child: _buildDropdown(
             value: _addTaluk,
             items: _addTaluks,
@@ -927,7 +930,7 @@ class _AssignCoordinatorViewState extends State<AssignCoordinatorView> {
             width: 180,
           ),
         _buildField(
-          label: 'Panchayats:',
+          label: AppLocalizations.of(context)?.panchayatsLabel ?? 'Panchayats:',
           child: _buildDropdown(
             value: _addPanchayat,
             items: _addPanchayats,
@@ -994,7 +997,7 @@ class _AssignCoordinatorViewState extends State<AssignCoordinatorView> {
       spacing: 24, runSpacing: 24,
       children: [
         _buildField(
-          label: 'Districts:',
+          label: AppLocalizations.of(context)?.districtsLabel ?? 'Districts:',
           child: _buildDropdown(
             value: _removeDistrict,
             items: _districts,
@@ -1013,7 +1016,7 @@ class _AssignCoordinatorViewState extends State<AssignCoordinatorView> {
           width: 180,
         ),
         _buildField(
-          label: 'Taluks:',
+          label: AppLocalizations.of(context)?.taluksLabel ?? 'Taluks:',
           child: _buildDropdown(
             value: _removeTaluk,
             items: _removeTaluks,
@@ -1030,7 +1033,7 @@ class _AssignCoordinatorViewState extends State<AssignCoordinatorView> {
           width: 180,
         ),
         _buildField(
-          label: 'Panchayats:',
+          label: AppLocalizations.of(context)?.panchayatsLabel ?? 'Panchayats:',
           child: _buildDropdown(
             value: _removePanchayat,
             items: _removePanchayats,
@@ -1045,7 +1048,7 @@ class _AssignCoordinatorViewState extends State<AssignCoordinatorView> {
           width: 180,
         ),
         _buildField(
-          label: 'Village:',
+          label: AppLocalizations.of(context)?.villagesLabel ?? 'Village:',
           child: _buildDropdown(
             value: _removeVillage,
             items: _removeVillages,
@@ -1082,7 +1085,10 @@ class _AssignCoordinatorViewState extends State<AssignCoordinatorView> {
     final filteredItems = items.where((e) => !e.startsWith('Choose ')).toList();
     return CustomDropdownSearch(
       label: '',
-      hint: value, // Use the "Choose X" string as the hint
+      hint: value == 'Choose District' ? (AppLocalizations.of(context)?.chooseDistrict ?? 'Choose District') :
+            value == 'Choose Taluk' ? (AppLocalizations.of(context)?.chooseTaluk ?? 'Choose Taluk') :
+            value == 'Choose Panchayat' ? (AppLocalizations.of(context)?.choosePanchayat ?? 'Choose Panchayat') :
+            value == 'Choose Village' ? (AppLocalizations.of(context)?.chooseVillage ?? 'Choose Village') : value,
       dropdownItems: filteredItems,
       value: isPlaceholder ? null : value,
       onChanged: (val) => onChanged(val ?? value),
@@ -1097,19 +1103,19 @@ class _AssignCoordinatorViewState extends State<AssignCoordinatorView> {
     
     if (type == 'member') {
       controller = _searchMemberController;
-      hint = 'Search Member';
+      hint = AppLocalizations.of(context)?.searchMember ?? 'Search Member';
       isMember = true;
     } else if (type == 'coordinator') {
       controller = _searchCoordinatorController;
-      hint = 'Search Coordinator';
+      hint = AppLocalizations.of(context)?.searchCoordinator ?? 'Search Coordinator';
       isMember = false;
     } else if (type == 'reassign_member') {
       controller = _reassignNewMemberController;
-      hint = 'Search New Member';
+      hint = AppLocalizations.of(context)?.searchNewMember ?? 'Search New Member';
       isMember = true;
     } else {
       controller = _removeCoordinatorController;
-      hint = 'Search Coordinator';
+      hint = AppLocalizations.of(context)?.searchCoordinator ?? 'Search Coordinator';
       isMember = false;
     }
 
@@ -1300,7 +1306,9 @@ class _SearchUserDialogState extends State<_SearchUserDialog> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              widget.isMember ? 'Search Member' : 'Search Coordinator',
+              widget.isMember 
+                  ? (AppLocalizations.of(context)?.searchMember ?? 'Search Member')
+                  : (AppLocalizations.of(context)?.searchCoordinator ?? 'Search Coordinator'),
               style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -1312,7 +1320,7 @@ class _SearchUserDialogState extends State<_SearchUserDialog> {
               controller: _controller,
               onChanged: (_) => _search(),
               decoration: InputDecoration(
-                hintText: 'Enter name or ID...',
+                hintText: AppLocalizations.of(context)?.searchHintText ?? 'Enter name or ID...',
                 hintStyle: const TextStyle(color: Colors.black38, fontSize: 14),
                 suffixIcon: IconButton(
                   icon: const Icon(Icons.search, color: Color(0xFF5D1712)), 
@@ -1396,7 +1404,7 @@ class _SearchUserDialogState extends State<_SearchUserDialog> {
               child: TextButton(
                 onPressed: () => Navigator.pop(context),
                 style: TextButton.styleFrom(foregroundColor: Colors.black54),
-                child: const Text('Cancel'),
+                child: Text(AppLocalizations.of(context)?.cancelDialogBtn ?? 'Cancel'),
               ),
             ),
           ],

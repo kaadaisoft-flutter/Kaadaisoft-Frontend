@@ -5,6 +5,9 @@ import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl_phone_field/countries.dart';
+import 'package:provider/provider.dart';
+import '../../l10n/app_localizations.dart';
+import '../../providers/locale_provider.dart';
 import '../widgets/custom_phone_field.dart';
 import '../../utils/api_config.dart';
 
@@ -271,8 +274,18 @@ class _LoginPageState extends State<LoginPage> {
                       setDialogState(() => errorMsg = 'Please enter the OTP sent to your email.');
                       return;
                     }
-                    if (newPasswordController.text.length < 8) {
-                      setDialogState(() => errorMsg = 'Password must be at least 8 characters long.');
+                    bool isValidPassword(String p) {
+                      if (p.length < 8) return false;
+                      if (p.contains(' ')) return false;
+                      if (!p.contains(RegExp(r'[A-Z]'))) return false;
+                      if (!p.contains(RegExp(r'[a-z]'))) return false;
+                      if (!p.contains(RegExp(r'[0-9]'))) return false;
+                      if (!p.contains(RegExp(r'[^A-Za-z0-9\s]'))) return false;
+                      return true;
+                    }
+
+                    if (!isValidPassword(newPasswordController.text)) {
+                      setDialogState(() => errorMsg = 'Password must be at least 8 characters long, contain an uppercase letter, a lowercase letter, a number, a special character, and no spaces.');
                       return;
                     }
                     if (newPasswordController.text != confirmPasswordController.text) {
@@ -356,8 +369,44 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
+  Widget _buildLanguageSwitcher(BuildContext context) {
+    final localeProvider = Provider.of<LocaleProvider>(context);
+    final isEnglish = localeProvider.locale.languageCode == 'en';
+
+    return InkWell(
+      onTap: () {
+        localeProvider.setLocale(Locale(isEnglish ? 'ta' : 'en'));
+      },
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.black45,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.white30),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              isEnglish ? 'English' : 'தமிழ்',
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(width: 8),
+            const Icon(Icons.language, color: Colors.white, size: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context);
     final size = MediaQuery.of(context).size;
     final isMobile = size.width < 600;
 
@@ -381,6 +430,14 @@ class _LoginPageState extends State<LoginPage> {
             width: double.infinity,
             height: double.infinity,
             color: Colors.black.withOpacity(0.25),
+          ),
+          // Language Switcher
+          Positioned(
+            top: 20,
+            right: 20,
+            child: SafeArea(
+              child: _buildLanguageSwitcher(context),
+            ),
           ),
           // Main Content
           SafeArea(
@@ -421,7 +478,7 @@ class _LoginPageState extends State<LoginPage> {
                             ),
                             SizedBox(height: isMobile ? 12 : 16),
                             Text(
-                              'Poondurai Kaadai Kulam',
+                              localizations?.appTitle ?? 'Poondurai Kaadai Kulam',
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 color: Colors.white,
@@ -466,7 +523,7 @@ class _LoginPageState extends State<LoginPage> {
                                 child: CustomPhoneField(
                                   label: '',
                                   controller: _mobileController,
-                                  hint: 'Mobile Number',
+                                  hint: localizations?.mobileNumber ?? 'Mobile Number',
                                   isDarkTheme: true,
                                   showDropdownOnRight: true,
                                   onCountryChanged: (country) {
@@ -482,7 +539,7 @@ class _LoginPageState extends State<LoginPage> {
                             // Password Field
                             _buildTextField(
                               controller: _passwordController,
-                              hint: 'Password',
+                              hint: localizations?.password ?? 'Password',
                               isPassword: true,
                               isPasswordVisible: _isPasswordVisible,
                               onToggleVisibility: () {
@@ -491,6 +548,11 @@ class _LoginPageState extends State<LoginPage> {
                                 });
                               },
                               isMobile: isMobile,
+                              onSubmitted: (_) {
+                                if (!_isLoading) {
+                                  _handleLogin();
+                                }
+                              },
                             ),
                             const SizedBox(height: 8),
                             Align(
@@ -506,8 +568,8 @@ class _LoginPageState extends State<LoginPage> {
                                 style: TextButton.styleFrom(
                                   visualDensity: VisualDensity.compact,
                                 ),
-                                child: const Text(
-                                  'Forgot password?',
+                                child: Text(
+                                  localizations?.forgotPassword ?? 'Forgot password?',
                                   style: TextStyle(
                                     color: Colors.white,
                                     fontSize: 13,
@@ -536,8 +598,8 @@ class _LoginPageState extends State<LoginPage> {
                                       width: 24,
                                       child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
                                     )
-                                  : const Text(
-                                      'Login',
+                                  : Text(
+                                      localizations?.login ?? 'Login',
                                       style: TextStyle(
                                         fontSize: 18,
                                         fontWeight: FontWeight.bold,
@@ -551,8 +613,8 @@ class _LoginPageState extends State<LoginPage> {
                             Wrap(
                               alignment: WrapAlignment.center,
                               children: [
-                                const Text(
-                                  "Don't have an account? ",
+                                Text(
+                                  "${localizations?.registerPrompt ?? "Don't have an account?"} ",
                                   style: TextStyle(color: Colors.white, fontSize: 14),
                                 ),
                                 MouseRegion(
@@ -564,8 +626,8 @@ class _LoginPageState extends State<LoginPage> {
                                         builder: (context) => const RegistrationForm(),
                                       );
                                     },
-                                    child: const Text(
-                                      'Register',
+                                    child: Text(
+                                      localizations?.register ?? 'Register',
                                       style: TextStyle(
                                         color: Colors.white,
                                         fontWeight: FontWeight.bold,
@@ -583,7 +645,7 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                   ),
                 ),
-                _buildFooter(),
+                _buildFooter(localizations),
                 const SizedBox(height: 16),
               ],
             ),
@@ -593,21 +655,25 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  Widget _buildFooter() {
+  Widget _buildFooter(AppLocalizations? localizations) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+        Wrap(
+          alignment: WrapAlignment.center,
+          crossAxisAlignment: WrapCrossAlignment.center,
           children: [
-            _footerLink('Terms & Conditions'),
-            const Text(' | ', style: TextStyle(color: Colors.white70)),
-            _footerLink('Privacy Policy'),
+            _footerLink(localizations?.termsAndConditions ?? 'Terms & Conditions', isTerms: true),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 4.0),
+              child: Text('|', style: TextStyle(color: Colors.white70)),
+            ),
+            _footerLink(localizations?.privacyPolicy ?? 'Privacy Policy', isTerms: false),
           ],
         ),
         const SizedBox(height: 4),
-        const Text(
-          '© 2026 Poondurai Kaadai Kulam. All rights reserved.',
+        Text(
+          localizations?.copyrightText ?? '© 2026 Poondurai Kaadai Kulam. All rights reserved.',
           textAlign: TextAlign.center,
           style: TextStyle(
             color: Colors.white,
@@ -636,6 +702,7 @@ class _LoginPageState extends State<LoginPage> {
     int? maxLength,
     TextInputType? keyboardType,
     String? prefixText,
+    ValueChanged<String>? onSubmitted,
   }) {
     return Container(
       decoration: BoxDecoration(
@@ -656,6 +723,7 @@ class _LoginPageState extends State<LoginPage> {
         ),
         cursorColor: Colors.white,
         keyboardType: keyboardType,
+        onSubmitted: onSubmitted,
         maxLength: maxLength,
         inputFormatters: maxLength != null ? [FilteringTextInputFormatter.digitsOnly] : null,
         decoration: InputDecoration(
@@ -704,13 +772,13 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  Widget _footerLink(String text) {
+  Widget _footerLink(String text, {required bool isTerms}) {
     return TextButton(
       onPressed: () {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => text == 'Terms & Conditions' 
+            builder: (context) => isTerms 
                 ? const TermsAndConditionsPage() 
                 : const PrivacyPolicyPage(),
           ),

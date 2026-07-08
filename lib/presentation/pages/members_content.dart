@@ -12,9 +12,7 @@ import 'update_details_content.dart';
 import 'member_details_content.dart';
 import '../widgets/registration_form.dart';
 import '../widgets/custom_dropdown_search.dart';
-
-
-
+import '../../l10n/app_localizations.dart';
 // Conditional import for web download
 import '../../utils/web_helper_stub.dart' if (dart.library.html) 'dart:html' as html;
 
@@ -187,8 +185,8 @@ class _MembersContentState extends State<MembersContent> {
                     children: [
                       Row(
                         children: [
-                          const Text(
-                            'Total Members: ',
+                          Text(
+                            AppLocalizations.of(context)?.totalMembersHeader ?? 'Total Members: ',
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
@@ -212,12 +210,18 @@ class _MembersContentState extends State<MembersContent> {
                           ),
                         ],
                       ),
-                      if (!isNarrow) _buildActionButtons(),
+                      if (!isNarrow)
+                        Flexible(
+                          child: Padding(
+                            padding: const EdgeInsets.only(left: 16),
+                            child: _buildActionButtons(false),
+                          ),
+                        ),
                     ],
                   ),
                   if (isNarrow) ...[
                     const SizedBox(height: 16),
-                    _buildActionButtons(),
+                    _buildActionButtons(true),
                   ],
                 ],
               );
@@ -262,11 +266,11 @@ class _MembersContentState extends State<MembersContent> {
                           padding: const EdgeInsets.symmetric(vertical: 8),
                           child: Row(
                             children: [
-                              _buildHeaderCell('ROLE', 80),
-                              _buildHeaderCell('DISTRICT', 110),
-                              _buildHeaderCell('TALUK', 110),
-                              _buildHeaderCell('PANCHAYAT', 130),
-                              _buildHeaderCell('VILLAGE', 130),
+                              _buildHeaderCell(AppLocalizations.of(context)?.roleHeader ?? 'ROLE', 110),
+                              _buildHeaderCell(AppLocalizations.of(context)?.districtHeader ?? 'DISTRICT', 110),
+                              _buildHeaderCell(AppLocalizations.of(context)?.talukHeader ?? 'TALUK', 110),
+                              _buildHeaderCell(AppLocalizations.of(context)?.panchayatHeader ?? 'PANCHAYAT', 130),
+                              _buildHeaderCell(AppLocalizations.of(context)?.villageUpperHeader ?? 'VILLAGE', 130),
                               _buildHeaderCell('ACTIONS', 160),
                             ],
                           ),
@@ -317,10 +321,10 @@ class _MembersContentState extends State<MembersContent> {
                                 padding: const EdgeInsets.symmetric(vertical: 8),
                                 child: Row(
                                   children: [
-                                    _buildHeaderCell('S.NO', 50),
-                                    _buildHeaderCell('FAMILY ID', 120),
-                                    _buildHeaderCell('NAME', 140),
-                                    _buildHeaderCell('MOBILE', 120),
+                                    _buildHeaderCell(AppLocalizations.of(context)?.sNo?.toUpperCase() ?? 'S.NO', 50),
+                                    _buildHeaderCell(AppLocalizations.of(context)?.familyIdHeader ?? 'FAMILY ID', 120),
+                                    _buildHeaderCell(AppLocalizations.of(context)?.nameHeader?.toUpperCase() ?? 'NAME', 140),
+                                    _buildHeaderCell(AppLocalizations.of(context)?.mobileLabel?.toUpperCase() ?? 'MOBILE', 120),
                                   ],
                                 ),
                               ),
@@ -350,7 +354,7 @@ class _MembersContentState extends State<MembersContent> {
                         ),
                         // Scrollable Right Part
                         isNarrow
-                            ? SizedBox(width: 720, child: rightPart)
+                            ? SizedBox(width: 750, child: rightPart)
                             : Expanded(
                                 child: Scrollbar(
                                   controller: _horizontalScrollController,
@@ -360,7 +364,7 @@ class _MembersContentState extends State<MembersContent> {
                                     controller: _horizontalScrollController,
                                     scrollDirection: Axis.horizontal,
                                     child: SizedBox(
-                                      width: 720, // 80+110+110+130+130+160
+                                      width: 750, // 110+110+110+130+130+160
                                       child: rightPart,
                                     ),
                                   ),
@@ -529,26 +533,45 @@ class _MembersContentState extends State<MembersContent> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: Text('Reject Member: $name'),
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.white,
+          title: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 4.0),
+                  child: Text('${AppLocalizations.of(context)?.rejectMemberTitle ?? "Reject Member: "}$name', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.close, size: 20),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ],
+          ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Please select a reason for rejection:'),
+              Text(AppLocalizations.of(context)?.selectRejectReason ?? 'Please select a reason for rejection:'),
               const SizedBox(height: 16),
               CustomDropdownSearch(
                 label: '',
-                hint: '-- Choose a reason --',
+                hint: AppLocalizations.of(context)?.chooseReason ?? '-- Choose a reason --',
                 value: selectedReason,
                 dropdownItems: reasons,
                 onChanged: (val) => setDialogState(() => selectedReason = val),
               ),
-              if (selectedReason == 'Other (Enter manually)') ...[
+              if (selectedReason == (AppLocalizations.of(context)?.otherEnterManually ?? 'Other (Enter manually)')) ...[
                 const SizedBox(height: 16),
                 TextField(
                   onChanged: (val) => customReason = val,
-                  decoration: const InputDecoration(
-                    hintText: 'Enter reason manually...',
+                  decoration: InputDecoration(
+                    hintText: AppLocalizations.of(context)?.enterReasonManuallyHint ?? 'Enter reason manually...',
                     border: OutlineInputBorder(),
                     contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   ),
@@ -560,19 +583,19 @@ class _MembersContentState extends State<MembersContent> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel', style: TextStyle(color: Colors.black54)),
+              child: Text(AppLocalizations.of(context)?.cancelDialogBtn ?? 'Cancel', style: const TextStyle(color: Colors.black54)),
             ),
             ElevatedButton(
               onPressed: selectedReason != null ? () {
-                final String finalReason = selectedReason == 'Other (Enter manually)' ? customReason : selectedReason!;
-                if (selectedReason == 'Other (Enter manually)' && finalReason.isEmpty) {
-                   showStatusDialog(context, title: 'Required', message: 'Please provide a reason', type: DialogType.error);
+                final String finalReason = selectedReason == (AppLocalizations.of(context)?.otherEnterManually ?? 'Other (Enter manually)') ? customReason : selectedReason!;
+                if (selectedReason == (AppLocalizations.of(context)?.otherEnterManually ?? 'Other (Enter manually)') && finalReason.isEmpty) {
+                   showStatusDialog(context, title: 'Required', message: AppLocalizations.of(context)?.pleaseProvideReason ?? 'Please provide a reason', type: DialogType.error);
                    return;
                 }
                 Navigator.pop(context, finalReason);
               } : null,
               style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
-              child: const Text('Confirm Reject'),
+              child: Text(AppLocalizations.of(context)?.confirmRejectBtn ?? 'Confirm Reject'),
             ),
           ],
         ),
@@ -616,6 +639,8 @@ class _MembersContentState extends State<MembersContent> {
       context: context,
       barrierDismissible: true,
       builder: (context) => Dialog(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
         child: Container(
@@ -660,55 +685,99 @@ class _MembersContentState extends State<MembersContent> {
     );
   }
 
-  Widget _buildActionButtons() {
+  Widget _buildActionButtons(bool isMobile) {
+    if (isMobile) {
+      return Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: _buildOutlinedButton(AppLocalizations.of(context)?.uploadBulkDataBtn ?? 'Upload Bulk Data', Icons.file_upload_outlined, const Color(0xFF5D1712), isMobile: true, onPressed: () => setState(() {
+                  _showBulkUpload = !_showBulkUpload;
+                  if (_showBulkUpload) _showFilters = false;
+                })),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildOutlinedButton(AppLocalizations.of(context)?.filterBtn ?? 'Filter', Icons.filter_alt_outlined, const Color(0xFF5D1712), isMobile: true, onPressed: () => setState(() {
+                  _showFilters = !_showFilters;
+                  if (_showFilters) _showBulkUpload = false;
+                })),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: _buildOutlinedButton(AppLocalizations.of(context)?.downloadBtn ?? 'Download', Icons.download_outlined, const Color(0xFF5D1712), isMobile: true, onPressed: _downloadMembersData),
+              ),
+              if (widget.role == 1) ...[
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _buildSolidButton(AppLocalizations.of(context)?.assignBtn ?? 'Assign', Icons.person_add_alt_1, const Color(0xFF5D1712), isMobile: true, onPressed: widget.onAssignPressed),
+                ),
+              ],
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildSolidButton(AppLocalizations.of(context)?.addBtn ?? 'Add', Icons.add, const Color(0xFF5D1712), isMobile: true, onPressed: _showAddMemberDialog),
+              ),
+            ],
+          ),
+        ],
+      );
+    }
+
     return Wrap(
       spacing: 12,
       runSpacing: 12,
+      alignment: WrapAlignment.start,
       children: [
-        _buildOutlinedButton('Upload Bulk Data', Icons.file_upload_outlined, const Color(0xFF5D1712), onPressed: () => setState(() {
+        _buildOutlinedButton(AppLocalizations.of(context)?.uploadBulkDataBtn ?? 'Upload Bulk Data', Icons.file_upload_outlined, const Color(0xFF5D1712), onPressed: () => setState(() {
           _showBulkUpload = !_showBulkUpload;
           if (_showBulkUpload) _showFilters = false;
         })),
-        _buildOutlinedButton('Filter', Icons.filter_alt_outlined, const Color(0xFF5D1712), onPressed: () => setState(() {
+        _buildOutlinedButton(AppLocalizations.of(context)?.filterBtn ?? 'Filter', Icons.filter_alt_outlined, const Color(0xFF5D1712), onPressed: () => setState(() {
           _showFilters = !_showFilters;
           if (_showFilters) _showBulkUpload = false;
         })),
-
-        _buildOutlinedButton('Download', Icons.download_outlined, const Color(0xFF5D1712), onPressed: _downloadMembersData),
-
+        _buildOutlinedButton(AppLocalizations.of(context)?.downloadBtn ?? 'Download', Icons.download_outlined, const Color(0xFF5D1712), onPressed: _downloadMembersData),
         if (widget.role == 1)
-          _buildSolidButton('Assign', Icons.person_add_alt_1, const Color(0xFF5D1712), onPressed: widget.onAssignPressed),
-
-        _buildSolidButton('Add', Icons.add, const Color(0xFF5D1712), onPressed: _showAddMemberDialog),
-
-
+          _buildSolidButton(AppLocalizations.of(context)?.assignBtn ?? 'Assign', Icons.person_add_alt_1, const Color(0xFF5D1712), onPressed: widget.onAssignPressed),
+        _buildSolidButton(AppLocalizations.of(context)?.addBtn ?? 'Add', Icons.add, const Color(0xFF5D1712), onPressed: _showAddMemberDialog),
       ],
     );
   }
 
-  Widget _buildOutlinedButton(String label, IconData icon, Color color, {VoidCallback? onPressed}) {
+  Widget _buildOutlinedButton(String label, IconData icon, Color color, {VoidCallback? onPressed, bool isMobile = false}) {
     return OutlinedButton.icon(
       onPressed: onPressed ?? () {},
-      icon: Icon(icon, color: color, size: 18),
-      label: Text(label, style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 13)),
+      icon: Icon(icon, color: color, size: isMobile ? 16 : 18),
+      label: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Text(label, style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: isMobile ? 12 : 13)),
+      ),
       style: OutlinedButton.styleFrom(
         side: BorderSide(color: color),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        padding: EdgeInsets.symmetric(horizontal: isMobile ? 8 : 16, vertical: 10),
       ),
     );
   }
 
 
-  Widget _buildSolidButton(String label, IconData icon, Color color, {VoidCallback? onPressed}) {
+  Widget _buildSolidButton(String label, IconData icon, Color color, {VoidCallback? onPressed, bool isMobile = false}) {
     return ElevatedButton.icon(
       onPressed: onPressed ?? () {},
-      icon: Icon(icon, color: Colors.white, size: 18),
-      label: Text(label, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+      icon: Icon(icon, color: Colors.white, size: isMobile ? 16 : 18),
+      label: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Text(label, style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: isMobile ? 12 : 13)),
+      ),
       style: ElevatedButton.styleFrom(
         backgroundColor: color,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        padding: EdgeInsets.symmetric(horizontal: isMobile ? 8 : 16, vertical: 10),
         elevation: 0,
       ),
     );
@@ -767,7 +836,7 @@ class _MembersContentState extends State<MembersContent> {
           ),
           child: Row(
             children: [
-              _buildDataCell('', 80, child: Container(
+              _buildDataCell('', 110, child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
                   color: role == '2' ? Colors.orange.shade50 : const Color(0xFFFDECEB),
@@ -775,7 +844,7 @@ class _MembersContentState extends State<MembersContent> {
                   border: Border.all(color: role == '2' ? Colors.orange.shade200 : const Color(0xFFE5A09D)),
                 ),
                 child: Text(
-                  role == '2' ? 'COORDINATOR' : 'MEMBER',
+                  role == '2' ? (AppLocalizations.of(context)?.coordinators?.toUpperCase() ?? 'COORDINATOR') : (AppLocalizations.of(context)?.memberRole?.toUpperCase() ?? 'MEMBER'),
                   style: TextStyle(color: role == '2' ? Colors.orange.shade700 : const Color(0xFF5D1712), fontSize: 10, fontWeight: FontWeight.bold),
                 ),
               )),
@@ -860,7 +929,7 @@ class _MembersContentState extends State<MembersContent> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
             decoration: BoxDecoration(
-              color: Colors.cyan.shade400,
+              color: const Color(0xFF5D1712),
               borderRadius: const BorderRadius.only(topLeft: Radius.circular(12), topRight: Radius.circular(12)),
             ),
             child: Row(
@@ -984,7 +1053,7 @@ class _MembersContentState extends State<MembersContent> {
                       spacing: 8,
                       runSpacing: 8,
                       children: [
-                        const Icon(Icons.info_outline, color: Colors.cyan, size: 16),
+                        const Icon(Icons.info_outline, color: const Color(0xFF5D1712), size: 16),
                         const Text('Please ensure your Excel file matches the required template format before uploading. ', style: TextStyle(color: Colors.black54, fontSize: 13)),
                         InkWell(
                           onTap: _downloadSampleFormat,

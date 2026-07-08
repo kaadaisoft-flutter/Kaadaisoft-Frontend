@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import '../../l10n/app_localizations.dart';
 import 'package:file_picker/file_picker.dart';
 import '../widgets/loading_spinner.dart';
 import '../widgets/custom_dialog.dart';
@@ -22,17 +23,60 @@ class _EventsContentState extends State<EventsContent> {
   bool _isLoading = true;
   String? _error;
   final ScrollController _scrollController = ScrollController();
+  String _selectedTab = 'Upcoming';
 
   List<dynamic> get _filteredEvents {
-    if (widget.globalSearchQuery == null || widget.globalSearchQuery!.isEmpty) {
-      return _events;
-    }
-    final query = widget.globalSearchQuery!.toLowerCase();
-    return _events.where((event) {
-      final name = (event['EventName']?.toString() ?? '').toLowerCase();
-      final tax = (event['TaxAmount']?.toString() ?? '').toLowerCase();
-      return name.contains(query) || tax.contains(query);
+    List<dynamic> filtered = _events;
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    
+    filtered = filtered.where((event) {
+      DateTime? fromDate;
+      DateTime? toDate;
+      try {
+        if (event['From_date'] != null && event['From_date'].toString().isNotEmpty && event['From_date'] != 'N/A') {
+          final p = DateTime.parse(event['From_date'].toString());
+          fromDate = DateTime(p.year, p.month, p.day);
+        }
+      } catch (_) {}
+      try {
+        if (event['To_date'] != null && event['To_date'].toString().isNotEmpty && event['To_date'] != 'N/A') {
+          final p = DateTime.parse(event['To_date'].toString());
+          toDate = DateTime(p.year, p.month, p.day);
+        }
+      } catch (_) {}
+
+      if (_selectedTab == 'Upcoming') {
+        return fromDate != null && fromDate.isAfter(today);
+      } else if (_selectedTab == 'Current') {
+        if (fromDate != null && toDate != null) {
+          return (fromDate.isBefore(today) || fromDate.isAtSameMomentAs(today)) &&
+                 (toDate.isAfter(today) || toDate.isAtSameMomentAs(today));
+        } else if (fromDate != null) {
+          return fromDate.isAtSameMomentAs(today);
+        }
+        return false;
+      } else if (_selectedTab == 'Completed') {
+        if (toDate != null) {
+          return toDate.isBefore(today);
+        } else if (fromDate != null) {
+          return fromDate.isBefore(today);
+        }
+        return false;
+      }
+      return true;
     }).toList();
+
+    if (widget.globalSearchQuery != null && widget.globalSearchQuery!.isNotEmpty) {
+      final query = widget.globalSearchQuery!.toLowerCase();
+      filtered = filtered.where((event) {
+        final name = (event['EventName']?.toString() ?? '').toLowerCase();
+        final tax = (event['TaxAmount']?.toString() ?? '').toLowerCase();
+        return name.contains(query) || tax.contains(query);
+      }).toList();
+    }
+    return filtered;
   }
 
   @override
@@ -112,13 +156,15 @@ class _EventsContentState extends State<EventsContent> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.transparent,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Expanded(
                 child: Text(
-                  'Update Event Details', 
+                  'Event Details', 
                   style: TextStyle(fontWeight: FontWeight.bold),
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -129,8 +175,8 @@ class _EventsContentState extends State<EventsContent> {
               ),
             ],
           ),
-          content: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 450),
+          content: SizedBox(
+            width: 450,
             child: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -256,7 +302,7 @@ class _EventsContentState extends State<EventsContent> {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       ),
                       child: isSaving 
-                        ? const SizedBox(width: 24, height: 24, child: LoadingSpinner())
+                        ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                         : const Text('Save Changes', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                     ),
                   ),
@@ -286,8 +332,8 @@ class _EventsContentState extends State<EventsContent> {
               IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
             ],
           ),
-          content: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 450),
+          content: SizedBox(
+            width: 450,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -495,6 +541,8 @@ class _EventsContentState extends State<EventsContent> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.transparent,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -728,7 +776,7 @@ class _EventsContentState extends State<EventsContent> {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                       ),
                       child: isSaving 
-                        ? const SizedBox(width: 20, height: 20, child: LoadingSpinner())
+                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                         : const Text('Create Event', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                     ),
                   ),
@@ -737,6 +785,57 @@ class _EventsContentState extends State<EventsContent> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildFilterTabs() {
+    bool isMobile = MediaQuery.of(context).size.width < 600;
+    
+    Widget tabsRow = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: ['Upcoming', 'Current', 'Completed'].map((tab) {
+        final isSelected = _selectedTab == tab;
+        Widget tabWidget = GestureDetector(
+          onTap: () => setState(() => _selectedTab = tab),
+          child: Container(
+            padding: EdgeInsets.symmetric(vertical: 10, horizontal: isMobile ? 4 : 24),
+            decoration: BoxDecoration(
+              color: isSelected ? Colors.white : Colors.transparent,
+              borderRadius: BorderRadius.circular(8),
+              boxShadow: isSelected ? [const BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2))] : null,
+            ),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                tab == 'Upcoming' ? (AppLocalizations.of(context)?.upcomingTab ?? 'Upcoming') :
+                tab == 'Current' ? (AppLocalizations.of(context)?.currentTab ?? 'Current') :
+                (AppLocalizations.of(context)?.completedTab ?? 'Completed'),
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: isSelected ? const Color(0xFFE53935) : Colors.grey[700],
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                  fontSize: isMobile ? 12 : 14,
+                ),
+              ),
+            ),
+          ),
+        );
+        return isMobile ? Expanded(child: tabWidget) : tabWidget;
+      }).toList(),
+    );
+
+    return Align(
+      alignment: Alignment.center,
+      child: Container(
+        width: isMobile ? double.infinity : null,
+        margin: const EdgeInsets.symmetric(vertical: 16),
+        padding: const EdgeInsets.all(4),
+        decoration: BoxDecoration(
+          color: Colors.grey[200],
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: tabsRow,
       ),
     );
   }
@@ -761,7 +860,7 @@ class _EventsContentState extends State<EventsContent> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Events Management', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: const Color(0xFF2D1B18))),
+                  Text(AppLocalizations.of(context)?.eventsManagement ?? 'Events Management', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF2D1B18))),
                   const SizedBox(height: 16),
                   if (widget.role == 1)
                     SizedBox(
@@ -784,7 +883,7 @@ class _EventsContentState extends State<EventsContent> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('Events Management', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: const Color(0xFF2D1B18))),
+                  Text(AppLocalizations.of(context)?.eventsManagement ?? 'Events Management', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF2D1B18))),
                   if (widget.role == 1)
                     ElevatedButton.icon(
                       onPressed: _showAddEventDialog,
@@ -800,175 +899,38 @@ class _EventsContentState extends State<EventsContent> {
                 ],
               ),
             
+            _buildFilterTabs(),
+            
             const SizedBox(height: 12),
-                       // Table Container
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Column(
+            if (isMobile)
+              Column(
                 children: [
-                  // Main Scrollable Area (Header + Body)
-                  Scrollbar(
-                    controller: _scrollController,
-                    thumbVisibility: true,
-                    child: SingleChildScrollView(
-                      controller: _scrollController,
-                      scrollDirection: Axis.horizontal,
-                      child: SizedBox(
-                        width: widget.role == 1 ? 960 : 810,
-                        child: Column(
-                          children: [
-                            // Table Header
-                            Container(
-                              color: const Color(0xFF2D1B18),
-                              height: 48,
-                              child: Row(
-                                children: [
-                                  _buildHeaderCell('S.NO', 60),
-                                  _buildHeaderCell('EVENT NAME', 250),
-                                  _buildHeaderCell('BANNER', 150),
-                                  _buildHeaderCell('DURATION', 200),
-                                  _buildHeaderCell('TAX AMOUNT', 150, hasDivider: widget.role == 1),
-                                  if (widget.role == 1)
-                                    _buildHeaderCell('ACTIONS', 150, hasDivider: false),
-                                ],
-                              ),
-                            ),
-                            // Table Body
-                            _events.isEmpty && !_isLoading
-                              ? const Padding(
-                                  padding: EdgeInsets.all(32),
-                                  child: Center(child: Text('No events found', style: TextStyle(color: Colors.black54))),
-                                )
-                              : ListView.separated(
-                                  shrinkWrap: true,
-                                  physics: const NeverScrollableScrollPhysics(),
-                                  padding: EdgeInsets.zero,
-                                  itemCount: _filteredEvents.length,
-                                  separatorBuilder: (context, index) => const Divider(height: 1, color: Colors.black12),
-                                  itemBuilder: (context, index) {
-                                    final event = _filteredEvents[index];
-                                    return Container(
-                                      height: 60,
-                                      color: index % 2 == 0 ? Colors.white : const Color(0xFFF8FAFC),
-                                      child: Row(
-                                        children: [
-                                          _buildDataCell('${index + 1}', 60),
-                                          _buildDataCell(event['EventName'] ?? 'N/A', 250, isBold: true),
-                                          // Banner Column
-                                          _buildDataCell('', 150, child: Center(
-                                            child: Container(
-                                              width: 80,
-                                              height: 46,
-                                              decoration: BoxDecoration(
-                                                color: Colors.grey[100],
-                                                borderRadius: BorderRadius.circular(4),
-                                              ),
-                                              child: Stack(
-                                                alignment: Alignment.bottomCenter,
-                                                children: [
-                                                  SizedBox.expand(
-                                                    child: event['Image'] != null && event['Image'].toString().isNotEmpty && event['Image'].toString() != 'null' && event['Image'].toString() != 'N/A'
-                                                      ? InkWell(
-                                                          onTap: () => _showFullScreenImage('${ApiConfig.baseUrl}/assets/uploads/${event['Image']}'),
-                                                          child: ClipRRect(
-                                                            borderRadius: BorderRadius.circular(4),
-                                                            child: Image.network(
-                                                              '${ApiConfig.baseUrl}/assets/uploads/${event['Image']}',
-                                                              fit: BoxFit.cover,
-                                                              errorBuilder: (context, error, stackTrace) => GestureDetector(
-                                                                onTap: () {}, // Consume tap to prevent opening dialog
-                                                                child: Tooltip(
-                                                                  message: 'image not found',
-                                                                  child: Container(
-                                                                    color: Colors.grey[100],
-                                                                    child: Icon(Icons.image_not_supported, color: Colors.grey[400]),
-                                                                  ),
-                                                                ),
-                                                              ),
-                                                            ),
-                                                          ),
-                                                        )
-                                                      : Tooltip(
-                                                          message: 'image not found',
-                                                          child: Icon(Icons.image_not_supported, color: Colors.grey[400]),
-                                                        ),
-                                                  ),
-                                                  if (widget.role == 1)
-                                                    InkWell(
-                                                      onTap: () => _showUpdateBannerDialog(event),
-                                                      child: Container(
-                                                        width: double.infinity,
-                                                        color: Colors.black.withOpacity(0.7),
-                                                        padding: const EdgeInsets.symmetric(vertical: 2),
-                                                        child: const Text('CHANGE', textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold)),
-                                                      ),
-                                                    ),
-                                                ],
-                                              ),
-                                            ),
-                                          )),
-                                          // Duration Column
-                                          _buildDataCell('', 200, child: Column(
-                                            mainAxisAlignment: MainAxisAlignment.center,
-                                            children: [
-                                              _buildDateInfo('From:', event['From_date']),
-                                              const SizedBox(height: 4),
-                                              _buildDateInfo('To:', event['To_date']),
-                                            ],
-                                          )),
-                                          // Tax Amount Column
-                                          _buildDataCell('', 150, hasDivider: widget.role == 1, child: Center(
-                                            child: Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                                              decoration: BoxDecoration(
-                                                color: const Color(0xFF5D1712).withOpacity(0.1),
-                                                borderRadius: BorderRadius.circular(4),
-                                                border: Border.all(color: const Color(0xFF5D1712).withOpacity(0.2)),
-                                              ),
-                                              child: Text(
-                                                '₹ ${event['TaxAmount'] ?? '0'}',
-                                                style: const TextStyle(color: const Color(0xFF5D1712), fontWeight: FontWeight.bold, fontSize: 13),
-                                              ),
-                                            ),
-                                          )),
-                                          // Actions Column
-                                          if (widget.role == 1)
-                                            _buildDataCell('', 150, hasDivider: false, child: Row(
-                                              mainAxisAlignment: MainAxisAlignment.center,
-                                              children: [
-                                                _buildIconButton(Icons.edit_outlined, const Color(0xFF5D1712), () => _showUpdateEventDialog(event), tooltip: 'Edit'),
-                                                const SizedBox(width: 8),
-                                                _buildIconButton(Icons.delete_outline, Colors.red, () => _showDeleteConfirmationDialog(event), tooltip: 'Delete'),
-                                              ],
-                                            )),
-                                        ],
-                                      ),
-                                    );
-                                  },
-                                ),
-                          ],
-                        ),
+                  _events.isEmpty && !_isLoading
+                    ? const Padding(
+                        padding: EdgeInsets.all(32),
+                        child: Center(child: Text('No events found', style: TextStyle(color: Colors.black54))),
+                      )
+                    : ListView.separated(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: _filteredEvents.length,
+                        separatorBuilder: (context, index) => const SizedBox(height: 16),
+                        itemBuilder: (context, index) {
+                          return _buildEventCard(_filteredEvents[index], index);
+                        },
                       ),
-                    ),
-                  ),
-                  // Footer
+                  const SizedBox(height: 16),
                   Container(
                     padding: const EdgeInsets.all(16),
-                    decoration: const BoxDecoration(border: Border(top: BorderSide(color: Colors.black12))),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                    ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(_isLoading ? '' : 'Total Events: ${_filteredEvents.length}', style: const TextStyle(color: Colors.black54, fontWeight: FontWeight.w500)),
+                        Expanded(child: Text(_isLoading ? '' : '${AppLocalizations.of(context)?.totalEvents ?? "Total Events:"} ${_filteredEvents.length}', style: const TextStyle(color: Colors.black54, fontWeight: FontWeight.w500), overflow: TextOverflow.ellipsis)),
                         const Row(
                           children: [
                             Icon(Icons.chevron_left, color: Colors.black26),
@@ -982,8 +944,191 @@ class _EventsContentState extends State<EventsContent> {
                     ),
                   ),
                 ],
+              )
+            else
+              // Table Container
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    // Main Scrollable Area (Header + Body)
+                    Scrollbar(
+                      controller: _scrollController,
+                      thumbVisibility: true,
+                      child: SingleChildScrollView(
+                        controller: _scrollController,
+                        scrollDirection: Axis.horizontal,
+                        child: SizedBox(
+                          width: widget.role == 1 ? 960 : 810,
+                          child: Column(
+                            children: [
+                              // Table Header
+                              Container(
+                                color: const Color(0xFF2D1B18),
+                                height: 48,
+                                child: Row(
+                                  children: [
+                                    _buildHeaderCell(AppLocalizations.of(context)?.sNo ?? 'S.NO', 60),
+                                    _buildHeaderCell(AppLocalizations.of(context)?.eventNameHeader ?? 'EVENT NAME', 250),
+                                    _buildHeaderCell(AppLocalizations.of(context)?.bannerHeader ?? 'BANNER', 150),
+                                    _buildHeaderCell(AppLocalizations.of(context)?.durationHeader ?? 'DURATION', 200),
+                                    _buildHeaderCell(AppLocalizations.of(context)?.taxAmount ?? 'TAX AMOUNT', 150, hasDivider: widget.role == 1),
+                                    if (widget.role == 1)
+                                      _buildHeaderCell('ACTIONS', 150, hasDivider: false),
+                                  ],
+                                ),
+                              ),
+                              // Table Body
+                              _events.isEmpty && !_isLoading
+                                ? const Padding(
+                                    padding: EdgeInsets.all(32),
+                                    child: Center(child: Text('No events found', style: TextStyle(color: Colors.black54))),
+                                  )
+                                : ListView.separated(
+                                    shrinkWrap: true,
+                                    physics: const NeverScrollableScrollPhysics(),
+                                    padding: EdgeInsets.zero,
+                                    itemCount: _filteredEvents.length,
+                                    separatorBuilder: (context, index) => const Divider(height: 1, color: Colors.black12),
+                                    itemBuilder: (context, index) {
+                                      final event = _filteredEvents[index];
+                                      return Container(
+                                        height: 60,
+                                        color: index % 2 == 0 ? Colors.white : const Color(0xFFF8FAFC),
+                                        child: Row(
+                                          children: [
+                                            _buildDataCell('${index + 1}', 60),
+                                            _buildDataCell(event['EventName'] ?? 'N/A', 250, isBold: true),
+                                            // Banner Column
+                                            _buildDataCell('', 150, child: Center(
+                                              child: Container(
+                                                width: 80,
+                                                height: 46,
+                                                decoration: BoxDecoration(
+                                                  color: Colors.grey[100],
+                                                  borderRadius: BorderRadius.circular(4),
+                                                ),
+                                                child: Stack(
+                                                  alignment: Alignment.bottomCenter,
+                                                  children: [
+                                                    SizedBox.expand(
+                                                      child: event['Image'] != null && event['Image'].toString().isNotEmpty && event['Image'].toString() != 'null' && event['Image'].toString() != 'N/A'
+                                                        ? InkWell(
+                                                            onTap: () => _showFullScreenImage('${ApiConfig.baseUrl}/assets/uploads/${event['Image']}'),
+                                                            child: ClipRRect(
+                                                              borderRadius: BorderRadius.circular(4),
+                                                              child: Image.network(
+                                                                '${ApiConfig.baseUrl}/assets/uploads/${event['Image']}',
+                                                                fit: BoxFit.cover,
+                                                                errorBuilder: (context, error, stackTrace) => GestureDetector(
+                                                                  onTap: () {}, // Consume tap to prevent opening dialog
+                                                                  child: Tooltip(
+                                                                    message: 'image not found',
+                                                                    child: Container(
+                                                                      color: Colors.grey[100],
+                                                                      child: Icon(Icons.image_not_supported, color: Colors.grey[400]),
+                                                                    ),
+                                                                  ),
+                                                                ),
+                                                              ),
+                                                            ),
+                                                          )
+                                                        : Tooltip(
+                                                            message: 'image not found',
+                                                            child: Icon(Icons.image_not_supported, color: Colors.grey[400]),
+                                                          ),
+                                                    ),
+                                                    if (widget.role == 1)
+                                                      InkWell(
+                                                        onTap: () => _showUpdateBannerDialog(event),
+                                                        child: Container(
+                                                          width: double.infinity,
+                                                          color: Colors.black.withOpacity(0.7),
+                                                          padding: const EdgeInsets.symmetric(vertical: 2),
+                                                          child: const Text('CHANGE', textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold)),
+                                                        ),
+                                                      ),
+                                                  ],
+                                                ),
+                                              ),
+                                            )),
+                                            // Duration Column
+                                            _buildDataCell('', 200, child: Column(
+                                              mainAxisAlignment: MainAxisAlignment.center,
+                                              children: [
+                                                _buildDateInfo(AppLocalizations.of(context)?.fromDate ?? 'From:', event['From_date']),
+                                                const SizedBox(height: 4),
+                                                _buildDateInfo(AppLocalizations.of(context)?.toDate ?? 'To:', event['To_date']),
+                                              ],
+                                            )),
+                                            // Tax Amount Column
+                                            _buildDataCell('', 150, hasDivider: widget.role == 1, child: Center(
+                                              child: Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                                decoration: BoxDecoration(
+                                                  color: const Color(0xFF5D1712).withOpacity(0.1),
+                                                  borderRadius: BorderRadius.circular(4),
+                                                  border: Border.all(color: const Color(0xFF5D1712).withOpacity(0.2)),
+                                                ),
+                                                child: Text(
+                                                  '₹ ${event['TaxAmount'] ?? '0'}',
+                                                  style: const TextStyle(color: const Color(0xFF5D1712), fontWeight: FontWeight.bold, fontSize: 13),
+                                                ),
+                                              ),
+                                            )),
+                                            // Actions Column
+                                            if (widget.role == 1)
+                                              _buildDataCell('', 150, hasDivider: false, child: Row(
+                                                mainAxisAlignment: MainAxisAlignment.center,
+                                                children: [
+                                                  _buildIconButton(Icons.edit_outlined, const Color(0xFF5D1712), () => _showUpdateEventDialog(event), tooltip: 'Edit'),
+                                                  const SizedBox(width: 8),
+                                                  _buildIconButton(Icons.delete_outline, Colors.red, () => _showDeleteConfirmationDialog(event), tooltip: 'Delete'),
+                                                ],
+                                              )),
+                                          ],
+                                        ),
+                                      );
+                                    },
+                                  ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    // Footer
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: const BoxDecoration(border: Border(top: BorderSide(color: Colors.black12))),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(child: Text(_isLoading ? '' : '${AppLocalizations.of(context)?.totalEvents ?? "Total Events:"} ${_filteredEvents.length}', style: const TextStyle(color: Colors.black54, fontWeight: FontWeight.w500), overflow: TextOverflow.ellipsis)),
+                          const Row(
+                            children: [
+                              Icon(Icons.chevron_left, color: Colors.black26),
+                              SizedBox(width: 16),
+                              CircleAvatar(radius: 14, backgroundColor: const Color(0xFF5D1712), child: Text('1', style: TextStyle(color: Colors.white, fontSize: 12))),
+                              SizedBox(width: 16),
+                              Icon(Icons.chevron_right, color: Colors.black26),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
           ],
         ),
       );
@@ -1078,9 +1223,9 @@ class _EventsContentState extends State<EventsContent> {
     }
   }
 
-  Widget _buildDateInfo(String label, dynamic date) {
+  Widget _buildDateInfo(String label, dynamic date, {MainAxisAlignment alignment = MainAxisAlignment.center}) {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
+      mainAxisAlignment: alignment,
       children: [
         Text(
           '$label ',
@@ -1098,6 +1243,194 @@ class _EventsContentState extends State<EventsContent> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildEventCard(dynamic event, int index) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
+        ],
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(18.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFFFF3E0),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.event,
+                          color: Colors.orange,
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          event['EventName'] ?? 'N/A',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF2D1B18),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (widget.role == 1)
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _buildIconButton(Icons.edit_outlined, const Color(0xFF5D1712), () => _showUpdateEventDialog(event), tooltip: 'Edit'),
+                      const SizedBox(width: 8),
+                      _buildIconButton(Icons.delete_outline, Colors.red, () => _showDeleteConfirmationDialog(event), tooltip: 'Delete'),
+                    ],
+                  ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            const Divider(height: 24, color: Color(0xFFE2E8F0)),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        AppLocalizations.of(context)?.durationHeader ?? 'DURATION',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: Colors.black45,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      _buildDateInfo(AppLocalizations.of(context)?.fromDate ?? 'From:', event['From_date'], alignment: MainAxisAlignment.start),
+                      const SizedBox(height: 2),
+                      _buildDateInfo(AppLocalizations.of(context)?.toDate ?? 'To:', event['To_date'], alignment: MainAxisAlignment.start),
+                      const SizedBox(height: 12),
+                      Text(
+                        AppLocalizations.of(context)?.taxAmount ?? 'TAX AMOUNT',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: Colors.black45,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF5D1712).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: const Color(0xFF5D1712).withOpacity(0.2)),
+                        ),
+                        child: Text(
+                          '₹ ${event['TaxAmount'] ?? '0'}',
+                          style: const TextStyle(color: Color(0xFF5D1712), fontWeight: FontWeight.bold, fontSize: 13),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // Banner Column
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Text(
+                      AppLocalizations.of(context)?.bannerHeader ?? 'BANNER',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Colors.black45,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Container(
+                      width: 80,
+                      height: 80,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[100],
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Stack(
+                        alignment: Alignment.bottomCenter,
+                        children: [
+                          SizedBox.expand(
+                            child: event['Image'] != null && event['Image'].toString().isNotEmpty && event['Image'].toString() != 'null' && event['Image'].toString() != 'N/A'
+                              ? InkWell(
+                                  onTap: () => _showFullScreenImage('${ApiConfig.baseUrl}/assets/uploads/${event['Image']}'),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: Image.network(
+                                      '${ApiConfig.baseUrl}/assets/uploads/${event['Image']}',
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (context, error, stackTrace) => GestureDetector(
+                                        onTap: () {},
+                                        child: Tooltip(
+                                          message: 'image not found',
+                                          child: Container(
+                                            color: Colors.grey[100],
+                                            child: Icon(Icons.image_not_supported, color: Colors.grey[400]),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                )
+                              : Tooltip(
+                                  message: 'image not found',
+                                  child: Icon(Icons.image_not_supported, color: Colors.grey[400]),
+                                ),
+                          ),
+                          if (widget.role == 1)
+                            InkWell(
+                              onTap: () => _showUpdateBannerDialog(event),
+                              child: Container(
+                                width: double.infinity,
+                                color: Colors.black.withOpacity(0.7),
+                                padding: const EdgeInsets.symmetric(vertical: 4),
+                                child: const Text('CHANGE', textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 

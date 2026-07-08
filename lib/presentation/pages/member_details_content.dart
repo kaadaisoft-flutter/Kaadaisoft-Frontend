@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../widgets/loading_spinner.dart';
 import '../widgets/custom_dialog.dart';
+import '../widgets/image_load_state.dart';
 import '../../utils/api_config.dart';
 import 'update_details_content.dart';
 
@@ -154,7 +155,7 @@ class _MemberDetailsContentState extends State<MemberDetailsContent> {
   }
 
   void _showImageViewer(String? imageName, String title) {
-    if (imageName == null || imageName.isEmpty) {
+    if (imageName == null || imageName.isEmpty || imageName == 'null') {
       showStatusDialog(
         context,
         title: 'Information',
@@ -295,9 +296,9 @@ class _MemberDetailsContentState extends State<MemberDetailsContent> {
           // Family Members Section
           const Row(
             children: [
-              Icon(Icons.group, color: const Color(0xFF5D1712), size: 24),
+              Icon(Icons.group, color: Color(0xFF5D1712), size: 24),
               SizedBox(width: 12),
-              Text('Family Members', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: const Color(0xFF2D1B18))),
+              Text('Family Members', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF2D1B18))),
             ],
           ),
           const SizedBox(height: 16),
@@ -352,35 +353,65 @@ class _MemberDetailsContentState extends State<MemberDetailsContent> {
   Widget _buildAvatarAndActions() {
     return Column(
       children: [
-        GestureDetector(
-          onTap: () => _showImageViewer(_userData?['Memberimage'], 'Profile Photo'),
-          child: MouseRegion(
-            cursor: SystemMouseCursors.click,
-            child: Container(
-              width: 150,
-              height: 150,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.grey.shade300, width: 2),
-                image: _userData?['Memberimage'] != null
-                    ? DecorationImage(
-                        image: NetworkImage('${ApiConfig.baseUrl}/assets/uploads/${_userData!['Memberimage']}'),
-                        fit: BoxFit.cover,
-                      )
-                    : null,
-              ),
-              child: _userData?['Memberimage'] == null
-                  ? Icon(Icons.person, size: 80, color: Colors.grey.shade400)
-                  : null,
-            ),
-          ),
+        Builder(
+          builder: (context) {
+            return ImageLoadState(
+              builder: (context, profileImageFailed, setImgState) {
+                final bool hasString = _userData?['Memberimage'] != null && _userData!['Memberimage'].toString().isNotEmpty && _userData!['Memberimage'].toString() != 'null';
+                final bool isValidImage = hasString && !profileImageFailed;
+                
+                return Tooltip(
+                  message: !isValidImage ? 'Profile Image Not Found' : '',
+                  waitDuration: const Duration(milliseconds: 300),
+                  child: GestureDetector(
+                    onTap: isValidImage ? () => _showImageViewer(_userData?['Memberimage'], 'Profile Photo') : null,
+                    child: MouseRegion(
+                      cursor: isValidImage ? SystemMouseCursors.click : SystemMouseCursors.basic,
+                      child: Container(
+                        width: 150,
+                        height: 150,
+                        decoration: BoxDecoration(
+                          color: isValidImage ? Colors.white : Colors.grey[200],
+                          shape: BoxShape.circle,
+                          border: Border.all(color: isValidImage ? Colors.black38 : Colors.grey[400]!),
+                          boxShadow: [
+                            BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4)),
+                          ],
+                        ),
+                        child: ClipOval(
+                          child: hasString
+                              ? Image.network(
+                                  '${ApiConfig.baseUrl}/assets/uploads/${_userData!['Memberimage']}',
+                                  fit: BoxFit.cover,
+                                  width: 150,
+                                  height: 150,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                                      setImgState();
+                                    });
+                                    return Icon(Icons.person, size: 80, color: Colors.grey.shade400);
+                                  },
+                                )
+                              : Icon(Icons.person, size: 80, color: Colors.grey.shade400),
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            );
+          },
         ),
         const SizedBox(height: 16),
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _roundIcon(Icons.contact_page_outlined, 'Community Certificate', onTap: () => _showImageViewer(_userData?['Communitycertificateimage'], 'Community Certificate')),
+            _roundIcon(
+              Icons.contact_page_outlined, 
+              'Community Certificate', 
+              onTap: () => _showImageViewer(_userData?['Communitycertificateimage'], 'Community Certificate'),
+              disabled: _userData?['Communitycertificateimage'] == null || _userData!['Communitycertificateimage'].toString().isEmpty || _userData!['Communitycertificateimage'].toString() == 'null',
+            ),
           ],
         ),
         const SizedBox(height: 16),
@@ -492,13 +523,13 @@ class _MemberDetailsContentState extends State<MemberDetailsContent> {
     );
   }
 
-  Widget _roundIcon(IconData icon, String tooltip, {VoidCallback? onTap}) {
+  Widget _roundIcon(IconData icon, String tooltip, {VoidCallback? onTap, bool disabled = false}) {
     return Container(
-      decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: const Color(0xFF5D1712).withOpacity(0.5))),
+      decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: disabled ? Colors.grey.withOpacity(0.5) : const Color(0xFF5D1712).withOpacity(0.5))),
       child: IconButton(
-        icon: Icon(icon, color: const Color(0xFF5D1712), size: 20),
-        onPressed: onTap ?? () {},
-        tooltip: tooltip,
+        icon: Icon(icon, color: disabled ? Colors.grey : const Color(0xFF5D1712), size: 20),
+        onPressed: disabled ? null : (onTap ?? () {}),
+        tooltip: disabled ? '$tooltip Not Found' : tooltip,
       ),
     );
   }

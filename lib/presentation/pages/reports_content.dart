@@ -9,6 +9,7 @@ import '../../utils/api_config.dart';
 import '../../utils/download_helper.dart' as dl;
 import 'update_details_content.dart';
 import '../widgets/custom_dropdown_search.dart';
+import '../../l10n/app_localizations.dart';
 
 class ReportsContent extends StatefulWidget {
   final int? userId;
@@ -400,8 +401,8 @@ class _ReportsContentState extends State<ReportsContent> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Report Status Filter:',
+            Text(
+              AppLocalizations.of(context)?.reportStatusFilter ?? 'Report Status Filter:',
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black54),
             ),
             const SizedBox(height: 12),
@@ -419,38 +420,59 @@ class _ReportsContentState extends State<ReportsContent> {
 
   Widget _buildFilterSection(bool isMobile) {
     return Card(
+      color: Colors.white,
+      surfaceTintColor: Colors.white,
       elevation: 1,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         child: Column(
           children: [
-            Wrap(
-              spacing: 24,
-              runSpacing: 24,
-              children: [
-                _buildFilterDropdown('CHOOSE EVENT YEAR', Icons.calendar_today, const Color(0xFF5D1712), _years, _selectedYear, (val) {
-                  setState(() => _selectedYear = val);
-                  _fetchEvents(val!);
-                }),
-                _buildFilterDropdown('CHOOSE EVENTS', Icons.event, Colors.orange, _events, _selectedEventId, (val) {
-                  setState(() => _selectedEventId = val);
-                }, isEvent: true),
-                _buildStatusFilter(),
-              ],
-            ),
+            isMobile
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _buildFilterDropdown(AppLocalizations.of(context)?.chooseEventYear ?? 'CHOOSE EVENT YEAR', Icons.calendar_today, const Color(0xFF5D1712), _years, _selectedYear, (val) {
+                        setState(() => _selectedYear = val);
+                        _fetchEvents(val!);
+                      }, isMobile: isMobile),
+                      const SizedBox(height: 16),
+                      _buildFilterDropdown(AppLocalizations.of(context)?.chooseEvents ?? 'CHOOSE EVENTS', Icons.event, Colors.orange, _events, _selectedEventId, (val) {
+                        setState(() => _selectedEventId = val);
+                      }, isEvent: true, isMobile: isMobile),
+                      const SizedBox(height: 16),
+                      _buildStatusFilter(isMobile),
+                    ],
+                  )
+                : Wrap(
+                    spacing: 24,
+                    runSpacing: 24,
+                    children: [
+                      _buildFilterDropdown(AppLocalizations.of(context)?.chooseEventYear ?? 'CHOOSE EVENT YEAR', Icons.calendar_today, const Color(0xFF5D1712), _years, _selectedYear, (val) {
+                        setState(() => _selectedYear = val);
+                        _fetchEvents(val!);
+                      }, isMobile: isMobile),
+                      _buildFilterDropdown(AppLocalizations.of(context)?.chooseEvents ?? 'CHOOSE EVENTS', Icons.event, Colors.orange, _events, _selectedEventId, (val) {
+                        setState(() => _selectedEventId = val);
+                      }, isEvent: true, isMobile: isMobile),
+                      _buildStatusFilter(isMobile),
+                    ],
+                  ),
             const SizedBox(height: 16),
             Align(
               alignment: isMobile ? Alignment.center : Alignment.centerRight,
-              child: ElevatedButton.icon(
-                onPressed: () => _applyFilters(resetPage: true),
-                icon: const Icon(Icons.filter_alt),
-                label: const Text('Apply Filter'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF5D1712),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              child: SizedBox(
+                width: isMobile ? double.infinity : null,
+                child: ElevatedButton.icon(
+                  onPressed: () => _applyFilters(resetPage: true),
+                  icon: const Icon(Icons.filter_alt),
+                  label: Text(AppLocalizations.of(context)?.applyFilterBtn ?? 'Apply Filter'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF5D1712),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
                 ),
               ),
             ),
@@ -460,7 +482,7 @@ class _ReportsContentState extends State<ReportsContent> {
     );
   }
 
-  Widget _buildFilterDropdown(String label, IconData icon, Color iconColor, List<dynamic> items, dynamic value, Function(dynamic) onChanged, {bool isEvent = false}) {
+  Widget _buildFilterDropdown(String label, IconData icon, Color iconColor, List<dynamic> items, dynamic value, Function(dynamic) onChanged, {bool isEvent = false, bool isMobile = false}) {
     // Build a Map<String, String> where key = id (as string), value = display label
     final Map<String, String> dropdownMap = {
       for (var item in items)
@@ -471,8 +493,8 @@ class _ReportsContentState extends State<ReportsContent> {
     final String? selectedKey = value != null ? value.toString() : null;
 
     return Container(
-      width: 280,
-      constraints: const BoxConstraints(maxWidth: 300),
+      width: isMobile ? double.infinity : 280,
+      constraints: BoxConstraints(maxWidth: isMobile ? double.infinity : 300),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -486,7 +508,7 @@ class _ReportsContentState extends State<ReportsContent> {
           const SizedBox(height: 8),
           CustomDropdownSearch(
             label: '',
-            hint: isEvent ? 'Choose Event' : 'Choose Year',
+            hint: isEvent ? (AppLocalizations.of(context)?.chooseEventHint ?? 'Choose Event') : (AppLocalizations.of(context)?.chooseYearHint ?? 'Choose Year'),
             dropdownMap: dropdownMap,
             value: selectedKey,
             onChanged: (val) {
@@ -502,35 +524,39 @@ class _ReportsContentState extends State<ReportsContent> {
     );
   }
 
-  Widget _buildStatusFilter() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Row(
-          children: [
-            Icon(Icons.payment, size: 16, color: Colors.green),
-            SizedBox(width: 8),
-            Text('PAYMENT STATUS', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black54)),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-          decoration: BoxDecoration(
-            border: Border.all(color: Colors.grey.shade300),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Wrap(
-            spacing: 8,
-            runSpacing: 4,
+  Widget _buildStatusFilter(bool isMobile) {
+    return SizedBox(
+      width: isMobile ? double.infinity : null,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              _buildRadioOption('Paid Users', 'Paid'),
-              _buildRadioOption('Unpaid Users', 'Pending'),
-              _buildRadioOption('All Users', 'All'),
+              const Icon(Icons.payment, size: 16, color: Colors.green),
+              const SizedBox(width: 8),
+              Text(AppLocalizations.of(context)?.paymentStatusFilter ?? 'PAYMENT STATUS', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black54)),
             ],
           ),
-        ),
-      ],
+          const SizedBox(height: 8),
+          Container(
+            width: isMobile ? double.infinity : null,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey.shade300),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 4,
+              children: [
+                _buildRadioOption(AppLocalizations.of(context)?.paidUsers ?? 'Paid Users', 'Paid'),
+                _buildRadioOption(AppLocalizations.of(context)?.unpaidUsers ?? 'Unpaid Users', 'Pending'),
+                _buildRadioOption(AppLocalizations.of(context)?.allUsers ?? 'All Users', 'All'),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -561,7 +587,7 @@ class _ReportsContentState extends State<ReportsContent> {
         crossAxisAlignment: WrapCrossAlignment.center,
         children: [
           Text(
-            'Total Members: $_totalItems',
+            "${AppLocalizations.of(context)?.totalMembersHeader ?? 'Total Members: '}$_totalItems",
             style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Colors.black54),
           ),
           SizedBox(
@@ -569,7 +595,7 @@ class _ReportsContentState extends State<ReportsContent> {
             child: ElevatedButton.icon(
               onPressed: _downloadReport,
               icon: const Icon(Icons.download, size: 18),
-              label: const Text('Download Excel'),
+              label: Text(AppLocalizations.of(context)?.downloadExcelBtn ?? 'Download Excel'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFFFC107),
                 foregroundColor: Colors.black87,
@@ -612,17 +638,17 @@ class _ReportsContentState extends State<ReportsContent> {
                 padding: const EdgeInsets.only(right: 20),
                 child: Row(
                   children: [
-                    _buildCell('ROLE', colRole, isHeader: true, hasDivider: true),
-                    _buildCell('DISTRICT', colDistrict, isHeader: true, hasDivider: true),
-                    _buildCell('TALUK', colTaluk, isHeader: true, hasDivider: true),
-                    _buildCell('PANCHAYAT', colPanchayat, isHeader: true, hasDivider: true),
-                    _buildCell('VILLAGE', colVillage, isHeader: true, hasDivider: showEventCols),
+                    _buildCell(AppLocalizations.of(context)?.roleHeader ?? 'ROLE', colRole, isHeader: true, hasDivider: true),
+                    _buildCell(AppLocalizations.of(context)?.districtHeader ?? 'DISTRICT', colDistrict, isHeader: true, hasDivider: true),
+                    _buildCell(AppLocalizations.of(context)?.talukHeader ?? 'TALUK', colTaluk, isHeader: true, hasDivider: true),
+                    _buildCell(AppLocalizations.of(context)?.panchayatHeader ?? 'PANCHAYAT', colPanchayat, isHeader: true, hasDivider: true),
+                    _buildCell(AppLocalizations.of(context)?.villageUpperHeader ?? 'VILLAGE', colVillage, isHeader: true, hasDivider: showEventCols),
                     if (showEventCols) ...[
-                      _buildCell('EVENTMONEY', colEventMoney, isHeader: true, hasDivider: true),
-                      _buildCell('PAIDCASH', colPaidCash, isHeader: true, hasDivider: true),
-                      _buildCell('PENDING', colPending, isHeader: true, hasDivider: true),
-                      _buildCell('STATUS', colStatus, isHeader: true, hasDivider: true),
-                      _buildCell('LASTPAID', colLastPaid, isHeader: true, hasDivider: false),
+                      _buildCell(AppLocalizations.of(context)?.eventMoneyHeader ?? 'EVENTMONEY', colEventMoney, isHeader: true, hasDivider: true),
+                      _buildCell(AppLocalizations.of(context)?.paidCashHeader ?? 'PAIDCASH', colPaidCash, isHeader: true, hasDivider: true),
+                      _buildCell(AppLocalizations.of(context)?.pendingHeader ?? 'PENDING', colPending, isHeader: true, hasDivider: true),
+                      _buildCell(AppLocalizations.of(context)?.statusLabel?.toUpperCase() ?? 'STATUS', colStatus, isHeader: true, hasDivider: true),
+                      _buildCell(AppLocalizations.of(context)?.lastPaidHeader ?? 'LASTPAID', colLastPaid, isHeader: true, hasDivider: false),
                     ],
                   ],
                 ),
@@ -658,10 +684,10 @@ class _ReportsContentState extends State<ReportsContent> {
                       padding: const EdgeInsets.only(left: 20),
                       child: Row(
                         children: [
-                          _buildCell('S.NO', colSno, isHeader: true, hasDivider: true),
-                          _buildCell('FAMILYMEMBERSHIP ID', colFamilyId, isHeader: true, hasDivider: true),
-                          _buildCell('USER NAME', colName, isHeader: true, hasDivider: true),
-                          _buildCell('PHONE NO', colPhone, isHeader: true, hasDivider: true),
+                          _buildCell(AppLocalizations.of(context)?.sNo?.toUpperCase() ?? 'S.NO', colSno, isHeader: true, hasDivider: true),
+                          _buildCell(AppLocalizations.of(context)?.familyMembershipIdHeader ?? 'FAMILYMEMBERSHIP ID', colFamilyId, isHeader: true, hasDivider: true),
+                          _buildCell(AppLocalizations.of(context)?.userNameHeader ?? 'USER NAME', colName, isHeader: true, hasDivider: true),
+                          _buildCell(AppLocalizations.of(context)?.phoneNoHeader ?? 'PHONE NO', colPhone, isHeader: true, hasDivider: true),
                         ],
                       ),
                     ),

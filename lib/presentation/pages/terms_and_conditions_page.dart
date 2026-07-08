@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../l10n/app_localizations.dart';
 
 class TermsAndConditionsPage extends StatelessWidget {
   const TermsAndConditionsPage({super.key});
@@ -43,7 +44,7 @@ class TermsAndConditionsPage extends StatelessWidget {
                   ),
                   const SizedBox(height: 40),
                   Text(
-                    'Terms and Conditions',
+                    AppLocalizations.of(context)?.termsAndConditionsTitle ?? 'Terms and Conditions',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: MediaQuery.of(context).size.width < 600 ? 32 : 48,
@@ -54,7 +55,7 @@ class TermsAndConditionsPage extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'Legal agreement for using Poondurai Kaadai Kulam platform',
+                    AppLocalizations.of(context)?.termsSubTitle ?? 'Legal agreement for using Poondurai Kaadai Kulam platform',
                     style: TextStyle(
                       color: Colors.white.withOpacity(0.5),
                       fontSize: 18,
@@ -101,21 +102,18 @@ class TermsAndConditionsPage extends StatelessWidget {
                     
                     // Highlight Box
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 20),
-                      decoration: const BoxDecoration(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
                         color: const Color(0xFFFFF3E0),
-                        border: Border(
-                          left: BorderSide(color: const Color(0xFFE65100), width: 4),
-                        ),
-                        borderRadius: BorderRadius.only(
-                          topRight: Radius.circular(12),
-                          bottomRight: Radius.circular(12),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: const Color(0xFFFFB74D).withOpacity(0.3),
                         ),
                       ),
-                      child: const Text(
-                        'Please read these terms and conditions carefully before using our services. By using our platform, you agree to comply with and be bound by these terms.',
-                        style: TextStyle(
-                          color: const Color(0xFFE65100),
+                      child: Text(
+                        AppLocalizations.of(context)?.termsIntro ?? 'Please read these terms and conditions carefully before using our services. By using our platform, you agree to comply with and be bound by these terms.',
+                        style: const TextStyle(
+                          color: Color(0xFFE65100),
                           fontWeight: FontWeight.bold,
                           fontSize: 16.5,
                           height: 1.6,
@@ -124,32 +122,32 @@ class TermsAndConditionsPage extends StatelessWidget {
                     ),
                     const SizedBox(height: 40),
                     
-                    _buildSectionTitle('1. Agreement to Terms'),
-                    _buildSectionText('By accessing or using our website, you agree to be bound by these Terms and Conditions and our Privacy Policy. If you do not agree with any part of these terms, you must not use our services. This agreement constitutes a legally binding contract between you and Poondurai Kaadai Kulam.'),
+                    _buildSectionTitle(AppLocalizations.of(context)?.termsSec1Title ?? '1. Agreement to Terms'),
+                    _buildSectionText(AppLocalizations.of(context)?.termsSec1Desc ?? 'By accessing or using our website, you agree to be bound by these Terms and Conditions and our Privacy Policy. If you do not agree with any part of these terms, you must not use our services. This agreement constitutes a legally binding contract between you and Poondurai Kaadai Kulam.'),
                     
-                    _buildSectionTitle('2. User Registration'),
-                    _buildSectionText('To access certain features of the website, you are required to register for an account. You agree to provide accurate, current, and complete information during the registration process (Mobile Number, Address, etc.) and to update such information to keep it accurate, current, and complete.'),
+                    _buildSectionTitle(AppLocalizations.of(context)?.termsSec2Title ?? '2. User Registration'),
+                    _buildSectionText(AppLocalizations.of(context)?.termsSec2Desc ?? 'To access certain features of the website, you are required to register for an account. You agree to provide accurate, current, and complete information during the registration process (Mobile Number, Address, etc.) and to update such information to keep it accurate, current, and complete.'),
                     
-                    _buildSectionTitle('3. Responsibility for Account'),
-                    _buildSectionText('You are solely responsible for maintaining the confidentiality of your account password and for all activities that occur under your account. You agree to notify us immediately of any unauthorized use of your account or any other breach of security.'),
+                    _buildSectionTitle(AppLocalizations.of(context)?.termsSec3Title ?? '3. Responsibility for Account'),
+                    _buildSectionText(AppLocalizations.of(context)?.termsSec3Desc ?? 'You are solely responsible for maintaining the confidentiality of your account password and for all activities that occur under your account. You agree to notify us immediately of any unauthorized use of your account or any other breach of security.'),
                     
-                    _buildSectionTitle('4. Use of Information'),
-                    _buildSectionText('The information provided on this platform is for community management and membership purposes. While we strive to maintain high data accuracy, we do not warrant the completeness or reliability of user-submitted information at all times.'),
+                    _buildSectionTitle(AppLocalizations.of(context)?.termsSec4Title ?? '4. Use of Information'),
+                    _buildSectionText(AppLocalizations.of(context)?.termsSec4Desc ?? 'The information provided on this platform is for community management and membership purposes. While we strive to maintain high data accuracy, we do not warrant the completeness or reliability of user-submitted information at all times.'),
                     
-                    _buildSectionTitle('5. Prohibited Activities'),
-                    _buildSectionText('You agree not to use the platform for any unlawful purpose or any purpose prohibited under these Terms. Prohibited activities include but are not limited to: uploading false documents, attempting to breach security, or harassing other community members.'),
+                    _buildSectionTitle(AppLocalizations.of(context)?.termsSec5Title ?? '5. Prohibited Activities'),
+                    _buildSectionText(AppLocalizations.of(context)?.termsSec5Desc ?? 'You agree not to use the platform for any unlawful purpose or any purpose prohibited under these Terms. Prohibited activities include but are not limited to: uploading false documents, attempting to breach security, or harassing other community members.'),
                     
-                    _buildSectionTitle('6. Intellectual Property'),
-                    _buildSectionText('All content included on this website, such as custom scripts, branding, UI designs, and logos, is the property of Poondurai Kaadai Kulam or its content suppliers and is protected by copyright laws.'),
+                    _buildSectionTitle(AppLocalizations.of(context)?.termsSec6Title ?? '6. Intellectual Property'),
+                    _buildSectionText(AppLocalizations.of(context)?.termsSec6Desc ?? 'All content included on this website, such as custom scripts, branding, UI designs, and logos, is the property of Poondurai Kaadai Kulam or its content suppliers and is protected by copyright laws.'),
                     
-                    _buildSectionTitle('7. Termination of Use'),
-                    _buildSectionText('We reserve the right to terminate or suspend your access to the platform without notice, for any conduct that we, in our sole discretion, believe is in violation of any applicable law or is harmful to the interests of the community.'),
+                    _buildSectionTitle(AppLocalizations.of(context)?.termsSec7Title ?? '7. Termination of Use'),
+                    _buildSectionText(AppLocalizations.of(context)?.termsSec7Desc ?? 'We reserve the right to terminate or suspend your access to the platform without notice, for any conduct that we, in our sole discretion, believe is in violation of any applicable law or is harmful to the interests of the community.'),
                     
-                    _buildSectionTitle('8. Changes to Terms'),
-                    _buildSectionText('We reserve the right to modify these Terms and Conditions at any time. Changes will be effective immediately upon posting. Your continued use of the website following changes will mean that you accept and agree to the modified terms.'),
+                    _buildSectionTitle(AppLocalizations.of(context)?.termsSec8Title ?? '8. Changes to Terms'),
+                    _buildSectionText(AppLocalizations.of(context)?.termsSec8Desc ?? 'We reserve the right to modify these Terms and Conditions at any time. Changes will be effective immediately upon posting. Your continued use of the website following changes will mean that you accept and agree to the modified terms.'),
                     
-                    _buildSectionTitle('9. Contact Support'),
-                    _buildSectionText('If you have any questions about these Terms and Conditions, please contact the administrator via the official community channels.'),
+                    _buildSectionTitle(AppLocalizations.of(context)?.termsSec9Title ?? '9. Contact Support'),
+                    _buildSectionText(AppLocalizations.of(context)?.termsSec9Desc ?? 'If you have any questions about these Terms and Conditions, please contact the administrator via the official community channels.'),
                     
                     const SizedBox(height: 20),
                   ],

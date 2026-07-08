@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import '../../l10n/app_localizations.dart';
 import '../widgets/loading_spinner.dart';
 import '../../utils/api_config.dart';
 import 'update_details_content.dart';
@@ -28,6 +29,8 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
   String? _error;
   bool _isTreeView = false;
   final ScrollController _treeScrollController = ScrollController();
+  Map<String, dynamic>? _myCoordinator;
+  bool _isLoadingCoordinator = true;
 
   @override
   void dispose() {
@@ -39,11 +42,13 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text('Event Participation:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
+            Text(AppLocalizations.of(context)?.eventParticipation ?? 'Event Participation', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
             IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
           ],
         ),
@@ -73,15 +78,15 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
                         constraints: BoxConstraints(minWidth: constraints.maxWidth),
                         child: DataTable(
                           border: TableBorder(verticalInside: BorderSide(color: Colors.grey.shade300, width: 1)),
-                          headingRowColor: MaterialStateProperty.all(Colors.grey[50]),
+                          headingRowColor: MaterialStateProperty.all(const Color(0xFF5D1712)),
                           columns: const [
-                            DataColumn(label: Text('SNo', style: TextStyle(fontWeight: FontWeight.bold))),
-                            DataColumn(label: Text('Event Name', style: TextStyle(fontWeight: FontWeight.bold))),
-                            DataColumn(label: Text('Tax Amount', style: TextStyle(fontWeight: FontWeight.bold))),
-                            DataColumn(label: Text('Paid Amount', style: TextStyle(fontWeight: FontWeight.bold))),
-                            DataColumn(label: Text('Balance Amount', style: TextStyle(fontWeight: FontWeight.bold))),
-                            DataColumn(label: Text('Status', style: TextStyle(fontWeight: FontWeight.bold))),
-                            DataColumn(label: Text('Payment Date', style: TextStyle(fontWeight: FontWeight.bold))),
+                            DataColumn(label: Text('SNo', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white))),
+                            DataColumn(label: Text('Event Name', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white))),
+                            DataColumn(label: Text('Tax Amount', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white))),
+                            DataColumn(label: Text('Paid Amount', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white))),
+                            DataColumn(label: Text('Balance Amount', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white))),
+                            DataColumn(label: Text('Status', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white))),
+                            DataColumn(label: Text('Payment Date', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white))),
                           ],
                           rows: data.asMap().entries.map((entry) {
                             final i = entry.key;
@@ -149,6 +154,7 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
             _familyMembers = familyData['data'];
             _isLoading = false;
           });
+          _fetchMyCoordinator();
         }
       } else {
         if (mounted) {
@@ -167,6 +173,123 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
       }
     }
   }
+
+  Future<void> _fetchMyCoordinator() async {
+    if (widget.userRole != 3) {
+      if (mounted) setState(() => _isLoadingCoordinator = false);
+      return;
+    }
+    
+    try {
+        final fid = _userData?['Familymembershipid'];
+        if (fid != null && fid.toString().isNotEmpty) {
+          final response = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/member-coordinator-by-fid/$fid'));
+          if (response.statusCode == 200) {
+            final data = jsonDecode(response.body);
+            if (mounted) {
+              setState(() {
+                _myCoordinator = data['coordinator'];
+                _isLoadingCoordinator = false;
+              });
+            }
+          } else {
+             if (mounted) setState(() => _isLoadingCoordinator = false);
+          }
+        } else {
+           if (mounted) setState(() => _isLoadingCoordinator = false);
+        }
+    } catch (e) {
+      print('Error fetching coordinator details: $e');
+      if (mounted) setState(() => _isLoadingCoordinator = false);
+    }
+  }
+
+  Widget _buildMyCoordinatorCard() {
+    if (widget.userRole != 3) return const SizedBox.shrink();
+
+    if (_isLoadingCoordinator) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_myCoordinator == null) {
+      return const Center(
+        child: Text('No coordinator assigned yet.', style: TextStyle(color: Colors.black54)),
+      );
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      margin: const EdgeInsets.only(top: 24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.black38),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.person_pin, color: Color(0xFF5D1712), size: 28),
+              const SizedBox(width: 12),
+              Text(
+                AppLocalizations.of(context)?.coordinatorDetails ?? 'My Coordinator Details',
+                style: TextStyle(
+                  color: Color(0xFF5D1712),
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Wrap(
+            spacing: 32,
+            runSpacing: 16,
+            children: [
+              _buildCoordinatorInfo(AppLocalizations.of(context)?.nameHeader ?? 'Name', _myCoordinator!['Name']?.toString() ?? 'N/A'),
+              _buildCoordinatorInfo(AppLocalizations.of(context)?.mobileLabel ?? 'Mobile', _myCoordinator!['Phonenumber']?.toString() ?? 'N/A'),
+              _buildCoordinatorInfo(AppLocalizations.of(context)?.villageLabel ?? 'Village', _myCoordinator!['Village']?.toString() ?? 'N/A'),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCoordinatorInfo(String label, String value) {
+    return Text.rich(
+      TextSpan(
+        text: '$label: ',
+        style: TextStyle(
+          color: Colors.grey.shade600,
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+        ),
+        children: [
+          TextSpan(
+            text: value,
+            style: const TextStyle(
+              color: Color(0xFF2D1B18),
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -196,7 +319,7 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
                         const SizedBox(width: 12),
                         Flexible(
                           child: Text(
-                            'My Details', 
+                            AppLocalizations.of(context)?.myDetails ?? 'My Details', 
                             style: TextStyle(
                               fontSize: isMobile ? 20 : 28, 
                               fontWeight: FontWeight.bold, 
@@ -221,6 +344,7 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
                     _buildProfileCard(isMobile),
                     const SizedBox(height: 32),
                     _buildDetailsCard(isMobile),
+                    _buildMyCoordinatorCard(),
                   ],
                 )
               else
@@ -229,7 +353,15 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
                   children: [
                     _buildProfileCard(isMobile),
                     const SizedBox(width: 60),
-                    Expanded(child: _buildDetailsCard(isMobile)),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildDetailsCard(isMobile),
+                          _buildMyCoordinatorCard(),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
 
@@ -248,7 +380,7 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
                       const Icon(Icons.group, color: Color(0xFFE65100), size: 28),
                       const SizedBox(width: 12),
                       Text(
-                        'Family Members', 
+                        AppLocalizations.of(context)?.familyMembersList ?? 'Family Members', 
                         style: TextStyle(fontSize: isMobile ? 20 : 24, fontWeight: FontWeight.bold, color: const Color(0xFF2D1B18))
                       ),
                     ],
@@ -262,8 +394,8 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        _buildToggleButton('Table', Icons.table_chart, !_isTreeView, () => setState(() => _isTreeView = false)),
-                        _buildToggleButton('Tree', Icons.account_tree, _isTreeView, () => setState(() => _isTreeView = true)),
+                        _buildToggleButton(AppLocalizations.of(context)?.tableView ?? 'Table', Icons.table_chart, !_isTreeView, () => setState(() => _isTreeView = false)),
+                        _buildToggleButton(AppLocalizations.of(context)?.treeView ?? 'Tree', Icons.account_tree, _isTreeView, () => setState(() => _isTreeView = true)),
                       ],
                     ),
                   ),
@@ -283,51 +415,48 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
       width: isMobile ? double.infinity : 300,
       child: Column(
         children: [
-          Builder(builder: (context) {
-            bool profileImageFailed = false;
-            return StatefulBuilder(builder: (context, setImgState) {
-              final hasProfileImage = _userData?['Memberimage'] != null && _userData!['Memberimage'].toString().isNotEmpty;
-              return Tooltip(
-                message: !hasProfileImage || profileImageFailed ? 'Profile Image Not Found' : '',
-                waitDuration: const Duration(milliseconds: 300),
-                child: GestureDetector(
-                  onTap: (hasProfileImage && !profileImageFailed)
-                      ? () => _showImageDialog('Profile Picture', _userData!['Memberimage'])
-                      : null,
-                  child: MouseRegion(
-                  cursor: (hasProfileImage && !profileImageFailed) ? SystemMouseCursors.click : SystemMouseCursors.basic,
-                  child: Container(
-                    width: 200,
-                    height: 200,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[200],
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 4),
-                      boxShadow: [
-                        BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 4)),
-                      ],
-                    ),
-                    child: ClipOval(
-                      child: hasProfileImage && !profileImageFailed
-                          ? Image.network(
-                              '${ApiConfig.baseUrl}/assets/uploads/${_userData!['Memberimage']}',
-                              fit: BoxFit.cover,
-                              width: 200,
-                              height: 200,
-                              errorBuilder: (context, error, stackTrace) {
-                                WidgetsBinding.instance.addPostFrameCallback((_) {
-                                  setImgState(() => profileImageFailed = true);
-                                });
-                                return Icon(Icons.person, size: 100, color: Colors.grey[400]);
-                              },
-                            )
-                          : Icon(Icons.person, size: 100, color: Colors.grey[400]),
-                    ),
+          _ImageLoadState(builder: (context, profileImageFailed, setImgState) {
+            final hasProfileImage = _userData?['Memberimage'] != null && _userData!['Memberimage'].toString().isNotEmpty;
+            return Tooltip(
+              message: !hasProfileImage || profileImageFailed ? 'Profile Image Not Found' : '',
+              waitDuration: const Duration(milliseconds: 300),
+              child: GestureDetector(
+                onTap: (hasProfileImage && !profileImageFailed)
+                    ? () => _showImageDialog('Profile Picture', _userData!['Memberimage'])
+                    : null,
+                child: MouseRegion(
+                cursor: (hasProfileImage && !profileImageFailed) ? SystemMouseCursors.click : SystemMouseCursors.basic,
+                child: Container(
+                  width: 200,
+                  height: 200,
+                  decoration: BoxDecoration(
+                    color: (hasProfileImage && !profileImageFailed) ? Colors.white : Colors.grey[200],
+                    shape: BoxShape.circle,
+                    border: Border.all(color: (hasProfileImage && !profileImageFailed) ? Colors.black38 : Colors.grey[400]!),
+                    boxShadow: [
+                      BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4)),
+                    ],
+                  ),
+                  child: ClipOval(
+                    child: hasProfileImage && !profileImageFailed
+                        ? Image.network(
+                            '${ApiConfig.baseUrl}/assets/uploads/${_userData!['Memberimage']}',
+                            fit: BoxFit.cover,
+                            width: 200,
+                            height: 200,
+                            errorBuilder: (context, error, stackTrace) {
+                              WidgetsBinding.instance.addPostFrameCallback((_) {
+                                setImgState();
+                              });
+                              return Icon(Icons.person, size: 100, color: Colors.grey[400]);
+                            },
+                          )
+                        : Icon(Icons.person, size: 100, color: Colors.grey[400]),
                   ),
                 ),
-                ),
-              );
-            });
+              ),
+              ),
+            );
           }),
           const SizedBox(height: 24),
           Row(
@@ -337,9 +466,9 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
             ],
           ),
           const SizedBox(height: 32),
-          _buildActionButton('Event Participation', Icons.event_available, const Color(0xFFE8F5E9), const Color(0xFF2E7D32), onTap: _showEventParticipationDialog),
+          _buildActionButton(AppLocalizations.of(context)?.eventParticipation ?? 'Event Participation', Icons.event_available, const Color(0xFFE8F5E9), const Color(0xFF2E7D32), onTap: _showEventParticipationDialog),
           const SizedBox(height: 12),
-          _buildActionButton('Update Details', Icons.person_outline, const Color(0xFFFFF8E1), const Color(0xFFF57C00), onTap: () {
+          _buildActionButton(AppLocalizations.of(context)?.updateDetails ?? 'Update Details', Icons.person_outline, const Color(0xFFFFF8E1), const Color(0xFFF57C00), onTap: () {
             if (_userData != null) {
               showDialog(
                 context: context,
@@ -362,7 +491,7 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
             }
           }),
           const SizedBox(height: 12),
-          _buildActionButton('Add Family Member', Icons.person_add_alt_1, const Color(0xFFE3F2FD), const Color(0xFF5D1712), onTap: () {
+          _buildActionButton(AppLocalizations.of(context)?.addFamilyMember ?? 'Add Family Member', Icons.person_add_alt_1, const Color(0xFFF5E6E6), const Color(0xFF5D1712), onTap: () {
             if (_userData != null) {
               showDialog(
                 context: context,
@@ -384,10 +513,11 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
     return Container(
       padding: EdgeInsets.all(isMobile ? 20 : 40),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8F9FA),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.black38),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4)),
+          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4)),
         ],
       ),
       child: Column(
@@ -396,7 +526,7 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(child: _buildDetailRow('Name:', (_userData?['Name'] ?? 'N/A').toString(), isBold: true, isBlue: true, isMobile: isMobile)),
+              Expanded(child: _buildDetailRow(AppLocalizations.of(context)?.nameLabel ?? 'Name:', (_userData?['Name'] ?? 'N/A').toString(), isBold: true, isBlue: true, isMobile: isMobile)),
               if (_userData?['has_pending_update'] == true)
                 Container(
                   margin: const EdgeInsets.only(left: 8),
@@ -414,11 +544,11 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
             ],
           ),
           const SizedBox(height: 32),
-          _buildDetailRow('Family Membership ID:', (_userData?['Familymembershipid'] ?? 'N/A').toString(), isPill: true, isMobile: isMobile),
-          const SizedBox(height: 32),
-          _buildDetailRow('Phone Number:', (_userData?['Phonenumber'] ?? 'N/A').toString(), isMobile: isMobile),
-          const SizedBox(height: 32),
-          _buildAddressRow('Address:', _userData, isMobile: isMobile),
+          _buildDetailRow(AppLocalizations.of(context)?.familyMembershipId ?? 'Family Membership ID:', (_userData?['Familymembershipid'] ?? 'N/A').toString(), isPill: true, isMobile: isMobile),
+          const SizedBox(height: 16),
+          _buildDetailRow(AppLocalizations.of(context)?.phoneNumber ?? 'Phone Number:', (_userData?['Phonenumber'] ?? 'N/A').toString(), isMobile: isMobile),
+          const SizedBox(height: 16),
+          _buildAddressRow(AppLocalizations.of(context)?.address ?? 'Address:', _userData, isMobile: isMobile),
         ],
       ),
     );
@@ -1317,6 +1447,12 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
       iconColor = Colors.pink.shade700;
     }
 
+    final isDead = member['is_dead']?.toString().toLowerCase() == 'dead' || member['is_dead']?.toString() == '1';
+    if (isDead) {
+      iconBgColor = Colors.grey.shade300;
+      iconColor = Colors.grey.shade600;
+    }
+
     final displayRole = _getDisplayRole(member);
     final isHead = displayRole == 'Head';
     final hasImage = member['Memberimage'] != null && member['Memberimage'].toString().isNotEmpty;
@@ -1423,10 +1559,10 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
                 width: 140,
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
                 decoration: BoxDecoration(
-                  color: isHead ? Colors.orange.shade50 : Colors.white,
+                  color: isDead ? Colors.grey.shade100 : (isHead ? Colors.orange.shade50 : Colors.white),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: isHead ? const Color(0xFFE65100) : const Color(0xFFE2E8F0),
+                    color: isDead ? Colors.grey.shade400 : (isHead ? const Color(0xFFE65100) : const Color(0xFFE2E8F0)),
                     width: isHead ? 2 : 1,
                   ),
                   boxShadow: [
@@ -1439,11 +1575,9 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
                 ),
       child: Column(
         children: [
-          Builder(builder: (context) {
-            bool imageLoadFailed = false;
-            return StatefulBuilder(
-              key: ValueKey('tree_node_img_${member['Id']}_${member['isSynthetic']}'),
-              builder: (context, setImgState) {
+          _ImageLoadState(
+            key: ValueKey('tree_node_img_${member['Id']}_${member['isSynthetic']}'),
+            builder: (context, imageLoadFailed, setImgState) {
               return Tooltip(
                 message: !hasImage || imageLoadFailed ? 'Image Not Found' : '',
                 waitDuration: const Duration(milliseconds: 300),
@@ -1460,27 +1594,48 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
                       ),
                       clipBehavior: Clip.antiAlias,
                       child: hasImage && !imageLoadFailed
-                          ? Image.network(
+                          ? (isDead ? ColorFiltered(
+                              colorFilter: const ColorFilter.matrix(<double>[
+                                0.2126, 0.7152, 0.0722, 0, 0,
+                                0.2126, 0.7152, 0.0722, 0, 0,
+                                0.2126, 0.7152, 0.0722, 0, 0,
+                                0,      0,      0,      1, 0,
+                              ]),
+                              child: Image.network(
+                                '${ApiConfig.baseUrl}/assets/uploads/${member['Memberimage']}',
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                                    setImgState();
+                                  });
+                                  return Icon(icon, color: iconColor, size: 28);
+                                },
+                              ),
+                            ) : Image.network(
                               '${ApiConfig.baseUrl}/assets/uploads/${member['Memberimage']}',
                               fit: BoxFit.cover,
                               errorBuilder: (context, error, stackTrace) {
                                 WidgetsBinding.instance.addPostFrameCallback((_) {
-                                  setImgState(() => imageLoadFailed = true);
+                                  setImgState();
                                 });
                                 return Icon(icon, color: iconColor, size: 28);
                               },
-                            )
+                            ))
                           : Icon(icon, color: iconColor, size: 28),
                     ),
                   ),
                 ),
               );
-            });
-          }),
+            }
+          ),
           const SizedBox(height: 8),
           Text(
-            member['Name'] ?? 'Unknown',
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF1E293B)),
+            (isDead ? 'Late. ' : '') + (member['Name'] ?? 'Unknown'),
+            style: TextStyle(
+              fontWeight: FontWeight.bold, 
+              fontSize: 13, 
+              color: isDead ? Colors.grey.shade600 : const Color(0xFF1E293B)
+            ),
             textAlign: TextAlign.center,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
@@ -1489,7 +1644,7 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: isHead ? const Color(0xFFFFF3E0) : Colors.grey.shade100,
+              color: isDead ? Colors.grey.shade300 : (isHead ? const Color(0xFFFFF3E0) : Colors.grey.shade100),
               borderRadius: BorderRadius.circular(4),
             ),
             child: Text(
@@ -1497,7 +1652,7 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
               style: TextStyle(
                 fontSize: 12, 
                 fontWeight: isHead ? FontWeight.bold : FontWeight.w600,
-                color: isHead ? const Color(0xFFE65100) : Colors.grey.shade600,
+                color: isDead ? Colors.grey.shade700 : (isHead ? const Color(0xFFE65100) : Colors.grey.shade600),
               ),
               textAlign: TextAlign.center,
             ),
@@ -1595,13 +1750,13 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
                   columnSpacing: 24,
                   border: const TableBorder(verticalInside: BorderSide(color: Colors.black12, width: 1)),
                   headingRowColor: MaterialStateProperty.all(const Color(0xFF2D1B18)),
-                  columns: const [
-                    DataColumn(label: Text('S.No', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
-                    DataColumn(label: Text('Name', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
-                    DataColumn(label: Text('Relationship', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
-                    DataColumn(label: Text('Gender', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
-                    DataColumn(label: Text('Age', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
-                    DataColumn(label: Text('Action', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
+                  columns: [
+                    DataColumn(label: Text(AppLocalizations.of(context)?.sNo ?? 'S.No', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
+                    DataColumn(label: Text(AppLocalizations.of(context)?.nameHeader ?? 'Name', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
+                    DataColumn(label: Text(AppLocalizations.of(context)?.relationshipHeader ?? 'Relationship', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
+                    DataColumn(label: Text(AppLocalizations.of(context)?.genderHeader ?? 'Gender', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
+                    DataColumn(label: Text(AppLocalizations.of(context)?.ageHeader ?? 'Age', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
+                    DataColumn(label: Text(AppLocalizations.of(context)?.actionHeader ?? 'Action', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
                   ],
                   rows: tableMembers.asMap().entries.map<DataRow>((entry) {
                     final index = entry.key;
@@ -1621,6 +1776,7 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
                       } catch (_) {}
                     }
       
+                    bool isDead = fm['is_dead']?.toString().toLowerCase() == 'dead' || fm['is_dead']?.toString() == '1';
                     bool isNewMemberPending = fm['Approvedstatus'] == 'Pending';
                     bool isUpdatePending = fm['pending_status'] == 'Pending';
 
@@ -1643,7 +1799,13 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Text(fm['Name'] ?? 'N/A'),
+                              Text(
+                                (isDead ? 'Late. ' : '') + (fm['Name'] ?? 'N/A'),
+                                style: TextStyle(
+                                  color: isDead ? Colors.grey.shade600 : Colors.black87,
+                                  fontWeight: isDead ? FontWeight.w500 : FontWeight.normal,
+                                ),
+                              ),
                               if (isUpdatePending || isNewMemberPending)
                                 Container(
                                   margin: const EdgeInsets.only(left: 8),
@@ -1672,7 +1834,7 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
                                   );
                                 },
                                 icon: const Icon(Icons.edit, size: 16, color: const Color(0xFF5D1712)),
-                                label: const Text('Edit', style: TextStyle(color: const Color(0xFF5D1712))),
+                                label: Text(AppLocalizations.of(context)?.editAction ?? 'Edit', style: const TextStyle(color: Color(0xFF5D1712))),
                               ),
                         ),
                       ],
@@ -1688,11 +1850,9 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
   }
 
   Widget _buildRoundIcon(IconData icon, String tooltip, dynamic imgPath) {
-    return Builder(builder: (context) {
-      bool imageLoadFailed = false;
-      return StatefulBuilder(builder: (context, setIconState) {
-        final hasImage = imgPath != null && imgPath.toString().trim().isNotEmpty && imgPath.toString() != 'null';
-        final isValidImage = hasImage && !imageLoadFailed;
+    return _ImageLoadState(builder: (context, imageLoadFailed, setIconState) {
+      final hasImage = imgPath != null && imgPath.toString().trim().isNotEmpty && imgPath.toString() != 'null';
+      final isValidImage = hasImage && !imageLoadFailed;
 
       return Stack(
         children: [
@@ -1703,9 +1863,7 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
                 '${ApiConfig.baseUrl}/assets/uploads/$imgPath',
                 errorBuilder: (context, error, stackTrace) {
                   WidgetsBinding.instance.addPostFrameCallback((_) {
-                    if (context.mounted) {
-                      setIconState(() => imageLoadFailed = true);
-                    }
+                    setIconState();
                   });
                   return const SizedBox();
                 },
@@ -1716,19 +1874,18 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
             waitDuration: const Duration(milliseconds: 300),
             child: Container(
               decoration: BoxDecoration(
-                color: isValidImage ? const Color(0xFF5D1712).withOpacity(0.1) : Colors.transparent,
+                color: isValidImage ? const Color(0xFF5D1712).withOpacity(0.1) : Colors.grey[200],
                 shape: BoxShape.circle,
-                border: Border.all(color: isValidImage ? const Color(0xFF5D1712) : const Color(0xFF5D1712).withOpacity(0.3)),
+                border: Border.all(color: isValidImage ? const Color(0xFF5D1712) : Colors.grey[400]!),
               ),
               child: IconButton(
-                icon: Icon(icon, color: const Color(0xFF5D1712), size: 20),
+                icon: Icon(icon, color: isValidImage ? const Color(0xFF5D1712) : Colors.grey, size: 20),
                 onPressed: isValidImage ? () => _showImageDialog(tooltip, imgPath) : null,
               ),
             ),
           ),
         ],
       );
-      });
     });
   }
 
@@ -1784,33 +1941,35 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
 
   Widget _buildDetailRow(String label, String value, {bool isBold = false, bool isBlue = false, bool isPill = false, required bool isMobile}) {
     final labelWidget = SizedBox(
-      width: isMobile ? double.infinity : 200,
+      width: isMobile ? 120 : 200,
       child: Text(
         label,
-        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black54),
+        style: TextStyle(fontSize: isMobile ? 14 : 16, fontWeight: FontWeight.w600, color: Colors.black54),
       ),
     );
 
     final valueWidget = isPill
         ? Container(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+            padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 24, vertical: isMobile ? 6 : 8),
             decoration: BoxDecoration(color: const Color(0xFF5D1712), borderRadius: BorderRadius.circular(20)),
-            child: Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            child: Text(value, style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: isMobile ? 12 : 14)),
           )
         : Text(
             value,
             style: TextStyle(
-              fontSize: 18,
+              fontSize: isMobile ? 15 : 18,
               fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
               color: isBlue ? const Color(0xFF5D1712) : Colors.black87,
             ),
           );
 
-    if (isMobile) {
-      return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [labelWidget, const SizedBox(height: 8), valueWidget]);
-    }
-
-    return Row(children: [labelWidget, valueWidget]);
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        labelWidget,
+        Expanded(child: Align(alignment: Alignment.centerLeft, child: valueWidget)),
+      ],
+    );
   }
 
   Widget _buildAddressRow(String label, Map<String, dynamic>? data, {required bool isMobile}) {
@@ -1866,5 +2025,31 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
         ),
       ],
     );
+  }
+}
+
+class _ImageLoadState extends StatefulWidget {
+  final Widget Function(BuildContext context, bool imageLoadFailed, VoidCallback setFailed) builder;
+  final Key? key;
+  const _ImageLoadState({this.key, required this.builder}) : super(key: key);
+
+  @override
+  State<_ImageLoadState> createState() => _ImageLoadStateState();
+}
+
+class _ImageLoadStateState extends State<_ImageLoadState> {
+  bool _imageLoadFailed = false;
+
+  void _setFailed() {
+    if (mounted) {
+      setState(() {
+        _imageLoadFailed = true;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return widget.builder(context, _imageLoadFailed, _setFailed);
   }
 }

@@ -12,6 +12,7 @@ import '../utils/pdf_generator.dart';
 import 'package:screenshot/screenshot.dart';
 import 'update_details_content.dart';
 import 'package:intl/intl.dart';
+import '../../l10n/app_localizations.dart';
 
 class PaymentsContent extends StatefulWidget {
   final int? userId;
@@ -454,7 +455,7 @@ class _PaymentsContentState extends State<PaymentsContent> {
                             children: [
                               Icon(Icons.receipt_long, color: Colors.white70, size: 18),
                               SizedBox(width: 8),
-                              Text('Payment Receipt History', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
+                              Text('My Payment Receipt History', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
                             ],
                           ),
                           const SizedBox(height: 8),
@@ -472,7 +473,7 @@ class _PaymentsContentState extends State<PaymentsContent> {
                             children: [
                               Icon(Icons.receipt_long, color: Colors.white70, size: 18),
                               SizedBox(width: 8),
-                              Text('Payment Receipt History', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
+                              Text('My Payment Receipt History', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
                             ],
                           ),
                           Container(
@@ -910,6 +911,67 @@ class _PaymentsContentState extends State<PaymentsContent> {
 
 
   Widget _buildTopBar(bool isMobile) {
+    if (isMobile) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Text(
+            AppLocalizations.of(context)?.bulkPaymentUploadTitle ?? 'Bulk Payment Upload',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF2D1B18)),
+            textAlign: TextAlign.center,
+          ),
+          if (_totalItems > 0)
+            Padding(
+              padding: const EdgeInsets.only(top: 8.0),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF5D1712).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  "${AppLocalizations.of(context)?.totalMembersHeader ?? 'Total Members: '}$_totalItems",
+                  style: const TextStyle(color: Color(0xFF5D1712), fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () => setState(() => _isFilterVisible = !_isFilterVisible),
+                  icon: const Icon(Icons.filter_list, size: 18),
+                  label: Text(AppLocalizations.of(context)?.filterBtn ?? 'Filter'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: const Color(0xFF5D1712),
+                    side: const BorderSide(color: Color(0xFF5D1712)),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () {},
+                  icon: const Icon(Icons.upload_file, size: 18),
+                  label: Text(AppLocalizations.of(context)?.uploadCsvBtn ?? 'Upload CSV'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      );
+    }
+
     return SizedBox(
       width: double.infinity,
       child: Wrap(
@@ -919,13 +981,13 @@ class _PaymentsContentState extends State<PaymentsContent> {
         crossAxisAlignment: WrapCrossAlignment.center,
         children: [
           Column(
-            crossAxisAlignment: isMobile ? CrossAxisAlignment.center : CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                '📊 Bulk Payment Upload',
-                style: TextStyle(fontSize: isMobile ? 20 : 24, fontWeight: FontWeight.bold, color: const Color(0xFF2D1B18)),
-                textAlign: isMobile ? TextAlign.center : TextAlign.start,
+                AppLocalizations.of(context)?.bulkPaymentUploadTitle ?? 'Bulk Payment Upload',
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF2D1B18)),
+                textAlign: TextAlign.start,
               ),
               if (_totalItems > 0)
                 Padding(
@@ -937,8 +999,8 @@ class _PaymentsContentState extends State<PaymentsContent> {
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
-                      'Total Members: $_totalItems',
-                      style: const TextStyle(color: const Color(0xFF5D1712), fontWeight: FontWeight.bold),
+                      "${AppLocalizations.of(context)?.totalMembersHeader ?? 'Total Members: '}$_totalItems",
+                      style: const TextStyle(color: Color(0xFF5D1712), fontWeight: FontWeight.bold),
                     ),
                   ),
                 ),
@@ -950,12 +1012,12 @@ class _PaymentsContentState extends State<PaymentsContent> {
               ElevatedButton.icon(
                 onPressed: () => setState(() => _isFilterVisible = !_isFilterVisible),
                 icon: const Icon(Icons.filter_list, size: 18),
-                label: const Text('Filter'),
+                label: Text(AppLocalizations.of(context)?.filterBtn ?? 'Filter'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.white,
                   foregroundColor: const Color(0xFF5D1712),
-                  side: const BorderSide(color: const Color(0xFF5D1712)),
-                  padding: EdgeInsets.symmetric(horizontal: isMobile ? 12 : 16, vertical: 8),
+                  side: const BorderSide(color: Color(0xFF5D1712)),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
                 ),
               ),
@@ -963,11 +1025,11 @@ class _PaymentsContentState extends State<PaymentsContent> {
               ElevatedButton.icon(
                 onPressed: () {},
                 icon: const Icon(Icons.upload_file, size: 18),
-                label: const Text('Upload CSV'),
+                label: Text(AppLocalizations.of(context)?.uploadCsvBtn ?? 'Upload CSV'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.green,
                   foregroundColor: Colors.white,
-                  padding: EdgeInsets.symmetric(horizontal: isMobile ? 12 : 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
                 ),
               ),
@@ -979,7 +1041,22 @@ class _PaymentsContentState extends State<PaymentsContent> {
   }
 
   Widget _buildFilterSection(bool isMobile) {
+    Widget buildRow(List<Widget> children) {
+      if (isMobile) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: children.map((c) => Padding(padding: const EdgeInsets.only(bottom: 16), child: c)).toList(),
+        );
+      }
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: children.map((c) => Expanded(child: Padding(padding: EdgeInsets.only(right: children.last == c ? 0 : 16), child: c))).toList(),
+      );
+    }
+
     return Card(
+      color: Colors.white,
+      surfaceTintColor: Colors.white,
       margin: const EdgeInsets.only(top: 20),
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -991,141 +1068,136 @@ class _PaymentsContentState extends State<PaymentsContent> {
               opacity: widget.role == 2 ? 0.6 : 1.0,
               child: AbsorbPointer(
                 absorbing: widget.role == 2,
-                child: Wrap(
-                  spacing: 16,
-                  runSpacing: 16,
-                  children: [
-                    _buildFilterField('District', _buildDropdown('District', _districts, _selectedDistrict, (val) {
-                      setState(() => _selectedDistrict = val);
-                      _fetchTaluks(val!);
-                    }, icon: Icons.map, isStringList: true), isMobile),
-                    _buildFilterField('Taluk', _buildDropdown('Taluk', _taluks, _selectedTaluk, (val) {
-                      setState(() => _selectedTaluk = val);
-                      _fetchPanchayats(val!);
-                    }, icon: Icons.location_city, isStringList: true), isMobile),
-                    _buildFilterField('Panchayat', _buildDropdown('Panchayat', _panchayats, _selectedPanchayat, (val) {
-                      setState(() => _selectedPanchayat = val);
-                      _fetchVillages(val!);
-                    }, icon: Icons.business, isStringList: true), isMobile),
-                    _buildFilterField('Village', _buildDropdown('Village', _villages, _selectedVillage, (val) {
-                      setState(() => _selectedVillage = val);
-                    }, icon: Icons.home, isStringList: true), isMobile),
-                  ],
-                ),
+                child: buildRow([
+                  _buildFilterField('District', _buildDropdown('District', _districts, _selectedDistrict, (val) {
+                    setState(() => _selectedDistrict = val);
+                    _fetchTaluks(val!);
+                  }, icon: Icons.map, isStringList: true), isMobile),
+                  _buildFilterField('Taluk', _buildDropdown('Taluk', _taluks, _selectedTaluk, (val) {
+                    setState(() => _selectedTaluk = val);
+                    _fetchPanchayats(val!);
+                  }, icon: Icons.location_city, isStringList: true), isMobile),
+                  _buildFilterField('Panchayat', _buildDropdown('Panchayat', _panchayats, _selectedPanchayat, (val) {
+                    setState(() => _selectedPanchayat = val);
+                    _fetchVillages(val!);
+                  }, icon: Icons.business, isStringList: true), isMobile),
+                  _buildFilterField('Village', _buildDropdown('Village', _villages, _selectedVillage, (val) {
+                    setState(() => _selectedVillage = val);
+                  }, icon: Icons.home, isStringList: true), isMobile),
+                ]),
               ),
             ),
-            const SizedBox(height: 20),
-            Wrap(
-              spacing: 16,
-              runSpacing: 16,
-              crossAxisAlignment: WrapCrossAlignment.end,
-              children: [
-                _buildFilterField('Event Year', CustomDropdownSearch(
-                  label: '',
-                  hint: 'Select Year',
-                  dropdownMap: { for (var y in _years) y.toString(): y.toString() },
-                  value: _selectedYear?.toString(),
-                  onChanged: (val) {
-                    final intVal = val != null ? int.tryParse(val) : null;
-                    setState(() => _selectedYear = intVal);
-                    if (intVal != null) _fetchEvents(intVal);
-                  },
-                ), isMobile),
-                _buildFilterField('Event', CustomDropdownSearch(
-                  label: '',
-                  hint: 'Select Event',
-                  dropdownMap: { for (var e in _events) e['Id'].toString(): e['EventName'].toString() },
-                  value: _selectedEventId?.toString(),
-                  onChanged: (val) {
-                    setState(() => _selectedEventId = val != null ? int.tryParse(val) : null);
-                  },
-                ), isMobile),
-                _buildFilterField('Status', Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey.shade400),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      _buildStatusRadio('Paid'),
-                      _buildStatusRadio('Pending', label: 'Unpaid'),
-                    ],
-                  ),
-                ), isMobile),
-                Container(
-                  width: isMobile ? double.infinity : null,
-                  child: isMobile
-                      ? Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            SizedBox(
-                              height: 44,
-                              child: ElevatedButton.icon(
-                                onPressed: _clearFilters,
-                                icon: const Icon(Icons.clear, size: 18),
-                                label: const Text('Clear'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.white,
-                                  foregroundColor: Colors.red,
-                                  side: const BorderSide(color: Colors.red),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            SizedBox(
-                              height: 44,
-                              child: ElevatedButton(
-                                onPressed: _applyFilters,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF5D1712),
-                                  foregroundColor: Colors.white,
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                ),
-                                child: const Text('Apply Filter'),
-                              ),
-                            ),
-                          ],
-                        )
-                      : Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            SizedBox(
-                              height: 44,
-                              child: ElevatedButton.icon(
-                                onPressed: _clearFilters,
-                                icon: const Icon(Icons.clear, size: 18),
-                                label: const Text('Clear'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.white,
-                                  foregroundColor: Colors.red,
-                                  side: const BorderSide(color: Colors.red),
-                                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            SizedBox(
-                              height: 44,
-                              child: ElevatedButton(
-                                onPressed: _applyFilters,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF5D1712),
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                ),
-                                child: const Text('Apply Filter'),
-                              ),
-                            ),
-                          ],
-                        ),
+            SizedBox(height: isMobile ? 0 : 20),
+            buildRow([
+              _buildFilterField('Event Year', CustomDropdownSearch(
+                label: '',
+                hint: 'Select Year',
+                dropdownMap: { for (var y in _years) y.toString(): y.toString() },
+                value: _selectedYear?.toString(),
+                onChanged: (val) {
+                  final intVal = val != null ? int.tryParse(val) : null;
+                  setState(() => _selectedYear = intVal);
+                  if (intVal != null) _fetchEvents(intVal);
+                },
+              ), isMobile),
+              _buildFilterField('Event', CustomDropdownSearch(
+                label: '',
+                hint: 'Select Event',
+                dropdownMap: { for (var e in _events) e['Id'].toString(): e['EventName'].toString() },
+                value: _selectedEventId?.toString(),
+                onChanged: (val) {
+                  setState(() => _selectedEventId = val != null ? int.tryParse(val) : null);
+                },
+              ), isMobile),
+              _buildFilterField('Status', Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey.shade400),
+                  borderRadius: BorderRadius.circular(8),
                 ),
-              ],
-            ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _buildStatusRadio('Paid'),
+                    _buildStatusRadio('Pending', label: 'Unpaid'),
+                  ],
+                ),
+              ), isMobile),
+              Container(
+                width: isMobile ? double.infinity : null,
+                child: isMobile
+                    ? Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          SizedBox(
+                            height: 44,
+                            child: ElevatedButton.icon(
+                              onPressed: _clearFilters,
+                              icon: const Icon(Icons.clear, size: 18),
+                              label: const Text('Clear'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.white,
+                                foregroundColor: Colors.red,
+                                side: const BorderSide(color: Colors.red),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          SizedBox(
+                            height: 44,
+                            child: ElevatedButton(
+                              onPressed: _applyFilters,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF5D1712),
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              ),
+                              child: Text(AppLocalizations.of(context)?.applyFilterBtn ?? 'Apply Filter'),
+                            ),
+                          ),
+                        ],
+                      )
+                    : Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Expanded(
+                            child: SizedBox(
+                              height: 44,
+                              child: ElevatedButton.icon(
+                                onPressed: _clearFilters,
+                                icon: const Icon(Icons.clear, size: 18),
+                                label: const Text('Clear'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.white,
+                                  foregroundColor: Colors.red,
+                                  side: const BorderSide(color: Colors.red),
+                                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: SizedBox(
+                              height: 44,
+                              child: ElevatedButton(
+                                onPressed: _applyFilters,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF5D1712),
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                ),
+                                child: Text(AppLocalizations.of(context)?.applyFilterBtn ?? 'Apply', overflow: TextOverflow.ellipsis),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+              ),
+            ]),
           ],
         ),
       ),
@@ -1133,16 +1205,13 @@ class _PaymentsContentState extends State<PaymentsContent> {
   }
 
   Widget _buildFilterField(String label, Widget child, bool isMobile) {
-    return SizedBox(
-      width: isMobile ? double.infinity : 220,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black54)),
-          const SizedBox(height: 6),
-          child,
-        ],
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black54)),
+        const SizedBox(height: 6),
+        child,
+      ],
     );
   }
 
@@ -1206,12 +1275,12 @@ class _PaymentsContentState extends State<PaymentsContent> {
                 padding: const EdgeInsets.only(right: 20),
                 child: Row(
                   children: [
-                    _buildCell('ROLE', colRole, isHeader: true, isCentered: true),
-                    _buildCell('DISTRICT', colDistrict, isHeader: true),
-                    _buildCell('TALUK', colTaluk, isHeader: true),
-                    _buildCell('PANCHAYAT', colPanchayat, isHeader: true),
-                    _buildCell('VILLAGE', colVillage, isHeader: true),
-                    _buildCell('ACTIONS', colActions, isHeader: true, isActions: true),
+                    _buildCell(AppLocalizations.of(context)?.roleHeader ?? 'ROLE', colRole, isHeader: true, isCentered: true),
+                    _buildCell(AppLocalizations.of(context)?.districtHeader ?? 'DISTRICT', colDistrict, isHeader: true),
+                    _buildCell(AppLocalizations.of(context)?.talukHeader ?? 'TALUK', colTaluk, isHeader: true),
+                    _buildCell(AppLocalizations.of(context)?.panchayatHeader ?? 'PANCHAYAT', colPanchayat, isHeader: true),
+                    _buildCell(AppLocalizations.of(context)?.villageUpperHeader ?? 'VILLAGE', colVillage, isHeader: true),
+                    _buildCell(AppLocalizations.of(context)?.actionHeader?.toUpperCase() ?? 'ACTIONS', colActions, isHeader: true, isActions: true),
                   ],
                 ),
               ),
@@ -1245,10 +1314,10 @@ class _PaymentsContentState extends State<PaymentsContent> {
                       padding: const EdgeInsets.only(left: 20),
                       child: Row(
                         children: [
-                          _buildCell('S.NO', colSno, isHeader: true),
-                          _buildCell('FAMILY ID', colFamilyId, isHeader: true),
-                          _buildCell('NAME', colName, isHeader: true),
-                          _buildCell('MOBILE', colMobile, isHeader: true),
+                          _buildCell(AppLocalizations.of(context)?.sNo?.toUpperCase() ?? 'S.NO', colSno, isHeader: true),
+                          _buildCell(AppLocalizations.of(context)?.familyIdHeader ?? 'FAMILY ID', colFamilyId, isHeader: true),
+                          _buildCell(AppLocalizations.of(context)?.nameHeader?.toUpperCase() ?? 'NAME', colName, isHeader: true),
+                          _buildCell(AppLocalizations.of(context)?.mobileLabel?.toUpperCase() ?? 'MOBILE', colMobile, isHeader: true),
                         ],
                       ),
                     ),
@@ -1329,7 +1398,7 @@ class _PaymentsContentState extends State<PaymentsContent> {
 
   Widget _buildScrollableDataRow(int index) {
     final member = _members[index];
-    final role = member['Role'] == 2 ? 'Coordinator' : 'Member';
+    final role = member['Role'] == 2 ? (AppLocalizations.of(context)?.coordinators ?? 'Coordinator') : (AppLocalizations.of(context)?.members ?? 'Member');
 
     double eventMoney = 0.0;
     if (_selectedEventId != null) {
@@ -1542,7 +1611,7 @@ class _PaymentsContentState extends State<PaymentsContent> {
                       children: [
                         Icon(Icons.receipt_long, color: Colors.white70, size: 18),
                         SizedBox(width: 8),
-                        Text('Payment Receipt History', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
+                        Text('My Payment Receipt History', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
                       ],
                     ),
                     const SizedBox(height: 8),
@@ -1560,7 +1629,7 @@ class _PaymentsContentState extends State<PaymentsContent> {
                       children: [
                         Icon(Icons.receipt_long, color: Colors.white70, size: 18),
                         SizedBox(width: 8),
-                        Text('Payment Receipt History', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
+                        Text('My Payment Receipt History', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
                       ],
                     ),
                     Container(

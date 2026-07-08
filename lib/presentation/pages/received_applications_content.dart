@@ -5,6 +5,7 @@ import '../widgets/loading_spinner.dart';
 import '../widgets/custom_dialog.dart';
 import '../../utils/api_config.dart';
 import '../widgets/custom_dropdown_search.dart';
+import '../../l10n/app_localizations.dart';
 
 class ReceivedApplicationsContent extends StatefulWidget {
   final dynamic userId;
@@ -119,7 +120,7 @@ class _ReceivedApplicationsContentState extends State<ReceivedApplicationsConten
                       child: MouseRegion(
                         cursor: SystemMouseCursors.click,
                         child: Text(
-                          'Dashboard',
+                          AppLocalizations.of(context)?.dashboard ?? 'Dashboard',
                           style: TextStyle(
                             fontSize: isMobile ? 18 : 22,
                             fontWeight: FontWeight.bold,
@@ -129,7 +130,7 @@ class _ReceivedApplicationsContentState extends State<ReceivedApplicationsConten
                       ),
                     ),
                     Text(
-                      ' / Received Applications',
+                      " / ${AppLocalizations.of(context)?.receivedApplicationsTitle ?? 'Received Applications'}",
                       style: TextStyle(
                         fontSize: isMobile ? 18 : 22,
                         fontWeight: FontWeight.bold,
@@ -177,26 +178,26 @@ class _ReceivedApplicationsContentState extends State<ReceivedApplicationsConten
                                   ),
                                 ),
                                 padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
-                                child: const Row(
+                                child: Row(
                                   children: [
-                                    SizedBox(width: 50, child: Text('S.NO', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13))),
-                                    SizedBox(width: 140, child: Text('MEMBER NAME', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13))),
-                                    SizedBox(width: 120, child: Text('MEMBER ID', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13))),
-                                    SizedBox(width: 110, child: Text('DISTRICT', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13))),
-                                    SizedBox(width: 110, child: Text('TALUK', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13))),
-                                    SizedBox(width: 130, child: Text('PANCHAYAT', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13))),
-                                    SizedBox(width: 110, child: Text('VILLAGE', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13))),
-                                    SizedBox(width: 150, child: Text('ACTIONS', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13))),
+                                    SizedBox(width: 50, child: Text(AppLocalizations.of(context)?.sNo?.toUpperCase() ?? 'S.NO', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13))),
+                                    SizedBox(width: 140, child: Text(AppLocalizations.of(context)?.memberNameHeader ?? 'MEMBER NAME', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13))),
+                                    SizedBox(width: 120, child: Text(AppLocalizations.of(context)?.memberIdHeader ?? 'MEMBER ID', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13))),
+                                    SizedBox(width: 110, child: Text(AppLocalizations.of(context)?.districtHeader ?? 'DISTRICT', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13))),
+                                    SizedBox(width: 110, child: Text(AppLocalizations.of(context)?.talukHeader ?? 'TALUK', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13))),
+                                    SizedBox(width: 130, child: Text(AppLocalizations.of(context)?.panchayatHeader ?? 'PANCHAYAT', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13))),
+                                    SizedBox(width: 110, child: Text(AppLocalizations.of(context)?.villageUpperHeader ?? 'VILLAGE', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13))),
+                                    SizedBox(width: 150, child: Text(AppLocalizations.of(context)?.actionHeader?.toUpperCase() ?? 'ACTIONS', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13))),
                                   ],
                                 ),
                               ),
                               // Table Body Rows
                               _applications.isEmpty
-                                  ? const Padding(
-                                      padding: EdgeInsets.all(48),
+                                  ? Padding(
+                                      padding: const EdgeInsets.all(48),
                                       child: Center(
                                         child: Text(
-                                          'No pending applications found.',
+                                          AppLocalizations.of(context)?.noPendingApplications ?? 'No pending applications found.',
                                           style: TextStyle(color: Colors.black45, fontSize: 15),
                                         ),
                                       ),
@@ -298,25 +299,25 @@ class _ReceivedApplicationsContentState extends State<ReceivedApplicationsConten
         context: context,
         builder: (context) => StatefulBuilder(
           builder: (context, setDialogState) => AlertDialog(
-            title: const Text('Reject Application'),
+            title: Text(AppLocalizations.of(context)?.rejectApplicationTitle ?? 'Reject Application'),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text('Please select a reason for rejection:'),
+                Text(AppLocalizations.of(context)?.selectRejectReason ?? 'Please select a reason for rejection:'),
                 const SizedBox(height: 16),
                 CustomDropdownSearch(
                   label: '',
-                  hint: '-- Choose a reason --',
+                  hint: AppLocalizations.of(context)?.chooseReason ?? '-- Choose a reason --',
                   value: selectedReason,
                   dropdownItems: reasons,
                   onChanged: (val) => setDialogState(() => selectedReason = val),
                 ),
-                if (selectedReason == 'Other (Enter manually)') ...[
+                if (selectedReason == (AppLocalizations.of(context)?.otherEnterManually ?? 'Other (Enter manually)')) ...[
                   const SizedBox(height: 16),
                   TextField(
                     onChanged: (val) => customReason = val,
-                    decoration: const InputDecoration(
-                      hintText: 'Enter reason manually...',
+                    decoration: InputDecoration(
+                      hintText: AppLocalizations.of(context)?.enterReasonManuallyHint ?? 'Enter reason manually...',
                       border: OutlineInputBorder(),
                     ),
                   ),
@@ -326,15 +327,15 @@ class _ReceivedApplicationsContentState extends State<ReceivedApplicationsConten
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel', style: TextStyle(color: Colors.black54)),
+                child: Text(AppLocalizations.of(context)?.cancelDialogBtn ?? 'Cancel', style: const TextStyle(color: Colors.black54)),
               ),
               ElevatedButton(
                 onPressed: selectedReason != null ? () {
-                  final String finalReason = selectedReason == 'Other (Enter manually)' ? customReason : selectedReason!;
+                  final String finalReason = selectedReason == (AppLocalizations.of(context)?.otherEnterManually ?? 'Other (Enter manually)') ? customReason : selectedReason!;
                   Navigator.pop(context, finalReason);
                 } : null,
                 style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
-                child: const Text('Confirm Reject'),
+                child: Text(AppLocalizations.of(context)?.confirmRejectBtn ?? 'Confirm Reject'),
               ),
             ],
           ),
@@ -355,7 +356,7 @@ class _ReceivedApplicationsContentState extends State<ReceivedApplicationsConten
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel', style: TextStyle(color: Colors.black54)),
+            child: Text(AppLocalizations.of(context)?.cancelDialogBtn ?? 'Cancel', style: const TextStyle(color: Colors.black54)),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),

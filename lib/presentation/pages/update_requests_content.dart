@@ -4,6 +4,7 @@ import 'dart:convert';
 import '../widgets/loading_spinner.dart';
 import '../../utils/api_config.dart';
 import '../../utils/notification_helper.dart';
+import '../../l10n/app_localizations.dart';
 
 class UpdateRequestsContent extends StatefulWidget {
   final VoidCallback? onBackToDashboard;
@@ -82,9 +83,9 @@ class _UpdateRequestsContentState extends State<UpdateRequestsContent> {
             children: [
               InkWell(
                 onTap: widget.onBackToDashboard,
-                child: Text('Dashboard', style: TextStyle(color: const Color(0xFF5D1712), fontSize: 14, fontWeight: FontWeight.w500)),
+                child: Text(AppLocalizations.of(context)?.dashboard ?? 'Dashboard', style: const TextStyle(color: Color(0xFF5D1712), fontSize: 14, fontWeight: FontWeight.w500)),
               ),
-              const Text(' / Member Update Requests', style: TextStyle(color: Colors.black45, fontSize: 14)),
+              Text(" / ${AppLocalizations.of(context)?.memberUpdateRequestsTitle ?? 'Member Update Requests'}", style: const TextStyle(color: Colors.black45, fontSize: 14)),
             ],
           ),
           const SizedBox(height: 16),
@@ -117,15 +118,15 @@ class _UpdateRequestsContentState extends State<UpdateRequestsContent> {
                               height: 48,
                               child: Row(
                                 children: [
-                                  _buildHeaderCell('S.NO', 60),
-                                  _buildHeaderCell('MEMBER NAME', 180),
-                                  _buildHeaderCell('FAMILY HEAD', 180),
-                                  _buildHeaderCell('MEMBER ID', 140),
-                                  _buildHeaderCell('DISTRICT', 130),
-                                  _buildHeaderCell('TALUK', 130),
-                                  _buildHeaderCell('PANCHAYAT', 130),
-                                  _buildHeaderCell('VILLAGE', 130),
-                                  _buildHeaderCell('REQUEST', 100, hasDivider: false),
+                                  _buildHeaderCell(AppLocalizations.of(context)?.sNo?.toUpperCase() ?? 'S.NO', 60),
+                                  _buildHeaderCell(AppLocalizations.of(context)?.memberNameHeader ?? 'MEMBER NAME', 180),
+                                  _buildHeaderCell(AppLocalizations.of(context)?.familyHeadHeader ?? 'FAMILY HEAD', 180),
+                                  _buildHeaderCell(AppLocalizations.of(context)?.memberIdHeader ?? 'MEMBER ID', 140),
+                                  _buildHeaderCell(AppLocalizations.of(context)?.districtHeader ?? 'DISTRICT', 130),
+                                  _buildHeaderCell(AppLocalizations.of(context)?.talukHeader ?? 'TALUK', 130),
+                                  _buildHeaderCell(AppLocalizations.of(context)?.panchayatHeader ?? 'PANCHAYAT', 130),
+                                  _buildHeaderCell(AppLocalizations.of(context)?.villageUpperHeader ?? 'VILLAGE', 130),
+                                  _buildHeaderCell(AppLocalizations.of(context)?.actionHeader?.toUpperCase() ?? 'REQUEST', 100, hasDivider: false),
                                 ],
                               ),
                             ),
@@ -134,11 +135,11 @@ class _UpdateRequestsContentState extends State<UpdateRequestsContent> {
                                     padding: EdgeInsets.all(48.0),
                                     child: Center(child: LoadingSpinner(message: 'Loading requests...')),
                                   )
-                                : _requests.isEmpty
-                                    ? const Padding(
-                                        padding: EdgeInsets.all(48.0),
-                                        child: Center(child: Text('No pending update requests.', style: TextStyle(color: Colors.black54))),
-                                      )
+                                  : _requests.isEmpty
+                                      ? Padding(
+                                          padding: const EdgeInsets.all(48.0),
+                                          child: Center(child: Text(AppLocalizations.of(context)?.noPendingUpdateRequests ?? 'No pending update requests.', style: const TextStyle(color: Colors.black54))),
+                                        )
                                     : ListView.separated(
                                         shrinkWrap: true,
                                         physics: const NeverScrollableScrollPhysics(),
