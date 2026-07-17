@@ -5,15 +5,15 @@ class ApiConfig {
   // Use 10.0.2.2 for Android Emulator to access host localhost
   static String get baseUrl {
     // Live backend URL:
-    return 'https://kaadaisoft-backend.onrender.com';
+    // return 'https://kaadaisoft-backend.onrender.com';
 
     // Local development (Uncomment to use locally):
-    // if (kIsWeb) {
-    //   return 'http://localhost:8000';
-    // } else {
-    //   // Laptop local IP for physical/wireless mobile debugging access
-    //   return 'http://192.168.68.110:8000';
-    // }
+    if (kIsWeb) {
+      return 'http://localhost:8000';
+    } else {
+      // Laptop local IP for physical/wireless mobile debugging access
+      return 'http://192.168.68.110:8000';
+    }
   }
 
   // Safe getter for origin that won't crash on mobile apps
@@ -43,4 +43,8 @@ class ApiConfig {
   static String get saveReceipt => '$baseUrl/api/payments/save-receipt';
   static String approveUpdateRequest(int id) => '$baseUrl/api/update-requests/approve/$id';
   static String rejectUpdateRequest(int id) => '$baseUrl/api/update-requests/reject/$id';
+  
+  static String get getPaymentRequests => '$baseUrl/api/payment-requests';
+  static String approvePaymentRequest(int id) => '$baseUrl/api/payment-requests/approve/$id';
+  static String rejectPaymentRequest(int id) => '$baseUrl/api/payment-requests/reject/$id';
 }
