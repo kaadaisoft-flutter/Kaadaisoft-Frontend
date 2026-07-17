@@ -421,7 +421,7 @@ class _PaymentsContentState extends State<PaymentsContent> {
         children: [
           // Header
           Text(
-            'My Financial Report', 
+            AppLocalizations.of(context)?.myFinancialReport ?? 'My Financial Report', 
             style: TextStyle(
               fontSize: isMobile ? 20 : 24, 
               fontWeight: FontWeight.bold, 
@@ -451,43 +451,43 @@ class _PaymentsContentState extends State<PaymentsContent> {
                     ? Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Row(
+                          Row(
                             children: [
-                              Icon(Icons.receipt_long, color: Colors.white70, size: 18),
-                              SizedBox(width: 8),
-                              Text('My Payment Receipt History', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
+                              const Icon(Icons.receipt_long, color: Colors.white70, size: 18),
+                              const SizedBox(width: 8),
+                              Text(AppLocalizations.of(context)?.myPaymentReceiptHistory ?? 'My Payment Receipt History', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
                             ],
                           ),
                           const SizedBox(height: 8),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                             decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(20)),
-                            child: Text('${_receipts.length} record(s)', style: const TextStyle(color: Colors.white, fontSize: 12)),
+                            child: Text('${_receipts.length} ${AppLocalizations.of(context)?.records ?? "record(s)"}', style: const TextStyle(color: Colors.white, fontSize: 12)),
                           ),
                         ],
                       )
                     : Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Row(
+                          Row(
                             children: [
-                              Icon(Icons.receipt_long, color: Colors.white70, size: 18),
-                              SizedBox(width: 8),
-                              Text('My Payment Receipt History', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
+                              const Icon(Icons.receipt_long, color: Colors.white70, size: 18),
+                              const SizedBox(width: 8),
+                              Text(AppLocalizations.of(context)?.myPaymentReceiptHistory ?? 'My Payment Receipt History', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
                             ],
                           ),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                             decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(20)),
-                            child: Text('${_receipts.length} record(s)', style: const TextStyle(color: Colors.white, fontSize: 12)),
+                            child: Text('${_receipts.length} ${AppLocalizations.of(context)?.records ?? "record(s)"}', style: const TextStyle(color: Colors.white, fontSize: 12)),
                           ),
                         ],
                       ),
                 ),
                 if (_receipts.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.all(32),
-                    child: Center(child: Text('No payment receipts found.', style: TextStyle(color: Colors.black45))),
+                  Padding(
+                    padding: const EdgeInsets.all(32),
+                    child: Center(child: Text(AppLocalizations.of(context)?.noPaymentReceiptsFound ?? 'No payment receipts found.', style: const TextStyle(color: Colors.black45))),
                   )
                 else
                   ..._buildGroupedReceiptTables(isMobile),
@@ -649,11 +649,21 @@ class _PaymentsContentState extends State<PaymentsContent> {
   }
 
   List<Widget> _buildGroupedReceiptTables(bool isMobile) {
+    if (isMobile) {
+      // sections.add(const SizedBox(height: 16));
+    }
+
+    // Filter receipts: only show approved or legacy (null) receipts in the history
+    final approvedReceipts = _receipts.where((r) {
+      final approvalStatus = r['approval_status']?.toString();
+      return approvalStatus != 'Pending' && approvalStatus != 'Rejected';
+    }).toList();
+
+    // Group receipts by event name
     final Map<String, List<dynamic>> grouped = {};
-    for (var r in _receipts) {
-      final name = r['eventname']?.toString() ?? 'Other';
-      if (!grouped.containsKey(name)) grouped[name] = [];
-      grouped[name]!.add(r);
+    for (var r in approvedReceipts) {
+      final name = r['eventname']?.toString() ?? r['EventName']?.toString() ?? AppLocalizations.of(context)?.otherUpper ?? 'OTHER';
+      grouped.putIfAbsent(name, () => []).add(r);
     }
 
     List<Widget> sections = [];
@@ -684,26 +694,26 @@ class _PaymentsContentState extends State<PaymentsContent> {
                     controller: controller,
                     scrollDirection: Axis.horizontal,
                     child: Container(
-                      width: constraints.maxWidth > 990 ? constraints.maxWidth : 990,
+                      width: constraints.maxWidth > 1410 ? constraints.maxWidth : 1410,
                       color: Colors.white,
                       child: Column(
                         children: [
-                          // Header
                       Container(
                         color: const Color(0xFFF8FAFC),
                         height: 48,
                         child: Row(
                           children: [
-                            _buildHistoryHeaderCell('S.NO', 50),
-                            _buildHistoryHeaderCell('TOTAL AMOUNT', 120),
-                            _buildHistoryHeaderCell('PAID', 100),
-                            _buildHistoryHeaderCell('PENDING', 100),
-                            Expanded(child: _buildHistoryHeaderCell('BANK / DETAILS', 150)),
-                            _buildHistoryHeaderCell('DATE', 100),
-                            _buildHistoryHeaderCell('YEAR', 70),
-                            _buildHistoryHeaderCell('DUES', 70),
-                            _buildHistoryHeaderCell('STATUS', 80),
-                            _buildHistoryHeaderCell('ACTIONS', 150, hasDivider: false),
+                            _buildHistoryHeaderCell(AppLocalizations.of(context)?.sNo ?? 'S.NO', 100),
+                            _buildHistoryHeaderCell(AppLocalizations.of(context)?.eventNameHeader ?? 'EVENT NAME', 180),
+                            _buildHistoryHeaderCell(AppLocalizations.of(context)?.totalAmountUpper ?? 'TOTAL AMOUNT', 140),
+                            _buildHistoryHeaderCell(AppLocalizations.of(context)?.paidUpper ?? 'PAID', 130),
+                            _buildHistoryHeaderCell(AppLocalizations.of(context)?.pendingUpper ?? 'PENDING', 120),
+                            Expanded(child: _buildHistoryHeaderCell(AppLocalizations.of(context)?.bankDetailsUpper ?? 'BANK / DETAILS', 150)),
+                            _buildHistoryHeaderCell(AppLocalizations.of(context)?.dateUpper ?? 'DATE', 100),
+                            _buildHistoryHeaderCell(AppLocalizations.of(context)?.yearUpper ?? 'YEAR', 80),
+                            _buildHistoryHeaderCell(AppLocalizations.of(context)?.duesUpper ?? 'DUES', 100),
+                            _buildHistoryHeaderCell(AppLocalizations.of(context)?.statusUpper ?? 'STATUS', 160),
+                            _buildHistoryHeaderCell(AppLocalizations.of(context)?.actionsUpper ?? 'ACTIONS', 150, hasDivider: false),
                           ],
                         ),
                       ),
@@ -727,10 +737,11 @@ class _PaymentsContentState extends State<PaymentsContent> {
                           ),
                           child: Row(
                             children: [
-                              _buildHistoryDataCell('${i + 1}', 50),
-                              _buildHistoryDataCell('${taxVal.toStringAsFixed(0)} Rs', 120),
-                              _buildHistoryDataCell('${paidVal.toStringAsFixed(0)} Rs', 100, color: Colors.green),
-                              _buildHistoryDataCell('${balanceVal.toStringAsFixed(0)} Rs', 100, color: balanceVal > 0 ? Colors.red : Colors.green),
+                              _buildHistoryDataCell('${i + 1}', 100),
+                              _buildHistoryDataCell(r['eventname']?.toString() ?? r['EventName']?.toString() ?? AppLocalizations.of(context)?.otherUpper ?? 'OTHER', 180),
+                              _buildHistoryDataCell('${taxVal.toStringAsFixed(0)} ${AppLocalizations.of(context)?.rs ?? "Rs"}', 140),
+                              _buildHistoryDataCell('${paidVal.toStringAsFixed(0)} ${AppLocalizations.of(context)?.rs ?? "Rs"}', 130, color: Colors.green),
+                              _buildHistoryDataCell('${balanceVal.toStringAsFixed(0)} ${AppLocalizations.of(context)?.rs ?? "Rs"}', 120, color: balanceVal > 0 ? Colors.red : Colors.green),
                               Expanded(child: _buildHistoryDataCell(
                                 '', 
                                 150, 
@@ -745,12 +756,18 @@ class _PaymentsContentState extends State<PaymentsContent> {
                                 )
                               )),
                               _buildHistoryDataCell(r['paymentdate']?.toString() ?? '-', 100),
-                              _buildHistoryDataCell(r['year']?.toString() ?? '-', 70),
-                              _buildHistoryDataCell(dues, 70),
-                              _buildHistoryDataCell('', 80, child: Container(
+                              _buildHistoryDataCell(r['year']?.toString() ?? '-', 80),
+                              _buildHistoryDataCell(dues, 100),
+                              _buildHistoryDataCell('', 160, child: Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                 decoration: BoxDecoration(color: isPaid ? Colors.green.shade100 : Colors.red.shade100, borderRadius: BorderRadius.circular(4)),
-                                child: Text(status.toUpperCase(), style: TextStyle(fontSize: 10, color: isPaid ? Colors.green.shade800 : Colors.red.shade800, fontWeight: FontWeight.bold)),
+                                child: Text(
+                                  isPaid ? (AppLocalizations.of(context)?.paidUpper ?? 'PAID') : (AppLocalizations.of(context)?.pendingUpper ?? 'PENDING'), 
+                                  style: TextStyle(fontSize: 10, color: isPaid ? Colors.green.shade800 : Colors.red.shade800, fontWeight: FontWeight.bold),
+                                  maxLines: 1,
+                                  softWrap: false,
+                                  overflow: TextOverflow.visible,
+                                ),
                               )),
                               _buildHistoryDataCell('', 150, hasDivider: false, child: Row(
                                 mainAxisSize: MainAxisSize.min,
@@ -1069,19 +1086,19 @@ class _PaymentsContentState extends State<PaymentsContent> {
               child: AbsorbPointer(
                 absorbing: widget.role == 2,
                 child: buildRow([
-                  _buildFilterField('District', _buildDropdown('District', _districts, _selectedDistrict, (val) {
+                  _buildFilterField(AppLocalizations.of(context)?.districtHeader ?? 'District', _buildDropdown(AppLocalizations.of(context)?.districtHeader ?? 'District', AppLocalizations.of(context)?.chooseDistrict ?? 'Select District', _districts, _selectedDistrict, (val) {
                     setState(() => _selectedDistrict = val);
                     _fetchTaluks(val!);
                   }, icon: Icons.map, isStringList: true), isMobile),
-                  _buildFilterField('Taluk', _buildDropdown('Taluk', _taluks, _selectedTaluk, (val) {
+                  _buildFilterField(AppLocalizations.of(context)?.talukHeader ?? 'Taluk', _buildDropdown(AppLocalizations.of(context)?.talukHeader ?? 'Taluk', AppLocalizations.of(context)?.chooseTaluk ?? 'Select Taluk', _taluks, _selectedTaluk, (val) {
                     setState(() => _selectedTaluk = val);
                     _fetchPanchayats(val!);
                   }, icon: Icons.location_city, isStringList: true), isMobile),
-                  _buildFilterField('Panchayat', _buildDropdown('Panchayat', _panchayats, _selectedPanchayat, (val) {
+                  _buildFilterField(AppLocalizations.of(context)?.panchayatHeader ?? 'Panchayat', _buildDropdown(AppLocalizations.of(context)?.panchayatHeader ?? 'Panchayat', AppLocalizations.of(context)?.choosePanchayat ?? 'Select Panchayat', _panchayats, _selectedPanchayat, (val) {
                     setState(() => _selectedPanchayat = val);
                     _fetchVillages(val!);
                   }, icon: Icons.business, isStringList: true), isMobile),
-                  _buildFilterField('Village', _buildDropdown('Village', _villages, _selectedVillage, (val) {
+                  _buildFilterField(AppLocalizations.of(context)?.villageUpperHeader ?? 'Village', _buildDropdown(AppLocalizations.of(context)?.villageUpperHeader ?? 'Village', AppLocalizations.of(context)?.chooseVillage ?? 'Select Village', _villages, _selectedVillage, (val) {
                     setState(() => _selectedVillage = val);
                   }, icon: Icons.home, isStringList: true), isMobile),
                 ]),
@@ -1089,9 +1106,9 @@ class _PaymentsContentState extends State<PaymentsContent> {
             ),
             SizedBox(height: isMobile ? 0 : 20),
             buildRow([
-              _buildFilterField('Event Year', CustomDropdownSearch(
+              _buildFilterField(AppLocalizations.of(context)?.eventYearLabel ?? 'Event Year', CustomDropdownSearch(
                 label: '',
-                hint: 'Select Year',
+                hint: AppLocalizations.of(context)?.chooseYearHint ?? 'Select Year',
                 dropdownMap: { for (var y in _years) y.toString(): y.toString() },
                 value: _selectedYear?.toString(),
                 onChanged: (val) {
@@ -1100,26 +1117,26 @@ class _PaymentsContentState extends State<PaymentsContent> {
                   if (intVal != null) _fetchEvents(intVal);
                 },
               ), isMobile),
-              _buildFilterField('Event', CustomDropdownSearch(
+              _buildFilterField(AppLocalizations.of(context)?.eventLabel ?? 'Event', CustomDropdownSearch(
                 label: '',
-                hint: 'Select Event',
+                hint: AppLocalizations.of(context)?.chooseEventHint ?? 'Select Event',
                 dropdownMap: { for (var e in _events) e['Id'].toString(): e['EventName'].toString() },
                 value: _selectedEventId?.toString(),
                 onChanged: (val) {
                   setState(() => _selectedEventId = val != null ? int.tryParse(val) : null);
                 },
               ), isMobile),
-              _buildFilterField('Status', Container(
+              _buildFilterField(AppLocalizations.of(context)?.statusLabel ?? 'Status', Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
                   border: Border.all(color: Colors.grey.shade400),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
+                child: Wrap(
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
-                    _buildStatusRadio('Paid'),
-                    _buildStatusRadio('Pending', label: 'Unpaid'),
+                    _buildStatusRadio('Paid', label: AppLocalizations.of(context)?.paidLabel ?? 'Paid'),
+                    _buildStatusRadio('Pending', label: AppLocalizations.of(context)?.unPaidLabel ?? 'Unpaid'),
                   ],
                 ),
               ), isMobile),
@@ -1134,7 +1151,7 @@ class _PaymentsContentState extends State<PaymentsContent> {
                             child: ElevatedButton.icon(
                               onPressed: _clearFilters,
                               icon: const Icon(Icons.clear, size: 18),
-                              label: const Text('Clear'),
+                              label: Text(AppLocalizations.of(context)?.cancelDialogBtn ?? 'Clear'),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.white,
                                 foregroundColor: Colors.red,
@@ -1158,40 +1175,37 @@ class _PaymentsContentState extends State<PaymentsContent> {
                           ),
                         ],
                       )
-                    : Row(
-                        mainAxisSize: MainAxisSize.min,
+                    : Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        alignment: WrapAlignment.end,
                         children: [
-                          Expanded(
-                            child: SizedBox(
-                              height: 44,
-                              child: ElevatedButton.icon(
-                                onPressed: _clearFilters,
-                                icon: const Icon(Icons.clear, size: 18),
-                                label: const Text('Clear'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.white,
-                                  foregroundColor: Colors.red,
-                                  side: const BorderSide(color: Colors.red),
-                                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                ),
+                          SizedBox(
+                            height: 44,
+                            child: ElevatedButton.icon(
+                              onPressed: _clearFilters,
+                              icon: const Icon(Icons.clear, size: 18),
+                              label: Text(AppLocalizations.of(context)?.cancelDialogBtn ?? 'Clear'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.white,
+                                foregroundColor: Colors.red,
+                                side: const BorderSide(color: Colors.red),
+                                padding: const EdgeInsets.symmetric(horizontal: 16),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                               ),
                             ),
                           ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: SizedBox(
-                              height: 44,
-                              child: ElevatedButton(
-                                onPressed: _applyFilters,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF5D1712),
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                ),
-                                child: Text(AppLocalizations.of(context)?.applyFilterBtn ?? 'Apply', overflow: TextOverflow.ellipsis),
+                          SizedBox(
+                            height: 44,
+                            child: ElevatedButton(
+                              onPressed: _applyFilters,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF5D1712),
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(horizontal: 16),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                               ),
+                              child: Text(AppLocalizations.of(context)?.applyFilterBtn ?? 'Apply'),
                             ),
                           ),
                         ],
@@ -1215,7 +1229,7 @@ class _PaymentsContentState extends State<PaymentsContent> {
     );
   }
 
-  Widget _buildDropdown(String label, List<dynamic> items, String? value, Function(String?) onChanged, {IconData? icon, bool isStringList = false}) {
+  Widget _buildDropdown(String label, String hintText, List<dynamic> items, String? value, Function(String?) onChanged, {IconData? icon, bool isStringList = false}) {
     List<String> mappedItems = items.map((item) {
       String val = isStringList ? (item is String ? item : item['taluk_name'] ?? item['panchayat_name'] ?? item['village_name']) : item['district_name'];
       return val;
@@ -1223,7 +1237,7 @@ class _PaymentsContentState extends State<PaymentsContent> {
 
     return CustomDropdownSearch(
       label: '',  // label is already shown by _buildFilterField wrapper
-      hint: 'Select $label',
+      hint: hintText,
       dropdownItems: mappedItems,
       value: value,
       onChanged: onChanged,

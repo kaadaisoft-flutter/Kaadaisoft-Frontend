@@ -272,11 +272,23 @@ abstract class AppLocalizations {
   /// **'Update Requests'**
   String get updateRequests;
 
+  /// No description provided for @paymentRequests.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment Requests'**
+  String get paymentRequests;
+
   /// No description provided for @searchPlaceholder.
   ///
   /// In en, this message translates to:
   /// **'Search ...'**
   String get searchPlaceholder;
+
+  /// No description provided for @coordinatorRole.
+  ///
+  /// In en, this message translates to:
+  /// **'Coordinator'**
+  String get coordinatorRole;
 
   /// No description provided for @memberRole.
   ///
@@ -425,7 +437,7 @@ abstract class AppLocalizations {
   /// No description provided for @sNo.
   ///
   /// In en, this message translates to:
-  /// **'S.No'**
+  /// **'S.NO'**
   String get sNo;
 
   /// No description provided for @nameHeader.
@@ -545,7 +557,7 @@ abstract class AppLocalizations {
   /// No description provided for @assignBtn.
   ///
   /// In en, this message translates to:
-  /// **'Assign'**
+  /// **'Assign Coordinator'**
   String get assignBtn;
 
   /// No description provided for @userIdHeader.
@@ -641,7 +653,7 @@ abstract class AppLocalizations {
   /// No description provided for @addBtn.
   ///
   /// In en, this message translates to:
-  /// **'Add'**
+  /// **'Add Member'**
   String get addBtn;
 
   /// No description provided for @familyIdHeader.
@@ -1616,6 +1628,48 @@ abstract class AppLocalizations {
   /// **'Paid Amount'**
   String get tablePaidAmount;
 
+  /// No description provided for @advancedSearchFiltersTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Advanced Search Filters'**
+  String get advancedSearchFiltersTitle;
+
+  /// No description provided for @specificSearchTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Specific Search (Name, Membership ID, Mobile, Email, Aadhar):'**
+  String get specificSearchTitle;
+
+  /// No description provided for @specificSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Type Name, Email, Mobile, Aadhar or Membership ID...'**
+  String get specificSearchHint;
+
+  /// No description provided for @specificSearchInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'Search by Name, Email, Mobile, Aadhar Card, or Membership ID directly.'**
+  String get specificSearchInfo;
+
+  /// No description provided for @clearFiltersBtn.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear Filters'**
+  String get clearFiltersBtn;
+
+  /// No description provided for @closeBtn.
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get closeBtn;
+
+  /// No description provided for @allLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get allLabel;
+
   /// No description provided for @tablePaymentDate.
   ///
   /// In en, this message translates to:
@@ -1771,6 +1825,498 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'PAID AMOUNT'**
   String get paidAmount;
+
+  /// No description provided for @myPaymentDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'My Payment Details'**
+  String get myPaymentDetails;
+
+  /// No description provided for @myInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'My Info'**
+  String get myInfo;
+
+  /// No description provided for @nameLabelShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Name:'**
+  String get nameLabelShort;
+
+  /// No description provided for @idLabelShort.
+  ///
+  /// In en, this message translates to:
+  /// **'ID:'**
+  String get idLabelShort;
+
+  /// No description provided for @addressLabelShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Address:'**
+  String get addressLabelShort;
+
+  /// No description provided for @eventInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'Event Info'**
+  String get eventInfo;
+
+  /// No description provided for @payAmountLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Pay Amount *'**
+  String get payAmountLabel;
+
+  /// No description provided for @dateLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Date: '**
+  String get dateLabel;
+
+  /// No description provided for @rsSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Rs Summary'**
+  String get rsSummary;
+
+  /// No description provided for @totalAmountLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Total Amount'**
+  String get totalAmountLabel;
+
+  /// No description provided for @alreadyPaidLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Already Paid'**
+  String get alreadyPaidLabel;
+
+  /// No description provided for @paymentMethodLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment Method'**
+  String get paymentMethodLabel;
+
+  /// No description provided for @bankMethod.
+  ///
+  /// In en, this message translates to:
+  /// **'Bank'**
+  String get bankMethod;
+
+  /// No description provided for @chequeMethod.
+  ///
+  /// In en, this message translates to:
+  /// **'Cheque'**
+  String get chequeMethod;
+
+  /// No description provided for @upiMethod.
+  ///
+  /// In en, this message translates to:
+  /// **'UPI'**
+  String get upiMethod;
+
+  /// No description provided for @cashMethod.
+  ///
+  /// In en, this message translates to:
+  /// **'Cash'**
+  String get cashMethod;
+
+  /// No description provided for @chooseBankLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose Bank *'**
+  String get chooseBankLabel;
+
+  /// No description provided for @otherBankNameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Other Bank Name *'**
+  String get otherBankNameLabel;
+
+  /// No description provided for @upiTransactionIdLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'UPI Transaction ID *'**
+  String get upiTransactionIdLabel;
+
+  /// No description provided for @referenceIdLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Reference ID *'**
+  String get referenceIdLabel;
+
+  /// No description provided for @chequeNumberLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cheque Number *'**
+  String get chequeNumberLabel;
+
+  /// No description provided for @saveReceiptBtn.
+  ///
+  /// In en, this message translates to:
+  /// **'Save Receipt'**
+  String get saveReceiptBtn;
+
+  /// No description provided for @savingBtn.
+  ///
+  /// In en, this message translates to:
+  /// **'Saving...'**
+  String get savingBtn;
+
+  /// No description provided for @confirmationRequiredTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirmation Required'**
+  String get confirmationRequiredTitle;
+
+  /// No description provided for @confirmDetailsBeforeSaving.
+  ///
+  /// In en, this message translates to:
+  /// **'Please confirm the details before saving.'**
+  String get confirmDetailsBeforeSaving;
+
+  /// No description provided for @successTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Success'**
+  String get successTitle;
+
+  /// No description provided for @receiptSavedSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment receipt saved successfully.'**
+  String get receiptSavedSuccess;
+
+  /// No description provided for @errorTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Error'**
+  String get errorTitle;
+
+  /// No description provided for @unableToSaveReceipt.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to save receipt.'**
+  String get unableToSaveReceipt;
+
+  /// No description provided for @invalidAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid Amount'**
+  String get invalidAmount;
+
+  /// No description provided for @chooseBankTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose bank'**
+  String get chooseBankTitle;
+
+  /// No description provided for @searchBankHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search bank...'**
+  String get searchBankHint;
+
+  /// No description provided for @noBanksFound.
+  ///
+  /// In en, this message translates to:
+  /// **'No banks found'**
+  String get noBanksFound;
+
+  /// No description provided for @requiredValidation.
+  ///
+  /// In en, this message translates to:
+  /// **'Required'**
+  String get requiredValidation;
+
+  /// No description provided for @greaterThanZeroValidation.
+  ///
+  /// In en, this message translates to:
+  /// **'Must be greater than 0'**
+  String get greaterThanZeroValidation;
+
+  /// No description provided for @exceedBalanceValidation.
+  ///
+  /// In en, this message translates to:
+  /// **'Cannot exceed balance'**
+  String get exceedBalanceValidation;
+
+  /// No description provided for @receiverInfoTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Receiver Info'**
+  String get receiverInfoTitle;
+
+  /// No description provided for @personReceivedMoneyLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Person Received the Money *'**
+  String get personReceivedMoneyLabel;
+
+  /// No description provided for @enterReceiverNameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter name of receiver'**
+  String get enterReceiverNameHint;
+
+  /// No description provided for @confirmDetailsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm Details'**
+  String get confirmDetailsLabel;
+
+  /// No description provided for @changePassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Change Password'**
+  String get changePassword;
+
+  /// No description provided for @addNewEvent.
+  ///
+  /// In en, this message translates to:
+  /// **'Add New Event'**
+  String get addNewEvent;
+
+  /// No description provided for @addEventNameUpper.
+  ///
+  /// In en, this message translates to:
+  /// **'EVENT NAME'**
+  String get addEventNameUpper;
+
+  /// No description provided for @addEventEgName.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Event_2026'**
+  String get addEventEgName;
+
+  /// No description provided for @addEventNoteName.
+  ///
+  /// In en, this message translates to:
+  /// **'Note: Year should be at the end of the event name (e.g. Event_2026).'**
+  String get addEventNoteName;
+
+  /// No description provided for @addEventBannerUpper.
+  ///
+  /// In en, this message translates to:
+  /// **'EVENT BANNER'**
+  String get addEventBannerUpper;
+
+  /// No description provided for @addEventChooseFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose File'**
+  String get addEventChooseFile;
+
+  /// No description provided for @addEventNoFileChosen.
+  ///
+  /// In en, this message translates to:
+  /// **'No file chosen'**
+  String get addEventNoFileChosen;
+
+  /// No description provided for @addEventNoteBanner.
+  ///
+  /// In en, this message translates to:
+  /// **'Note: Max file size 2MB (JPG, PNG).'**
+  String get addEventNoteBanner;
+
+  /// No description provided for @addEventDurationUpper.
+  ///
+  /// In en, this message translates to:
+  /// **'DURATION'**
+  String get addEventDurationUpper;
+
+  /// No description provided for @addEventFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'From'**
+  String get addEventFrom;
+
+  /// No description provided for @addEventTo.
+  ///
+  /// In en, this message translates to:
+  /// **'To'**
+  String get addEventTo;
+
+  /// No description provided for @addEventTaxAmountUpper.
+  ///
+  /// In en, this message translates to:
+  /// **'TAX AMOUNT (₹)'**
+  String get addEventTaxAmountUpper;
+
+  /// No description provided for @addEventCreateBtn.
+  ///
+  /// In en, this message translates to:
+  /// **'Create Event'**
+  String get addEventCreateBtn;
+
+  /// No description provided for @eventDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Event Details'**
+  String get eventDetails;
+
+  /// No description provided for @saveChanges.
+  ///
+  /// In en, this message translates to:
+  /// **'Save Changes'**
+  String get saveChanges;
+
+  /// No description provided for @uploadReceiptLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload Receipt (Optional)'**
+  String get uploadReceiptLabel;
+
+  /// No description provided for @changeImageBtn.
+  ///
+  /// In en, this message translates to:
+  /// **'Change Image'**
+  String get changeImageBtn;
+
+  /// No description provided for @removeImageBtn.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove Image'**
+  String get removeImageBtn;
+
+  /// No description provided for @noImageSelectedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'No image selected'**
+  String get noImageSelectedLabel;
+
+  /// No description provided for @tapToUploadLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to upload receipt'**
+  String get tapToUploadLabel;
+
+  /// No description provided for @myFinancialReport.
+  ///
+  /// In en, this message translates to:
+  /// **'My Financial Report'**
+  String get myFinancialReport;
+
+  /// No description provided for @myPaymentReceiptHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'My Payment Receipt History'**
+  String get myPaymentReceiptHistory;
+
+  /// No description provided for @noPaymentReceiptsFound.
+  ///
+  /// In en, this message translates to:
+  /// **'No payment receipts found.'**
+  String get noPaymentReceiptsFound;
+
+  /// No description provided for @totalAmountUpper.
+  ///
+  /// In en, this message translates to:
+  /// **'TOTAL AMOUNT'**
+  String get totalAmountUpper;
+
+  /// No description provided for @paidUpper.
+  ///
+  /// In en, this message translates to:
+  /// **'PAID'**
+  String get paidUpper;
+
+  /// No description provided for @pendingUpper.
+  ///
+  /// In en, this message translates to:
+  /// **'PENDING'**
+  String get pendingUpper;
+
+  /// No description provided for @bankDetailsUpper.
+  ///
+  /// In en, this message translates to:
+  /// **'BANK / DETAILS'**
+  String get bankDetailsUpper;
+
+  /// No description provided for @dateUpper.
+  ///
+  /// In en, this message translates to:
+  /// **'DATE'**
+  String get dateUpper;
+
+  /// No description provided for @yearUpper.
+  ///
+  /// In en, this message translates to:
+  /// **'YEAR'**
+  String get yearUpper;
+
+  /// No description provided for @duesUpper.
+  ///
+  /// In en, this message translates to:
+  /// **'DUES'**
+  String get duesUpper;
+
+  /// No description provided for @statusUpper.
+  ///
+  /// In en, this message translates to:
+  /// **'STATUS'**
+  String get statusUpper;
+
+  /// No description provided for @actionsUpper.
+  ///
+  /// In en, this message translates to:
+  /// **'ACTIONS'**
+  String get actionsUpper;
+
+  /// No description provided for @otherUpper.
+  ///
+  /// In en, this message translates to:
+  /// **'OTHER'**
+  String get otherUpper;
+
+  /// No description provided for @rs.
+  ///
+  /// In en, this message translates to:
+  /// **'Rs'**
+  String get rs;
+
+  /// No description provided for @records.
+  ///
+  /// In en, this message translates to:
+  /// **'record(s)'**
+  String get records;
+
+  /// No description provided for @noPendingPaymentRequests.
+  ///
+  /// In en, this message translates to:
+  /// **'No pending payment requests.'**
+  String get noPendingPaymentRequests;
+
+  /// No description provided for @totalAmountHeader.
+  ///
+  /// In en, this message translates to:
+  /// **'Total Amount'**
+  String get totalAmountHeader;
+
+  /// No description provided for @paidAmountHeader.
+  ///
+  /// In en, this message translates to:
+  /// **'Paid Amount'**
+  String get paidAmountHeader;
+
+  /// No description provided for @methodHeader.
+  ///
+  /// In en, this message translates to:
+  /// **'Method'**
+  String get methodHeader;
+
+  /// No description provided for @dateHeader.
+  ///
+  /// In en, this message translates to:
+  /// **'Date'**
+  String get dateHeader;
+
+  /// No description provided for @actionsHeader.
+  ///
+  /// In en, this message translates to:
+  /// **'Actions'**
+  String get actionsHeader;
 }
 
 class _AppLocalizationsDelegate

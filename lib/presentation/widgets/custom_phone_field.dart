@@ -126,11 +126,11 @@ class _CustomPhoneFieldState extends State<CustomPhoneField> {
         if (cleanLabel.isNotEmpty) ...[
           RichText(
             text: TextSpan(
-              text: cleanLabel,
+              text: '$cleanLabel ',
               style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black87),
               children: [
                 if (hasAsterisk)
-                  const TextSpan(text: ' *', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+                  const TextSpan(text: '*', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
               ],
             ),
           ),

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
@@ -68,6 +69,9 @@ class _PaymentFormState extends State<PaymentForm> {
   int _balance = 0; // The fixed balance from backend
   int _displayedBalance = 0; // Dynamic balance shown in UI
 
+  // Receipt image
+  PlatformFile? _receiptImage;
+
   @override
   void initState() {
     super.initState();
@@ -107,6 +111,24 @@ class _PaymentFormState extends State<PaymentForm> {
     _chequeNoFocus.dispose();
     _receiverFocus.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickImage() async {
+    try {
+      FilePickerResult? result = await FilePicker.pickFiles(
+        type: FileType.image,
+        allowMultiple: false,
+        withData: true,
+      );
+
+      if (result != null) {
+        setState(() {
+          _receiptImage = result.files.first;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error picking image: $e');
+    }
   }
 
   Future<void> _fetchYears() async {
@@ -210,6 +232,11 @@ class _PaymentFormState extends State<PaymentForm> {
       return;
     }
 
+    if (_paymentMethod == 'UPI' && _receiptImage == null) {
+      showStatusDialog(context, title: 'Receipt Required', message: 'Please upload the payment receipt for UPI transactions.', type: DialogType.warning);
+      return;
+    }
+
     if (!_isConfirmed) {
       showStatusDialog(context, title: 'Confirmation Required', message: 'Please confirm the details before saving.', type: DialogType.warning);
       return;
@@ -217,24 +244,31 @@ class _PaymentFormState extends State<PaymentForm> {
 
     setState(() => _isLoading = true);
     try {
-      final body = {
-        'member_id': widget.memberData['Familymembershipid'],
-        'event_id': _selectedEventId,
-        'paid_amount': int.parse(_amountController.text),
-        'payment_method': _paymentMethod,
-        'received_by': _receiverController.text,
-        'payment_date': DateFormat('yyyy-MM-dd').format(DateTime.now()),
-        'bank_name': (_paymentMethod == 'Bank' || _paymentMethod == 'Cheque') ? (_selectedBank == 'Other Bank' ? _otherBankController.text : _selectedBank) : null,
-        'transaction_id': _paymentMethod == 'Bank' ? _refNoController.text : null,
-        'check_no': _paymentMethod == 'Cheque' ? _chequeNoController.text : null,
-        'upi_id': _paymentMethod == 'UPI' ? _upiIdController.text : null,
-      };
+      var request = http.MultipartRequest('POST', Uri.parse(ApiConfig.saveReceipt));
+      request.fields['member_id'] = widget.memberData['Familymembershipid'].toString();
+      request.fields['event_id'] = _selectedEventId.toString();
+      request.fields['paid_amount'] = _amountController.text;
+      request.fields['payment_method'] = _paymentMethod;
+      request.fields['received_by'] = _receiverController.text;
+      request.fields['payment_date'] = DateFormat('yyyy-MM-dd').format(DateTime.now());
+      
+      if (_paymentMethod == 'Bank' || _paymentMethod == 'Cheque') {
+          request.fields['bank_name'] = _selectedBank == 'Other Bank' ? _otherBankController.text : _selectedBank!;
+      }
+      if (_paymentMethod == 'Bank') request.fields['transaction_id'] = _refNoController.text;
+      if (_paymentMethod == 'Cheque') request.fields['check_no'] = _chequeNoController.text;
+      if (_paymentMethod == 'UPI') request.fields['upi_id'] = _upiIdController.text;
 
-      final response = await http.post(
-        Uri.parse(ApiConfig.saveReceipt),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(body),
-      );
+      if (_receiptImage != null) {
+        if (_receiptImage!.bytes != null) {
+          request.files.add(http.MultipartFile.fromBytes('receipt_image', _receiptImage!.bytes!, filename: _receiptImage!.name));
+        } else if (_receiptImage!.path != null) {
+          request.files.add(await http.MultipartFile.fromPath('receipt_image', _receiptImage!.path!));
+        }
+      }
+
+      var streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
 
       if (response.statusCode == 200) {
         if (mounted) {
@@ -248,11 +282,14 @@ class _PaymentFormState extends State<PaymentForm> {
           });
         }
       } else {
-        final error = jsonDecode(response.body)['detail'] ?? 'Failed to save receipt';
+        final decoded = jsonDecode(response.body);
+        final detail = decoded['detail'];
+        final String error = detail is List ? detail.first['msg'].toString() : (detail?.toString() ?? 'Failed to save receipt');
         if (mounted) showStatusDialog(context, title: 'Error', message: error, type: DialogType.error);
       }
     } catch (e) {
-      if (mounted) showStatusDialog(context, title: 'Connection Error', message: 'Unable to save receipt.', type: DialogType.error);
+      debugPrint('Save Receipt Error: $e');
+      if (mounted) showStatusDialog(context, title: 'Connection Error', message: 'Unable to save receipt. \n$e', type: DialogType.error);
     } finally {
       setState(() => _isLoading = false);
     }
@@ -778,8 +815,77 @@ class _PaymentFormState extends State<PaymentForm> {
                 ],
               ),
           ],
+          if (_paymentMethod == 'UPI')
+            _buildImagePicker(),
         ],
       ),
+    );
+  }
+
+  Widget _buildImagePicker() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 16),
+        Text.rich(
+          TextSpan(
+            text: 'Upload Receipt ',
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF64748B)),
+            children: const [
+              TextSpan(
+                text: '*',
+                style: TextStyle(color: Colors.red),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 6),
+        if (_receiptImage != null)
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.image, color: Color(0xFF5D1712)),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(_receiptImage!.name, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500), overflow: TextOverflow.ellipsis),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close, color: Colors.red, size: 20),
+                  onPressed: () => setState(() => _receiptImage = null),
+                  tooltip: 'Remove Image',
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+              ],
+            ),
+          )
+        else
+          InkWell(
+            onTap: _pickImage,
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFE2E8F0), style: BorderStyle.solid),
+              ),
+              child: Column(
+                children: [
+                  const Icon(Icons.cloud_upload_outlined, color: Color(0xFF64748B), size: 32),
+                  const SizedBox(height: 8),
+                  const Text('Tap to upload receipt', style: TextStyle(fontSize: 13, color: Color(0xFF64748B))),
+                ],
+              ),
+            ),
+          ),
+      ],
     );
   }
 

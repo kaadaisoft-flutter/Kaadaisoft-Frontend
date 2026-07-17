@@ -262,6 +262,7 @@ class _MembersContentState extends State<MembersContent> {
                     Widget rightPart = Column(
                       children: [
                         Container(
+                          height: 50, // Fixed height to align with left header
                           color: const Color(0xFF2D1B18),
                           padding: const EdgeInsets.symmetric(vertical: 8),
                           child: Row(
@@ -317,6 +318,7 @@ class _MembersContentState extends State<MembersContent> {
                           child: Column(
                             children: [
                               Container(
+                                height: 50, // Fixed height to align with right header
                                 color: const Color(0xFF2D1B18),
                                 padding: const EdgeInsets.symmetric(vertical: 8),
                                 child: Row(
@@ -687,43 +689,23 @@ class _MembersContentState extends State<MembersContent> {
 
   Widget _buildActionButtons(bool isMobile) {
     if (isMobile) {
-      return Column(
+      return Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        alignment: WrapAlignment.start,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: _buildOutlinedButton(AppLocalizations.of(context)?.uploadBulkDataBtn ?? 'Upload Bulk Data', Icons.file_upload_outlined, const Color(0xFF5D1712), isMobile: true, onPressed: () => setState(() {
-                  _showBulkUpload = !_showBulkUpload;
-                  if (_showBulkUpload) _showFilters = false;
-                })),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _buildOutlinedButton(AppLocalizations.of(context)?.filterBtn ?? 'Filter', Icons.filter_alt_outlined, const Color(0xFF5D1712), isMobile: true, onPressed: () => setState(() {
-                  _showFilters = !_showFilters;
-                  if (_showFilters) _showBulkUpload = false;
-                })),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: _buildOutlinedButton(AppLocalizations.of(context)?.downloadBtn ?? 'Download', Icons.download_outlined, const Color(0xFF5D1712), isMobile: true, onPressed: _downloadMembersData),
-              ),
-              if (widget.role == 1) ...[
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _buildSolidButton(AppLocalizations.of(context)?.assignBtn ?? 'Assign', Icons.person_add_alt_1, const Color(0xFF5D1712), isMobile: true, onPressed: widget.onAssignPressed),
-                ),
-              ],
-              const SizedBox(width: 8),
-              Expanded(
-                child: _buildSolidButton(AppLocalizations.of(context)?.addBtn ?? 'Add', Icons.add, const Color(0xFF5D1712), isMobile: true, onPressed: _showAddMemberDialog),
-              ),
-            ],
-          ),
+          _buildOutlinedButton(AppLocalizations.of(context)?.uploadBulkDataBtn ?? 'Upload Bulk Data', Icons.file_upload_outlined, const Color(0xFF5D1712), isMobile: true, onPressed: () => setState(() {
+            _showBulkUpload = !_showBulkUpload;
+            if (_showBulkUpload) _showFilters = false;
+          })),
+          _buildOutlinedButton(AppLocalizations.of(context)?.filterBtn ?? 'Filter', Icons.filter_alt_outlined, const Color(0xFF5D1712), isMobile: true, onPressed: () => setState(() {
+            _showFilters = !_showFilters;
+            if (_showFilters) _showBulkUpload = false;
+          })),
+          _buildOutlinedButton(AppLocalizations.of(context)?.downloadBtn ?? 'Download', Icons.download_outlined, const Color(0xFF5D1712), isMobile: true, onPressed: _downloadMembersData),
+          if (widget.role == 1)
+            _buildSolidButton(AppLocalizations.of(context)?.assignBtn ?? 'Assign', Icons.person_add_alt_1, const Color(0xFF5D1712), isMobile: true, onPressed: widget.onAssignPressed),
+          _buildSolidButton(AppLocalizations.of(context)?.addBtn ?? 'Add', Icons.add, const Color(0xFF5D1712), isMobile: true, onPressed: _showAddMemberDialog),
         ],
       );
     }
@@ -844,7 +826,7 @@ class _MembersContentState extends State<MembersContent> {
                   border: Border.all(color: role == '2' ? Colors.orange.shade200 : const Color(0xFFE5A09D)),
                 ),
                 child: Text(
-                  role == '2' ? (AppLocalizations.of(context)?.coordinators?.toUpperCase() ?? 'COORDINATOR') : (AppLocalizations.of(context)?.memberRole?.toUpperCase() ?? 'MEMBER'),
+                  role == '2' ? (AppLocalizations.of(context)?.coordinatorRole?.toUpperCase() ?? 'COORDINATOR') : (AppLocalizations.of(context)?.memberRole?.toUpperCase() ?? 'MEMBER'),
                   style: TextStyle(color: role == '2' ? Colors.orange.shade700 : const Color(0xFF5D1712), fontSize: 10, fontWeight: FontWeight.bold),
                 ),
               )),
@@ -1374,7 +1356,7 @@ class _MembersContentState extends State<MembersContent> {
               children: [
                 Icon(Icons.search_rounded, color: Colors.amber.shade700, size: 24),
                 const SizedBox(width: 12),
-                const Text('Advanced Search Filters', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: const Color(0xFF2D1B18))),
+                Text(AppLocalizations.of(context)?.advancedSearchFiltersTitle ?? 'Advanced Search Filters', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF2D1B18))),
               ],
             ),
           ),
@@ -1393,28 +1375,28 @@ class _MembersContentState extends State<MembersContent> {
                         spacing: 16,
                         runSpacing: 16,
                         children: [
-                          SizedBox(width: itemWidth, child: _buildFilterDropdown('Districts:', _districts, _selectedDistrict, (v) {
+                          SizedBox(width: itemWidth, child: _buildFilterDropdown(AppLocalizations.of(context)?.districtsLabel ?? 'Districts:', _districts, _selectedDistrict, (v) {
                             if (v != null) {
                               setState(() => _selectedDistrict = v);
                               _fetchTaluks(v);
                               _fetchMembers();
                             }
                           }, isLoading: _isLoadingDistricts)),
-                          SizedBox(width: itemWidth, child: _buildFilterDropdown('Taluks:', _taluks, _selectedTaluk, (v) {
+                          SizedBox(width: itemWidth, child: _buildFilterDropdown(AppLocalizations.of(context)?.taluksLabel ?? 'Taluks:', _taluks, _selectedTaluk, (v) {
                             if (v != null) {
                               setState(() => _selectedTaluk = v);
                               _fetchPanchayats(v);
                               _fetchMembers();
                             }
                           }, isLoading: _isLoadingTaluks)),
-                          SizedBox(width: itemWidth, child: _buildFilterDropdown('Panchayat:', _panchayats, _selectedPanchayat, (v) {
+                          SizedBox(width: itemWidth, child: _buildFilterDropdown(AppLocalizations.of(context)?.panchayatsLabel ?? 'Panchayats:', _panchayats, _selectedPanchayat, (v) {
                             if (v != null) {
                               setState(() => _selectedPanchayat = v);
                               _fetchVillages(v);
                               _fetchMembers();
                             }
                           }, isLoading: _isLoadingPanchayats)),
-                          SizedBox(width: itemWidth, child: _buildFilterDropdown('Village:', _villages, _selectedVillage, (v) {
+                          SizedBox(width: itemWidth, child: _buildFilterDropdown(AppLocalizations.of(context)?.villagesLabel ?? 'Villages:', _villages, _selectedVillage, (v) {
                             setState(() => _selectedVillage = v);
                             _fetchMembers();
                           }, isLoading: _isLoadingVillages)),
@@ -1427,13 +1409,13 @@ class _MembersContentState extends State<MembersContent> {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Specific Search (Name, Membership ID, Mobile, Email, Aadhar):', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black87)),
+                        Text(AppLocalizations.of(context)?.specificSearchTitle ?? 'Specific Search (Name, Membership ID, Mobile, Email, Aadhar):', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black87)),
                         const SizedBox(height: 12),
                         TextField(
                           controller: _searchController,
                           onChanged: (v) => _fetchMembers(),
                           decoration: InputDecoration(
-                            hintText: 'Type Name, Email, Mobile, Aadhar or Membership ID...',
+                            hintText: AppLocalizations.of(context)?.specificSearchHint ?? 'Type Name, Email, Mobile, Aadhar or Membership ID...',
                             prefixIcon: const Icon(Icons.search, size: 20, color: Colors.amber),
                             filled: true,
                             fillColor: Colors.white,
@@ -1447,7 +1429,7 @@ class _MembersContentState extends State<MembersContent> {
                           children: [
                             Icon(Icons.info, size: 14, color: Colors.grey.shade500),
                             const SizedBox(width: 6),
-                            const Expanded(child: Text('Search by Name, Email, Mobile, Aadhar Card, or Membership ID directly.', style: TextStyle(fontSize: 12, color: Colors.grey))),
+                            Expanded(child: Text(AppLocalizations.of(context)?.specificSearchInfo ?? 'Search by Name, Email, Mobile, Aadhar Card, or Membership ID directly.', style: const TextStyle(fontSize: 12, color: Colors.grey))),
                           ],
                         ),
                       ],
@@ -1459,15 +1441,15 @@ class _MembersContentState extends State<MembersContent> {
                       spacing: 16,
                       runSpacing: 16,
                       children: [
-                        SizedBox(width: itemWidth, child: _buildFilterDropdown('Blood Group:', _bloodGroups, _selectedBloodGroup, (v) {
+                        SizedBox(width: itemWidth, child: _buildFilterDropdown(AppLocalizations.of(context)?.bloodGroupLabel ?? 'Blood Group:', _bloodGroups, _selectedBloodGroup, (v) {
                           setState(() => _selectedBloodGroup = v);
                           _fetchMembers();
                         })),
-                        SizedBox(width: itemWidth, child: _buildFilterDropdown('Gender:', _genders, _selectedGender, (v) {
+                        SizedBox(width: itemWidth, child: _buildFilterDropdown(AppLocalizations.of(context)?.genderHeader ?? 'Gender:', _genders, _selectedGender, (v) {
                           setState(() => _selectedGender = v!);
                           _fetchMembers();
                         })),
-                        SizedBox(width: itemWidth, child: _buildFilterDropdown('Occupation:', _occupations, _selectedOccupation, (v) {
+                        SizedBox(width: itemWidth, child: _buildFilterDropdown(AppLocalizations.of(context)?.professionLabel ?? 'Occupation:', _occupations, _selectedOccupation, (v) {
                           setState(() => _selectedOccupation = v!);
                           _fetchMembers();
                         })),
@@ -1491,7 +1473,7 @@ class _MembersContentState extends State<MembersContent> {
                               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                             ),
-                            child: const Text('Clear Filters', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                            child: Text(AppLocalizations.of(context)?.clearFiltersBtn ?? 'Clear Filters', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                           ),
                         ),
                         SizedBox(
@@ -1504,7 +1486,7 @@ class _MembersContentState extends State<MembersContent> {
                               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                             ),
-                            child: const Text('Close', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                            child: Text(AppLocalizations.of(context)?.closeBtn ?? 'Close', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                           ),
                         ),
                       ],

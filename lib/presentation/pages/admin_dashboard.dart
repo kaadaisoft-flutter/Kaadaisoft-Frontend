@@ -23,6 +23,8 @@ import '../widgets/custom_dialog.dart';
 import '../widgets/payment_form.dart';
 import '../widgets/receipt_dialog.dart';
 import '../../utils/api_config.dart';
+import 'payment_requests_content.dart';
+
 class AdminDashboard extends StatefulWidget {
   final bool showLoginSuccess;
   final String userName;
@@ -386,6 +388,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
       {'title': 'Payments', 'icon': Icons.credit_card, 'color': const Color(0xFF14B8A6)},
       {'title': 'Reports', 'icon': Icons.file_copy_outlined, 'color': const Color(0xFFF97316)},
       {'title': 'Update Requests', 'icon': Icons.person_add_alt_1, 'color': const Color(0xFF06B6D4)},
+      {'title': 'Payment Requests', 'icon': Icons.receipt_long, 'color': const Color(0xFF6366F1)},
       {'title': 'Logout', 'icon': Icons.power_settings_new, 'color': Colors.red},
     ];
 
@@ -430,7 +433,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
           title: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Change Password', style: TextStyle(fontWeight: FontWeight.bold)),
+              Text(AppLocalizations.of(context)?.changePassword ?? 'Change Password', style: const TextStyle(fontWeight: FontWeight.bold)),
               IconButton(
                 icon: const Icon(Icons.close),
                 onPressed: () => Navigator.pop(context),
@@ -535,7 +538,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
                       ),
                       child: isChanging 
                         ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                        : const Text('Change Password'),
+                        : Text(AppLocalizations.of(context)?.changePassword ?? 'Change Password'),
                     ),
                   ),
                 ],
@@ -701,6 +704,20 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
       );
     }
     
+    if (_activeItem == 'Payment Requests') {
+      return Padding(
+        padding: contentPadding,
+        child: PaymentRequestsContent(
+          key: const ValueKey('Payment Requests'),
+          onBackToDashboard: () {
+            _fetchStats();
+            _fetchPaymentDetails();
+            _navigateTo('Dashboard');
+          },
+        ),
+      );
+    }
+    
     if (_activeItem == 'ID Card Benefits') {
       return Padding(
         padding: contentPadding,
@@ -845,6 +862,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
       case 'Payments': return loc?.payments ?? title;
       case 'Reports': return loc?.reports ?? title;
       case 'Update Requests': return loc?.updateRequests ?? title;
+      case 'Payment Requests': return loc?.paymentRequests ?? title;
       case 'Logout': return loc?.logout ?? title;
       default: return title;
     }
@@ -1210,23 +1228,23 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
         }
       },
       itemBuilder: (context) => [
-        const PopupMenuItem(
+        PopupMenuItem(
           value: 'change_password',
           child: Row(
             children: [
-              Icon(Icons.key, size: 18, color: const Color(0xFF5D1712)),
-              SizedBox(width: 12),
-              Text('Change Password', style: TextStyle(fontSize: 14)),
+              const Icon(Icons.key, size: 18, color: Color(0xFF5D1712)),
+              const SizedBox(width: 12),
+              Text(AppLocalizations.of(context)?.changePassword ?? 'Change Password', style: const TextStyle(fontSize: 14)),
             ],
           ),
         ),
-        const PopupMenuItem(
+        PopupMenuItem(
           value: 'logout',
           child: Row(
             children: [
-              Icon(Icons.power_settings_new, size: 18, color: Colors.red),
-              SizedBox(width: 12),
-              Text('Logout', style: TextStyle(fontSize: 14, color: Colors.red)),
+              const Icon(Icons.power_settings_new, size: 18, color: Colors.red),
+              const SizedBox(width: 12),
+              Text(AppLocalizations.of(context)?.logout ?? 'Logout', style: const TextStyle(fontSize: 14, color: Colors.red)),
             ],
           ),
         ),
@@ -1720,13 +1738,21 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
     final eventId = payment['Id'];
     final year = payment['year'];
 
-    final Color badgeBgColor = isPaid
-        ? const Color(0xFFE8F5E9)
-        : (isPartial ? const Color(0xFFE3F2FD) : const Color(0xFFFFEBEE));
-    final Color badgeTextColor = isPaid
-        ? const Color(0xFF2E7D32)
-        : (isPartial ? const Color(0xFF1565C0) : const Color(0xFFC62828));
-    final String statusText = isPaid ? (AppLocalizations.of(context)?.paidLabel ?? 'PAID') : (isPartial ? 'PARTIALLY PAID' : (AppLocalizations.of(context)?.unPaidLabel ?? 'UN PAID'));
+    final hasPending = payment['has_pending'] == 1;
+
+    final Color badgeBgColor = hasPending
+        ? const Color(0xFFFFF3E0)
+        : (isPaid
+            ? const Color(0xFFE8F5E9)
+            : (isPartial ? const Color(0xFFE3F2FD) : const Color(0xFFFFEBEE)));
+    final Color badgeTextColor = hasPending
+        ? const Color(0xFFE65100)
+        : (isPaid
+            ? const Color(0xFF2E7D32)
+            : (isPartial ? const Color(0xFF1565C0) : const Color(0xFFC62828)));
+    final String statusText = hasPending
+        ? 'IN PROGRESS'
+        : (isPaid ? (AppLocalizations.of(context)?.paidLabel ?? 'PAID') : (isPartial ? 'PARTIALLY PAID' : (AppLocalizations.of(context)?.unPaidLabel ?? 'UN PAID')));
 
     return MouseRegion(
       cursor: SystemMouseCursors.click,

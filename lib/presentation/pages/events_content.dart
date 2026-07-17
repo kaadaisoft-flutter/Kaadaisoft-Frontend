@@ -162,10 +162,10 @@ class _EventsContentState extends State<EventsContent> {
           title: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Expanded(
+              Expanded(
                 child: Text(
-                  'Event Details', 
-                  style: TextStyle(fontWeight: FontWeight.bold),
+                  AppLocalizations.of(context)?.eventDetails ?? 'Event Details', 
+                  style: const TextStyle(fontWeight: FontWeight.bold),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
@@ -182,7 +182,7 @@ class _EventsContentState extends State<EventsContent> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('EVENT NAME', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black54, letterSpacing: 0.5)),
+                  Text(AppLocalizations.of(context)?.addEventNameUpper ?? 'EVENT NAME', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black54, letterSpacing: 0.5)),
                   const SizedBox(height: 8),
                   TextField(
                     controller: nameController,
@@ -197,7 +197,7 @@ class _EventsContentState extends State<EventsContent> {
                     ),
                   ),
                   const SizedBox(height: 20),
-                  const Text('DURATION', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black54, letterSpacing: 0.5)),
+                  Text(AppLocalizations.of(context)?.addEventDurationUpper ?? 'DURATION', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black54, letterSpacing: 0.5)),
                   const SizedBox(height: 8),
                   Builder(
                     builder: (context) {
@@ -206,18 +206,23 @@ class _EventsContentState extends State<EventsContent> {
                       final fromDateWidget = Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('From', style: TextStyle(fontSize: 11, color: Colors.black45)),
+                          Text(AppLocalizations.of(context)?.addEventFrom ?? 'From', style: TextStyle(fontSize: 11, color: Colors.black45)),
                           const SizedBox(height: 4),
-                          _buildDatePicker(context, fromDate, (date) => setDialogState(() => fromDate = date)),
+                          _buildDatePicker(context, fromDate, (date) {
+                            setDialogState(() {
+                              fromDate = date;
+                              if (toDate.isBefore(fromDate)) toDate = fromDate;
+                            });
+                          }),
                         ],
                       );
                       
                       final toDateWidget = Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('To', style: TextStyle(fontSize: 11, color: Colors.black45)),
+                          Text(AppLocalizations.of(context)?.addEventTo ?? 'To', style: TextStyle(fontSize: 11, color: Colors.black45)),
                           const SizedBox(height: 4),
-                          _buildDatePicker(context, toDate, (date) => setDialogState(() => toDate = date)),
+                          _buildDatePicker(context, toDate, (date) => setDialogState(() => toDate = date), minDate: fromDate),
                         ],
                       );
 
@@ -241,7 +246,7 @@ class _EventsContentState extends State<EventsContent> {
                     },
                   ),
                   const SizedBox(height: 20),
-                  const Text('TAX AMOUNT (₹)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black54, letterSpacing: 0.5)),
+                  Text(AppLocalizations.of(context)?.addEventTaxAmountUpper ?? 'TAX AMOUNT (₹)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black54, letterSpacing: 0.5)),
                   const SizedBox(height: 8),
                   TextField(
                     controller: taxController,
@@ -271,6 +276,10 @@ class _EventsContentState extends State<EventsContent> {
                     height: 54,
                     child: ElevatedButton(
                       onPressed: isSaving ? null : () async {
+                        if (toDate.isBefore(fromDate)) {
+                          showStatusDialog(context, title: 'Error', message: 'To date cannot be earlier than From date', type: DialogType.error);
+                          return;
+                        }
                         setDialogState(() => isSaving = true);
                         try {
                           final response = await http.post(
@@ -303,7 +312,7 @@ class _EventsContentState extends State<EventsContent> {
                       ),
                       child: isSaving 
                         ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                        : const Text('Save Changes', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                        : Text(AppLocalizations.of(context)?.saveChanges ?? 'Save Changes', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -489,14 +498,21 @@ class _EventsContentState extends State<EventsContent> {
   }
 
 
-  Widget _buildDatePicker(BuildContext context, DateTime? selectedDate, Function(DateTime) onDateSelected) {
-
+  Widget _buildDatePicker(BuildContext context, DateTime? selectedDate, Function(DateTime) onDateSelected, {DateTime? minDate}) {
     return InkWell(
       onTap: () async {
+        DateTime now = DateTime.now();
+        DateTime today = DateTime(now.year, now.month, now.day);
+        DateTime first = minDate ?? DateTime(2000);
+        DateTime initial = selectedDate ?? today;
+        if (initial.isBefore(first)) {
+          initial = first;
+        }
+
         final date = await showDatePicker(
           context: context,
-          initialDate: selectedDate ?? DateTime.now(),
-          firstDate: DateTime.now(),
+          initialDate: initial,
+          firstDate: first,
           lastDate: DateTime(2100),
         );
         if (date != null) onDateSelected(date);
@@ -547,10 +563,10 @@ class _EventsContentState extends State<EventsContent> {
           title: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Expanded(
+              Expanded(
                 child: Text(
-                  'Add New Event', 
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+                  AppLocalizations.of(context)?.addNewEvent ?? 'Add New Event', 
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
@@ -567,12 +583,12 @@ class _EventsContentState extends State<EventsContent> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('EVENT NAME', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black54)),
+                  Text(AppLocalizations.of(context)?.addEventNameUpper ?? 'EVENT NAME', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black54)),
                   const SizedBox(height: 8),
                   TextField(
                     controller: nameController,
                     decoration: InputDecoration(
-                      hintText: 'e.g. Event_2026',
+                      hintText: AppLocalizations.of(context)?.addEventEgName ?? 'e.g. Event_2026',
                       filled: true,
                       fillColor: Colors.grey[50],
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey[200]!)),
@@ -586,7 +602,7 @@ class _EventsContentState extends State<EventsContent> {
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text(
-                          'Note: Year should be at the end of the event name (e.g. Event_2026).',
+                          AppLocalizations.of(context)?.addEventNoteName ?? 'Note: Year should be at the end of the event name (e.g. Event_2026).',
                           style: TextStyle(fontSize: 11, color: const Color(0xFF5D1712)),
                         ),
                       ),
@@ -594,7 +610,7 @@ class _EventsContentState extends State<EventsContent> {
                   ),
                   const SizedBox(height: 24),
                   
-                  const Text('EVENT BANNER', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black54)),
+                  Text(AppLocalizations.of(context)?.addEventBannerUpper ?? 'EVENT BANNER', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black54)),
                   const SizedBox(height: 8),
                   InkWell(
                     onTap: () async {
@@ -626,12 +642,12 @@ class _EventsContentState extends State<EventsContent> {
                               border: Border.all(color: Colors.grey[300]!),
                               borderRadius: BorderRadius.circular(4),
                             ),
-                            child: const Text('Choose File', style: TextStyle(fontSize: 13, color: Colors.black87)),
+                            child: Text(AppLocalizations.of(context)?.addEventChooseFile ?? 'Choose File', style: TextStyle(fontSize: 13, color: Colors.black87)),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
                             child: Text(
-                              selectedBanner?.name ?? 'No file chosen',
+                              selectedBanner?.name ?? AppLocalizations.of(context)?.addEventNoFileChosen ?? 'No file chosen',
                               style: TextStyle(fontSize: 13, color: selectedBanner == null ? Colors.black45 : Colors.black87),
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -647,7 +663,7 @@ class _EventsContentState extends State<EventsContent> {
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text(
-                          'Note: Max file size 2MB (JPG, PNG).',
+                          AppLocalizations.of(context)?.addEventNoteBanner ?? 'Note: Max file size 2MB (JPG, PNG).',
                           style: TextStyle(fontSize: 11, color: const Color(0xFF5D1712)),
                         ),
                       ),
@@ -655,7 +671,7 @@ class _EventsContentState extends State<EventsContent> {
                   ),
                   const SizedBox(height: 24),
 
-                  const Text('DURATION', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black54)),
+                  Text(AppLocalizations.of(context)?.addEventDurationUpper ?? 'DURATION', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black54)),
                   const SizedBox(height: 8),
                   Builder(
                     builder: (context) {
@@ -664,18 +680,25 @@ class _EventsContentState extends State<EventsContent> {
                       final fromDateWidget = Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('From', style: TextStyle(fontSize: 11, color: Colors.black45)),
+                          Text(AppLocalizations.of(context)?.addEventFrom ?? 'From', style: TextStyle(fontSize: 11, color: Colors.black45)),
                           const SizedBox(height: 4),
-                          _buildDatePicker(context, fromDate, (date) => setDialogState(() => fromDate = date)),
+                          _buildDatePicker(context, fromDate, (date) {
+                            setDialogState(() {
+                              fromDate = date;
+                              if (toDate != null && toDate!.isBefore(fromDate!)) {
+                                toDate = fromDate;
+                              }
+                            });
+                          }, minDate: DateTime.now()),
                         ],
                       );
                       
                       final toDateWidget = Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('To', style: TextStyle(fontSize: 11, color: Colors.black45)),
+                          Text(AppLocalizations.of(context)?.addEventTo ?? 'To', style: TextStyle(fontSize: 11, color: Colors.black45)),
                           const SizedBox(height: 4),
-                          _buildDatePicker(context, toDate, (date) => setDialogState(() => toDate = date)),
+                          _buildDatePicker(context, toDate, (date) => setDialogState(() => toDate = date), minDate: fromDate ?? DateTime.now()),
                         ],
                       );
 
@@ -700,7 +723,7 @@ class _EventsContentState extends State<EventsContent> {
                   ),
                   const SizedBox(height: 24),
 
-                  const Text('TAX AMOUNT (₹)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black54)),
+                  Text(AppLocalizations.of(context)?.addEventTaxAmountUpper ?? 'TAX AMOUNT (₹)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black54)),
                   const SizedBox(height: 8),
                   TextField(
                     controller: taxController,
@@ -734,6 +757,10 @@ class _EventsContentState extends State<EventsContent> {
                         }
                         if (fromDate == null || toDate == null) {
                           showStatusDialog(context, title: 'Error', message: 'Please select event duration', type: DialogType.error);
+                          return;
+                        }
+                        if (toDate!.isBefore(fromDate!)) {
+                          showStatusDialog(context, title: 'Error', message: 'To date cannot be earlier than From date', type: DialogType.error);
                           return;
                         }
 
@@ -777,7 +804,7 @@ class _EventsContentState extends State<EventsContent> {
                       ),
                       child: isSaving 
                         ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                        : const Text('Create Event', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                        : Text(AppLocalizations.of(context)?.addEventCreateBtn ?? 'Create Event', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                     ),
                   ),
                 ],
@@ -868,7 +895,7 @@ class _EventsContentState extends State<EventsContent> {
                       child: ElevatedButton.icon(
                         onPressed: _showAddEventDialog,
                         icon: const Icon(Icons.add, size: 18),
-                        label: const Text('Add New Event'),
+                        label: Text(AppLocalizations.of(context)?.addNewEvent ?? 'Add New Event'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF2D1B18),
                           foregroundColor: Colors.white,
@@ -888,7 +915,7 @@ class _EventsContentState extends State<EventsContent> {
                     ElevatedButton.icon(
                       onPressed: _showAddEventDialog,
                       icon: const Icon(Icons.add, size: 18),
-                      label: const Text('Add New Event'),
+                      label: Text(AppLocalizations.of(context)?.addNewEvent ?? 'Add New Event'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF2D1B18),
                         foregroundColor: Colors.white,

@@ -15,22 +15,22 @@ class AppLocalizationsTa extends AppLocalizations {
   String get login => 'உள்நுழைக';
 
   @override
-  String get dashboard => 'முகப்பு';
+  String get dashboard => 'டாஷ்போர்டு';
 
   @override
   String get myDetails => 'எனது விவரங்கள்';
 
   @override
-  String get logout => 'வெளியேறு';
+  String get logout => 'லாக் அவுட்';
 
   @override
   String get mobileNumber => 'அலைபேசி எண்';
 
   @override
-  String get password => 'கடவுச்சொல்';
+  String get password => 'பாஸ்வேர்டு';
 
   @override
-  String get forgotPassword => 'கடவுச்சொல் மறந்துவிட்டதா?';
+  String get forgotPassword => 'பாஸ்வேர்டு மறந்துவிட்டதா?';
 
   @override
   String get registerPrompt => 'கணக்கு இல்லையா?';
@@ -39,7 +39,7 @@ class AppLocalizationsTa extends AppLocalizations {
   String get register => 'பதிவு செய்';
 
   @override
-  String get coordinatorDetails => 'ஒருங்கிணைப்பாளர் விவரங்கள்';
+  String get coordinatorDetails => 'பொறுப்பாளர் விவரங்கள்';
 
   @override
   String get termsAndConditions => 'விதிமுறைகள் மற்றும் நிபந்தனைகள்';
@@ -52,10 +52,10 @@ class AppLocalizationsTa extends AppLocalizations {
       '© 2026 பூந்துறை காடை குலம். அனைத்து உரிமைகளும் பாதுகாக்கப்பட்டவை.';
 
   @override
-  String get forgotPasswordTitle => 'கடவுச்சொல் மறந்துவிட்டதா';
+  String get forgotPasswordTitle => 'பாஸ்வேர்டு மறந்துவிட்டதா';
 
   @override
-  String get resetPasswordTitle => 'கடவுச்சொல்லை மாற்று';
+  String get resetPasswordTitle => 'பாஸ்வேர்டு மாற்று';
 
   @override
   String get forgotPasswordInstruction =>
@@ -66,28 +66,28 @@ class AppLocalizationsTa extends AppLocalizations {
 
   @override
   String get resetPasswordInstruction =>
-      'உங்கள் மின்னஞ்சலுக்கு அனுப்பப்பட்ட 6 இலக்க OTP மற்றும் புதிய கடவுச்சொல்லை உள்ளிடவும்.';
+      'உங்கள் மின்னஞ்சலுக்கு அனுப்பப்பட்ட 6 இலக்க OTP மற்றும் புதிய பாஸ்வேர்டை உள்ளிடவும்.';
 
   @override
   String get otpHint => 'OTP';
 
   @override
-  String get newPasswordHint => 'புதிய கடவுச்சொல்';
+  String get newPasswordHint => 'புதிய பாஸ்வேர்டு';
 
   @override
-  String get resetPasswordButton => 'கடவுச்சொல்லை மாற்று';
+  String get resetPasswordButton => 'பாஸ்வேர்டு மாற்று';
 
   @override
   String get idCardBenefits => 'அடையாள அட்டை சலுகைகள்';
 
   @override
-  String get coordinators => 'ஒருங்கிணைப்பாளர்கள்';
+  String get coordinators => 'பொறுப்பாளர்கள்';
 
   @override
   String get members => 'உறுப்பினர்கள்';
 
   @override
-  String get events => 'நிகழ்வுகள்';
+  String get events => 'விசேஷங்கள்';
 
   @override
   String get payments => 'கட்டணங்கள்';
@@ -99,7 +99,13 @@ class AppLocalizationsTa extends AppLocalizations {
   String get updateRequests => 'கோரிக்கைகளை புதுப்பிக்கவும்';
 
   @override
+  String get paymentRequests => 'கட்டண கோரிக்கைகள்';
+
+  @override
   String get searchPlaceholder => 'தேடு ...';
+
+  @override
+  String get coordinatorRole => 'பொறுப்பாளர்';
 
   @override
   String get memberRole => 'உறுப்பினர்';
@@ -114,27 +120,27 @@ class AppLocalizationsTa extends AppLocalizations {
   String get villageLabel => 'கிராமம்';
 
   @override
-  String get paymentPendingDetails => 'கட்டணம் நிலுவையில் உள்ள விவரங்கள்';
+  String get paymentPendingDetails => 'செலுத்த வேண்டிய கட்டணங்கள்';
 
   @override
-  String get unpaidDetails => 'நிலுவை விவரங்கள்';
+  String get unpaidDetails => 'செலுத்தாதவை';
 
   @override
-  String get paidEvents => 'செலுத்தப்பட்ட நிகழ்வுகள்';
+  String get paidEvents => 'செலுத்தியவை';
 
   @override
-  String get totalPendingAmount => 'மொத்த நிலுவைத் தொகை';
+  String get totalPendingAmount => 'மொத்த பாக்கித் தொகை';
 
   @override
   String get totalPaidAmount => 'மொத்த செலுத்தப்பட்ட தொகை';
 
   @override
   String get pendingBalanceFromAllEvents =>
-      'அனைத்து நிகழ்வுகளிலிருந்தும் நிலுவைத் தொகை';
+      'இதுவரை செலுத்த வேண்டிய மொத்த பாக்கி';
 
   @override
   String get paidBalanceFromAllEvents =>
-      'அனைத்து நிகழ்வுகளுக்கும் செலுத்தப்பட்ட மொத்த தொகை';
+      'அனைத்து விசேஷங்களுக்கும் செலுத்தப்பட்ட மொத்த தொகை';
 
   @override
   String get unPaidLabel => 'செலுத்தப்படவில்லை';
@@ -158,7 +164,7 @@ class AppLocalizationsTa extends AppLocalizations {
   String get address => 'முகவரி:';
 
   @override
-  String get eventParticipation => 'நிகழ்வு பங்கேற்பு';
+  String get eventParticipation => 'விசேஷங்களில் பங்கேற்பு';
 
   @override
   String get updateDetails => 'விவரங்களை புதுப்பிக்கவும்';
@@ -197,7 +203,7 @@ class AppLocalizationsTa extends AppLocalizations {
   String get editAction => 'திருத்து';
 
   @override
-  String get eventsManagement => 'நிகழ்வுகள் மேலாண்மை';
+  String get eventsManagement => 'விசேஷங்கள் மேலாண்மை';
 
   @override
   String get upcomingTab => 'வரவிருக்கும்';
@@ -209,7 +215,7 @@ class AppLocalizationsTa extends AppLocalizations {
   String get completedTab => 'முடிந்தவை';
 
   @override
-  String get eventNameHeader => 'நிகழ்வு பெயர்';
+  String get eventNameHeader => 'விசேஷத்தின் பெயர்';
 
   @override
   String get bannerHeader => 'பேனர்';
@@ -224,22 +230,22 @@ class AppLocalizationsTa extends AppLocalizations {
   String get toDate => 'வரை:';
 
   @override
-  String get totalEvents => 'மொத்த நிகழ்வுகள்:';
+  String get totalEvents => 'மொத்த விசேஷங்கள்:';
 
   @override
-  String get coordinatorsManagement => 'ஒருங்கிணைப்பாளர்கள் மேலாண்மை';
+  String get coordinatorsManagement => 'பொறுப்பாளர்கள் மேலாண்மை';
 
   @override
-  String get totalCoordinators => 'மொத்த ஒருங்கிணைப்பாளர்கள்:';
+  String get totalCoordinators => 'மொத்த பொறுப்பாளர்கள்:';
 
   @override
-  String get filterBtn => 'வடிகட்டி';
+  String get filterBtn => 'தேடல்';
 
   @override
-  String get assignBtn => 'ஒதுக்கு';
+  String get assignBtn => 'பொறுப்பாளரைச் சேர்';
 
   @override
-  String get userIdHeader => 'பயனர் ஐடி';
+  String get userIdHeader => 'உறுப்பினர் எண்';
 
   @override
   String get districtHeader => 'மாவட்டம்';
@@ -254,7 +260,7 @@ class AppLocalizationsTa extends AppLocalizations {
   String get villageUpperHeader => 'கிராமம்';
 
   @override
-  String get assignedVillageHeader => 'ஒதுக்கப்பட்ட கிராமம்';
+  String get assignedVillageHeader => 'நியமிக்கப்பட்ட கிராமம்';
 
   @override
   String get searchHintText => 'பெயர்/ஐடி/மொபைல் தேடுக';
@@ -266,13 +272,13 @@ class AppLocalizationsTa extends AppLocalizations {
   String get ofPage => 'மொத்தம்';
 
   @override
-  String get statCoordinators => 'ஒருங்கிணைப்பாளர்கள்';
+  String get statCoordinators => 'பொறுப்பாளர்கள்';
 
   @override
   String get statTotalMembers => 'மொத்த உறுப்பினர்கள்';
 
   @override
-  String get statApprovals => 'ஒப்புதல்கள்';
+  String get statApprovals => 'விண்ணப்பங்கள்';
 
   @override
   String get totalMembersHeader => 'மொத்த உறுப்பினர்கள்: ';
@@ -284,10 +290,10 @@ class AppLocalizationsTa extends AppLocalizations {
   String get downloadBtn => 'பதிவிறக்கு';
 
   @override
-  String get addBtn => 'சேர்';
+  String get addBtn => 'உறுப்பினரைச் சேர்';
 
   @override
-  String get familyIdHeader => 'குடும்ப ஐடி';
+  String get familyIdHeader => 'குடும்ப உறுப்பினர் எண்';
 
   @override
   String get roleHeader => 'பங்கு';
@@ -302,25 +308,25 @@ class AppLocalizationsTa extends AppLocalizations {
   String get applyFilterBtn => 'வடிகட்டியை செயல்படுத்து';
 
   @override
-  String get eventYearLabel => 'நிகழ்வு ஆண்டு';
+  String get eventYearLabel => 'விசேஷம் ஆண்டு';
 
   @override
-  String get eventLabel => 'நிகழ்வு';
+  String get eventLabel => 'விசேஷம்';
 
   @override
   String get statusLabel => 'நிலை';
 
   @override
-  String get reportStatusFilter => 'அறிக்கை நிலை வடிகட்டி:';
+  String get reportStatusFilter => 'தகவல்கள் நிலை வடிகட்டி:';
 
   @override
-  String get chooseEventYear => 'நிகழ்வு ஆண்டைத் தேர்ந்தெடுக்கவும்';
+  String get chooseEventYear => 'விசேஷம் ஆண்டைத் தேர்ந்தெடுக்கவும்';
 
   @override
   String get chooseYearHint => 'ஆண்டைத் தேர்ந்தெடுக்கவும்';
 
   @override
-  String get chooseEvents => 'நிகழ்வுகளைத் தேர்ந்தெடுக்கவும்';
+  String get chooseEvents => 'விசேஷங்களைத் தேர்ந்தெடுக்கவும்';
 
   @override
   String get chooseEventHint => 'நிகழ்வைத் தேர்ந்தெடுக்கவும்';
@@ -350,7 +356,7 @@ class AppLocalizationsTa extends AppLocalizations {
   String get phoneNoHeader => 'மொபைல் எண்';
 
   @override
-  String get eventMoneyHeader => 'நிகழ்வு பணம்';
+  String get eventMoneyHeader => 'விசேஷப் பணம்';
 
   @override
   String get paidCashHeader => 'செலுத்திய பணம்';
@@ -605,7 +611,7 @@ class AppLocalizationsTa extends AppLocalizations {
 
   @override
   String get privacySec2Item3 =>
-      'சமூக நிகழ்வுகள் மற்றும் உறுப்பினர் புதுப்பிப்புகளை ஒருங்கிணைத்தல்.';
+      'சமூக விசேஷங்கள் மற்றும் உறுப்பினர் புதுப்பிப்புகளை ஒருங்கிணைத்தல்.';
 
   @override
   String get privacySec2Item4 =>
@@ -616,7 +622,7 @@ class AppLocalizationsTa extends AppLocalizations {
 
   @override
   String get privacySec3Desc =>
-      'உங்கள் தனிப்பட்ட தகவல்களை நாங்கள் விற்கவோ, வர்த்தகம் செய்யவோ அல்லது மூன்றாம் தரப்பினருக்கு வாடகைக்கு விடவோ மாட்டோம். பூந்துறை காடைகுலம் சமூக சுற்றுச்சூழல் அமைப்பிற்குள் சரிபார்ப்பு நோக்கங்களுக்காக அங்கீகரிக்கப்பட்ட தள நிர்வாகிகளுக்கும் ஒருங்கிணைப்பாளர்களுக்கும் மட்டுமே உங்கள் தரவு தெரியும்.';
+      'உங்கள் தனிப்பட்ட தகவல்களை நாங்கள் விற்கவோ, வர்த்தகம் செய்யவோ அல்லது மூன்றாம் தரப்பினருக்கு வாடகைக்கு விடவோ மாட்டோம். பூந்துறை காடைகுலம் சமூக சுற்றுச்சூழல் அமைப்பிற்குள் சரிபார்ப்பு நோக்கங்களுக்காக அங்கீகரிக்கப்பட்ட தள நிர்வாகிகளுக்கும் பொறுப்பாளர்களுக்கும் மட்டுமே உங்கள் தரவு தெரியும்.';
 
   @override
   String get privacySec4Title => '4. பாதுகாப்பு நடவடிக்கைகள்';
@@ -687,7 +693,7 @@ class AppLocalizationsTa extends AppLocalizations {
 
   @override
   String get termsSec3Desc =>
-      'உங்கள் கணக்கு கடவுச்சொல்லின் ரகசியத்தன்மையைப் பேணுவதற்கும் உங்கள் கணக்கின் கீழ் நிகழும் அனைத்துச் செயல்பாடுகளுக்கும் நீங்கள் மட்டுமே பொறுப்பாவீர்கள். உங்கள் கணக்கின் அங்கீகரிக்கப்படாத பயன்பாடு அல்லது பாதுகாப்பை மீறும் வேறு ஏதேனும் இருந்தால் உடனடியாக எங்களுக்குத் தெரிவிக்க ஒப்புக்கொள்கிறீர்கள்.';
+      'உங்கள் கணக்கு பாஸ்வேர்டின் ரகசியத்தன்மையைப் பேணுவதற்கும் உங்கள் கணக்கின் கீழ் நிகழும் அனைத்துச் செயல்பாடுகளுக்கும் நீங்கள் மட்டுமே பொறுப்பாவீர்கள். உங்கள் கணக்கின் அங்கீகரிக்கப்படாத பயன்பாடு அல்லது பாதுகாப்பை மீறும் வேறு ஏதேனும் இருந்தால் உடனடியாக எங்களுக்குத் தெரிவிக்க ஒப்புக்கொள்கிறீர்கள்.';
 
   @override
   String get termsSec4Title => '4. தகவலின் பயன்பாடு';
@@ -813,19 +819,43 @@ class AppLocalizationsTa extends AppLocalizations {
   String get tablePaidAmount => 'செலுத்திய தொகை';
 
   @override
+  String get advancedSearchFiltersTitle => 'மேம்பட்ட தேடல் வடிகட்டிகள்';
+
+  @override
+  String get specificSearchTitle =>
+      'குறிப்பிட்ட தேடல் (பெயர், உறுப்பினர் ஐடி, மொபைல், மின்னஞ்சல், ஆதார்):';
+
+  @override
+  String get specificSearchHint =>
+      'பெயர், மின்னஞ்சல், மொபைல், ஆதார் அல்லது உறுப்பினர் ஐடியை உள்ளிடுக...';
+
+  @override
+  String get specificSearchInfo =>
+      'பெயர், மின்னஞ்சல், மொபைல், ஆதார் அட்டை அல்லது உறுப்பினர் ஐடி மூலம் நேரடியாக தேடுங்கள்.';
+
+  @override
+  String get clearFiltersBtn => 'வடிகட்டிகளை அழி';
+
+  @override
+  String get closeBtn => 'மூடு';
+
+  @override
+  String get allLabel => 'அனைத்தும்';
+
+  @override
   String get tablePaymentDate => 'பணம் செலுத்திய தேதி';
 
   @override
-  String get eventParticipationTitle => 'நிகழ்வு பங்கேற்பு:';
+  String get eventParticipationTitle => 'விசேஷங்களில் பங்கேற்பு:';
 
   @override
-  String get assignCoordinatorHeader => 'ஒருங்கிணைப்பாளரை ஒதுக்கு';
+  String get assignCoordinatorHeader => 'பொறுப்பாளரை சேர்';
 
   @override
   String get searchMember => 'உறுப்பினரைத் தேடு';
 
   @override
-  String get searchCoordinator => 'ஒருங்கிணைப்பாளரைத் தேடு';
+  String get searchCoordinator => 'பொறுப்பாளரைத் தேடு';
 
   @override
   String get searchNewMember => 'புதிய உறுப்பினரைத் தேடு';
@@ -858,19 +888,19 @@ class AppLocalizationsTa extends AppLocalizations {
   String get noVillagesAvailable => 'கிராமங்கள் எதுவும் கிடைக்கவில்லை';
 
   @override
-  String get assignAction => 'ஒதுக்கு';
+  String get assignAction => 'சேர்';
 
   @override
-  String get reassignCoordinatorHeader => 'ஒருங்கிணைப்பாளரை மீண்டும் ஒதுக்கு';
+  String get reassignCoordinatorHeader => 'பொறுப்பாளரை மீண்டும் சேர்';
 
   @override
-  String get reassignAction => 'மீண்டும் ஒதுக்கு';
+  String get reassignAction => 'மீண்டும் சேர்';
 
   @override
-  String get removeCoordinatorHeader => 'ஒருங்கிணைப்பாளரை அகற்று';
+  String get removeCoordinatorHeader => 'பொறுப்பாளரை அகற்று';
 
   @override
-  String get removeCoordinatorAction => 'ஒருங்கிணைப்பாளரை அகற்று';
+  String get removeCoordinatorAction => 'பொறுப்பாளரை அகற்று';
 
   @override
   String get addVillageHeader => 'கிராமத்தைச் சேர்';
@@ -885,8 +915,259 @@ class AppLocalizationsTa extends AppLocalizations {
   String get removeVillageAction => 'கிராமத்தை அகற்று';
 
   @override
-  String get assignCoordinatorsBreadcrumb => ' / ஒருங்கிணைப்பாளரை ஒதுக்கு';
+  String get assignCoordinatorsBreadcrumb => ' / பொறுப்பாளரை சேர்';
 
   @override
   String get paidAmount => 'செலுத்திய தொகை';
+
+  @override
+  String get myPaymentDetails => 'எனது கட்டண விவரங்கள்';
+
+  @override
+  String get myInfo => 'எனது தகவல்';
+
+  @override
+  String get nameLabelShort => 'பெயர்:';
+
+  @override
+  String get idLabelShort => 'ஐடி:';
+
+  @override
+  String get addressLabelShort => 'முகவரி:';
+
+  @override
+  String get eventInfo => 'விசேஷம் தகவல்';
+
+  @override
+  String get payAmountLabel => 'செலுத்தும் தொகை *';
+
+  @override
+  String get dateLabel => 'தேதி: ';
+
+  @override
+  String get rsSummary => 'தொகை சுருக்கம்';
+
+  @override
+  String get totalAmountLabel => 'மொத்த தொகை';
+
+  @override
+  String get alreadyPaidLabel => 'ஏற்கனவே செலுத்தியது';
+
+  @override
+  String get paymentMethodLabel => 'கட்டண முறை';
+
+  @override
+  String get bankMethod => 'வங்கி';
+
+  @override
+  String get chequeMethod => 'காசோலை';
+
+  @override
+  String get upiMethod => 'UPI';
+
+  @override
+  String get cashMethod => 'பணம்';
+
+  @override
+  String get chooseBankLabel => 'வங்கியைக் தேர்ந்தெடுக்கவும் *';
+
+  @override
+  String get otherBankNameLabel => 'மற்ற வங்கி பெயர் *';
+
+  @override
+  String get upiTransactionIdLabel => 'UPI பரிவர்த்தனை ஐடி *';
+
+  @override
+  String get referenceIdLabel => 'குறிப்பு ஐடி *';
+
+  @override
+  String get chequeNumberLabel => 'காசோலை எண் *';
+
+  @override
+  String get saveReceiptBtn => 'ரசீதை சேமி';
+
+  @override
+  String get savingBtn => 'சேமிக்கிறது...';
+
+  @override
+  String get confirmationRequiredTitle => 'உறுதிப்படுத்தல் தேவை';
+
+  @override
+  String get confirmDetailsBeforeSaving =>
+      'சேமிப்பதற்கு முன் விவரங்களை உறுதிப்படுத்தவும்.';
+
+  @override
+  String get successTitle => 'வெற்றி';
+
+  @override
+  String get receiptSavedSuccess => 'கட்டண ரசீது வெற்றிகரமாக சேமிக்கப்பட்டது.';
+
+  @override
+  String get errorTitle => 'பிழை';
+
+  @override
+  String get unableToSaveReceipt => 'ரசீதை சேமிக்க முடியவில்லை.';
+
+  @override
+  String get invalidAmount => 'தவறான தொகை';
+
+  @override
+  String get chooseBankTitle => 'வங்கியைக் தேர்ந்தெடுக்கவும்';
+
+  @override
+  String get searchBankHint => 'வங்கியைக் தேடு...';
+
+  @override
+  String get noBanksFound => 'வங்கிகள் எதுவும் இல்லை';
+
+  @override
+  String get requiredValidation => 'கட்டாயம் தேவை';
+
+  @override
+  String get greaterThanZeroValidation => '0 ஐ விட அதிகமாக இருக்க வேண்டும்';
+
+  @override
+  String get exceedBalanceValidation =>
+      'மீதத் தொகையை விட அதிகமாக இருக்க முடியாது';
+
+  @override
+  String get receiverInfoTitle => 'பெறுநர் தகவல்';
+
+  @override
+  String get personReceivedMoneyLabel => 'பணம் பெற்றவர் பெயர் *';
+
+  @override
+  String get enterReceiverNameHint => 'பெறுநரின் பெயரை உள்ளிடவும்';
+
+  @override
+  String get confirmDetailsLabel => 'விவரங்களை உறுதிப்படுத்தவும்';
+
+  @override
+  String get changePassword => 'பாஸ்வேர்டு மாற்று';
+
+  @override
+  String get addNewEvent => 'புதிய விசேஷம் சேர்';
+
+  @override
+  String get addEventNameUpper => 'விசேஷத்தின் பெயர்';
+
+  @override
+  String get addEventEgName => 'உ.ம்: Visesham_2026';
+
+  @override
+  String get addEventNoteName =>
+      'குறிப்பு: விசேஷத்தின் பெயரின் முடிவில் ஆண்டு இருக்க வேண்டும் (உ.ம்: Visesham_2026).';
+
+  @override
+  String get addEventBannerUpper => 'விசேஷம் பேனர்';
+
+  @override
+  String get addEventChooseFile => 'கோப்பைத் தேர்ந்தெடு';
+
+  @override
+  String get addEventNoFileChosen => 'கோப்பு தேர்ந்தெடுக்கப்படவில்லை';
+
+  @override
+  String get addEventNoteBanner =>
+      'குறிப்பு: அதிகபட்ச கோப்பு அளவு 2MB (JPG, PNG).';
+
+  @override
+  String get addEventDurationUpper => 'கால அளவு';
+
+  @override
+  String get addEventFrom => 'முதல்';
+
+  @override
+  String get addEventTo => 'வரை';
+
+  @override
+  String get addEventTaxAmountUpper => 'வரித் தொகை (₹)';
+
+  @override
+  String get addEventCreateBtn => 'விசேஷத்தை உருவாக்கு';
+
+  @override
+  String get eventDetails => 'விசேஷத்தின் விவரங்கள்';
+
+  @override
+  String get saveChanges => 'மாற்றங்களைச் சேமி';
+
+  @override
+  String get uploadReceiptLabel => 'ரசீதை பதிவேற்றவும் (விருப்பத்தேர்வு)';
+
+  @override
+  String get changeImageBtn => 'படத்தை மாற்று';
+
+  @override
+  String get removeImageBtn => 'படத்தை அகற்று';
+
+  @override
+  String get noImageSelectedLabel => 'படம் தேர்ந்தெடுக்கப்படவில்லை';
+
+  @override
+  String get tapToUploadLabel => 'ரசீதை பதிவேற்ற தட்டவும்';
+
+  @override
+  String get myFinancialReport => 'எனது கட்டண விவரங்கள்';
+
+  @override
+  String get myPaymentReceiptHistory => 'செலுத்திய கட்டண ரசீதுகள்';
+
+  @override
+  String get noPaymentReceiptsFound => 'கட்டண ரசீதுகள் எதுவும் கிடைக்கவில்லை.';
+
+  @override
+  String get totalAmountUpper => 'மொத்த தொகை';
+
+  @override
+  String get paidUpper => 'செலுத்தப்பட்டது';
+
+  @override
+  String get pendingUpper => 'நிலுவையில்';
+
+  @override
+  String get bankDetailsUpper => 'வங்கி / விவரங்கள்';
+
+  @override
+  String get dateUpper => 'தேதி';
+
+  @override
+  String get yearUpper => 'ஆண்டு';
+
+  @override
+  String get duesUpper => 'தவணை';
+
+  @override
+  String get statusUpper => 'நிலை';
+
+  @override
+  String get actionsUpper => 'செயல்கள்';
+
+  @override
+  String get otherUpper => 'மற்றவை';
+
+  @override
+  String get rs => 'ரூ';
+
+  @override
+  String get records => 'பதிவு(கள்)';
+
+  @override
+  String get noPendingPaymentRequests =>
+      'நிலுவையில் உள்ள கட்டண கோரிக்கைகள் இல்லை.';
+
+  @override
+  String get totalAmountHeader => 'மொத்த தொகை';
+
+  @override
+  String get paidAmountHeader => 'செலுத்திய தொகை';
+
+  @override
+  String get methodHeader => 'முறை';
+
+  @override
+  String get dateHeader => 'தேதி';
+
+  @override
+  String get actionsHeader => 'செயல்கள்';
 }

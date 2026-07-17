@@ -99,7 +99,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get updateRequests => 'Update Requests';
 
   @override
+  String get paymentRequests => 'Payment Requests';
+
+  @override
   String get searchPlaceholder => 'Search ...';
+
+  @override
+  String get coordinatorRole => 'Coordinator';
 
   @override
   String get memberRole => 'MEMBER';
@@ -174,7 +180,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get treeView => 'Tree';
 
   @override
-  String get sNo => 'S.No';
+  String get sNo => 'S.NO';
 
   @override
   String get nameHeader => 'Name';
@@ -234,7 +240,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get filterBtn => 'Filter';
 
   @override
-  String get assignBtn => 'Assign';
+  String get assignBtn => 'Assign Coordinator';
 
   @override
   String get userIdHeader => 'USER ID';
@@ -282,7 +288,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get downloadBtn => 'Download';
 
   @override
-  String get addBtn => 'Add';
+  String get addBtn => 'Add Member';
 
   @override
   String get familyIdHeader => 'FAMILY ID';
@@ -807,6 +813,30 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tablePaidAmount => 'Paid Amount';
 
   @override
+  String get advancedSearchFiltersTitle => 'Advanced Search Filters';
+
+  @override
+  String get specificSearchTitle =>
+      'Specific Search (Name, Membership ID, Mobile, Email, Aadhar):';
+
+  @override
+  String get specificSearchHint =>
+      'Type Name, Email, Mobile, Aadhar or Membership ID...';
+
+  @override
+  String get specificSearchInfo =>
+      'Search by Name, Email, Mobile, Aadhar Card, or Membership ID directly.';
+
+  @override
+  String get clearFiltersBtn => 'Clear Filters';
+
+  @override
+  String get closeBtn => 'Close';
+
+  @override
+  String get allLabel => 'All';
+
+  @override
   String get tablePaymentDate => 'Payment Date';
 
   @override
@@ -883,4 +913,252 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get paidAmount => 'PAID AMOUNT';
+
+  @override
+  String get myPaymentDetails => 'My Payment Details';
+
+  @override
+  String get myInfo => 'My Info';
+
+  @override
+  String get nameLabelShort => 'Name:';
+
+  @override
+  String get idLabelShort => 'ID:';
+
+  @override
+  String get addressLabelShort => 'Address:';
+
+  @override
+  String get eventInfo => 'Event Info';
+
+  @override
+  String get payAmountLabel => 'Pay Amount *';
+
+  @override
+  String get dateLabel => 'Date: ';
+
+  @override
+  String get rsSummary => 'Rs Summary';
+
+  @override
+  String get totalAmountLabel => 'Total Amount';
+
+  @override
+  String get alreadyPaidLabel => 'Already Paid';
+
+  @override
+  String get paymentMethodLabel => 'Payment Method';
+
+  @override
+  String get bankMethod => 'Bank';
+
+  @override
+  String get chequeMethod => 'Cheque';
+
+  @override
+  String get upiMethod => 'UPI';
+
+  @override
+  String get cashMethod => 'Cash';
+
+  @override
+  String get chooseBankLabel => 'Choose Bank *';
+
+  @override
+  String get otherBankNameLabel => 'Other Bank Name *';
+
+  @override
+  String get upiTransactionIdLabel => 'UPI Transaction ID *';
+
+  @override
+  String get referenceIdLabel => 'Reference ID *';
+
+  @override
+  String get chequeNumberLabel => 'Cheque Number *';
+
+  @override
+  String get saveReceiptBtn => 'Save Receipt';
+
+  @override
+  String get savingBtn => 'Saving...';
+
+  @override
+  String get confirmationRequiredTitle => 'Confirmation Required';
+
+  @override
+  String get confirmDetailsBeforeSaving =>
+      'Please confirm the details before saving.';
+
+  @override
+  String get successTitle => 'Success';
+
+  @override
+  String get receiptSavedSuccess => 'Payment receipt saved successfully.';
+
+  @override
+  String get errorTitle => 'Error';
+
+  @override
+  String get unableToSaveReceipt => 'Unable to save receipt.';
+
+  @override
+  String get invalidAmount => 'Invalid Amount';
+
+  @override
+  String get chooseBankTitle => 'Choose bank';
+
+  @override
+  String get searchBankHint => 'Search bank...';
+
+  @override
+  String get noBanksFound => 'No banks found';
+
+  @override
+  String get requiredValidation => 'Required';
+
+  @override
+  String get greaterThanZeroValidation => 'Must be greater than 0';
+
+  @override
+  String get exceedBalanceValidation => 'Cannot exceed balance';
+
+  @override
+  String get receiverInfoTitle => 'Receiver Info';
+
+  @override
+  String get personReceivedMoneyLabel => 'Person Received the Money *';
+
+  @override
+  String get enterReceiverNameHint => 'Enter name of receiver';
+
+  @override
+  String get confirmDetailsLabel => 'Confirm Details';
+
+  @override
+  String get changePassword => 'Change Password';
+
+  @override
+  String get addNewEvent => 'Add New Event';
+
+  @override
+  String get addEventNameUpper => 'EVENT NAME';
+
+  @override
+  String get addEventEgName => 'e.g. Event_2026';
+
+  @override
+  String get addEventNoteName =>
+      'Note: Year should be at the end of the event name (e.g. Event_2026).';
+
+  @override
+  String get addEventBannerUpper => 'EVENT BANNER';
+
+  @override
+  String get addEventChooseFile => 'Choose File';
+
+  @override
+  String get addEventNoFileChosen => 'No file chosen';
+
+  @override
+  String get addEventNoteBanner => 'Note: Max file size 2MB (JPG, PNG).';
+
+  @override
+  String get addEventDurationUpper => 'DURATION';
+
+  @override
+  String get addEventFrom => 'From';
+
+  @override
+  String get addEventTo => 'To';
+
+  @override
+  String get addEventTaxAmountUpper => 'TAX AMOUNT (₹)';
+
+  @override
+  String get addEventCreateBtn => 'Create Event';
+
+  @override
+  String get eventDetails => 'Event Details';
+
+  @override
+  String get saveChanges => 'Save Changes';
+
+  @override
+  String get uploadReceiptLabel => 'Upload Receipt (Optional)';
+
+  @override
+  String get changeImageBtn => 'Change Image';
+
+  @override
+  String get removeImageBtn => 'Remove Image';
+
+  @override
+  String get noImageSelectedLabel => 'No image selected';
+
+  @override
+  String get tapToUploadLabel => 'Tap to upload receipt';
+
+  @override
+  String get myFinancialReport => 'My Financial Report';
+
+  @override
+  String get myPaymentReceiptHistory => 'My Payment Receipt History';
+
+  @override
+  String get noPaymentReceiptsFound => 'No payment receipts found.';
+
+  @override
+  String get totalAmountUpper => 'TOTAL AMOUNT';
+
+  @override
+  String get paidUpper => 'PAID';
+
+  @override
+  String get pendingUpper => 'PENDING';
+
+  @override
+  String get bankDetailsUpper => 'BANK / DETAILS';
+
+  @override
+  String get dateUpper => 'DATE';
+
+  @override
+  String get yearUpper => 'YEAR';
+
+  @override
+  String get duesUpper => 'DUES';
+
+  @override
+  String get statusUpper => 'STATUS';
+
+  @override
+  String get actionsUpper => 'ACTIONS';
+
+  @override
+  String get otherUpper => 'OTHER';
+
+  @override
+  String get rs => 'Rs';
+
+  @override
+  String get records => 'record(s)';
+
+  @override
+  String get noPendingPaymentRequests => 'No pending payment requests.';
+
+  @override
+  String get totalAmountHeader => 'Total Amount';
+
+  @override
+  String get paidAmountHeader => 'Paid Amount';
+
+  @override
+  String get methodHeader => 'Method';
+
+  @override
+  String get dateHeader => 'Date';
+
+  @override
+  String get actionsHeader => 'Actions';
 }

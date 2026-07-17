@@ -505,7 +505,6 @@ class _CoordinatorsContentState extends State<CoordinatorsContent> {
                       children: [
                         Container(
                           color: const Color(0xFF2D1B18),
-                          padding: const EdgeInsets.symmetric(vertical: 8),
                           child: Row(
                             children: [
                               _buildHeaderCell(AppLocalizations.of(context)?.districtHeader ?? 'DISTRICT', 100),
@@ -553,7 +552,6 @@ class _CoordinatorsContentState extends State<CoordinatorsContent> {
                             children: [
                               Container(
                                 color: const Color(0xFF2D1B18),
-                                padding: const EdgeInsets.symmetric(vertical: 8),
                                 child: Row(
                                   children: [
                                     _buildHeaderCell(AppLocalizations.of(context)?.sNo?.toUpperCase() ?? 'S.NO', 50),
@@ -761,6 +759,7 @@ class _CoordinatorsContentState extends State<CoordinatorsContent> {
   Widget _buildHeaderCell(String label, double width, {bool isLast = false}) {
     return Container(
       width: width,
+      height: 48,
       decoration: BoxDecoration(
         border: isLast ? null : const Border(right: BorderSide(color: Colors.white24, width: 1)),
       ),

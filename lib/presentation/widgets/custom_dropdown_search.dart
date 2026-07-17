@@ -577,7 +577,7 @@ class _CustomDropdownSearchState extends State<CustomDropdownSearch> with Widget
               TextSpan(
                 children: [
                   TextSpan(
-                    text: widget.label.replaceAll('*', '').trim(),
+                    text: '${widget.label.replaceAll('*', '').trim()} ',
                     style: AppTypography.manrope(
                       color: _searchFocusNode.hasFocus ? AppColors.primary : Colors.grey.shade800,
                       fontSize: 14,
@@ -586,11 +586,11 @@ class _CustomDropdownSearchState extends State<CustomDropdownSearch> with Widget
                   ),
                   if (widget.requiredMark || widget.label.contains('*'))
                     const TextSpan(
-                      text: ' *',
+                      text: '*',
                       style: TextStyle(
                         color: AppColors.error,
                         fontSize: 14,
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                 ],
