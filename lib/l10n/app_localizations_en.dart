@@ -39,7 +39,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get register => 'Register';
 
   @override
-  String get coordinatorDetails => 'My Coordinator Details';
+  String get coordinatorDetails => 'My Village Committee Coordinator Details';
 
   @override
   String get termsAndConditions => 'Terms & Conditions';
@@ -81,7 +81,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get idCardBenefits => 'ID Card Benefits';
 
   @override
-  String get coordinators => 'Coordinators';
+  String get coordinators => 'Village Committee Coordinators';
 
   @override
   String get members => 'Members';
@@ -105,7 +105,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get searchPlaceholder => 'Search ...';
 
   @override
-  String get coordinatorRole => 'Coordinator';
+  String get coordinatorRole => 'Village Committee Coordinator';
 
   @override
   String get memberRole => 'MEMBER';
@@ -231,10 +231,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get totalEvents => 'Total Events:';
 
   @override
-  String get coordinatorsManagement => 'Coordinators Management';
+  String get coordinatorsManagement =>
+      'Village Committee Coordinators Management';
 
   @override
-  String get totalCoordinators => 'Total Coordinators:';
+  String get totalCoordinators => 'Total Village Committee Coordinators:';
 
   @override
   String get filterBtn => 'Filter';
@@ -270,7 +271,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ofPage => 'of';
 
   @override
-  String get statCoordinators => 'COORDINATORS';
+  String get statCoordinators => 'VILLAGE COMMITTEE COORDINATORS';
 
   @override
   String get statTotalMembers => 'TOTAL MEMBERS';
@@ -843,13 +844,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get eventParticipationTitle => 'Event Participation:';
 
   @override
-  String get assignCoordinatorHeader => 'Assign Coordinator';
+  String get assignCoordinatorHeader => 'Assign Village Committee Coordinator';
 
   @override
   String get searchMember => 'Search Member';
 
   @override
-  String get searchCoordinator => 'Search Coordinator';
+  String get searchCoordinator => 'Search Village Committee Coordinator';
 
   @override
   String get searchNewMember => 'Search New Member';
@@ -885,16 +886,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get assignAction => 'Assign';
 
   @override
-  String get reassignCoordinatorHeader => 'Reassign Coordinator';
+  String get reassignCoordinatorHeader =>
+      'Reassign Village Committee Coordinator';
 
   @override
   String get reassignAction => 'Reassign';
 
   @override
-  String get removeCoordinatorHeader => 'Remove Coordinator';
+  String get removeCoordinatorHeader => 'Remove Village Committee Coordinator';
 
   @override
-  String get removeCoordinatorAction => 'Remove Coordinator';
+  String get removeCoordinatorAction => 'Remove Village Committee Coordinator';
 
   @override
   String get addVillageHeader => 'Add Village';
@@ -909,7 +911,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get removeVillageAction => 'Remove Village';
 
   @override
-  String get assignCoordinatorsBreadcrumb => ' / Assigncoordinators';
+  String get assignCoordinatorsBreadcrumb =>
+      ' / Assign Village Committee Coordinators';
 
   @override
   String get paidAmount => 'PAID AMOUNT';

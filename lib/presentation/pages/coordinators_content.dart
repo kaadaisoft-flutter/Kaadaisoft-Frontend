@@ -379,6 +379,7 @@ class _CoordinatorsContentState extends State<CoordinatorsContent> {
                             if (widget.role != 3) ...[
                               const SizedBox(width: 8),
                               Expanded(
+                                flex: 2,
                                 child: ElevatedButton.icon(
                                   onPressed: () {
                                     setState(() {
@@ -386,7 +387,10 @@ class _CoordinatorsContentState extends State<CoordinatorsContent> {
                                     });
                                   },
                                   icon: const Icon(Icons.person_add_alt_1, color: Colors.white, size: 18),
-                                  label: Text(AppLocalizations.of(context)?.assignBtn ?? 'Assign', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                                  label: FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    child: Text(AppLocalizations.of(context)?.assignBtn ?? 'Assign', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                                  ),
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: const Color(0xFF2D1B18),
                                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
@@ -462,26 +466,30 @@ class _CoordinatorsContentState extends State<CoordinatorsContent> {
         ],
         const SizedBox(height: 8),
         // Total count
-        Wrap(
-          crossAxisAlignment: WrapCrossAlignment.center,
-          spacing: 8,
-          children: [
-            Text(
-              AppLocalizations.of(context)?.totalCoordinators ?? 'Total Coordinators: ',
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF2D1B18)),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: const Color(0xFF5D1712),
-                borderRadius: BorderRadius.circular(12),
+        Text.rich(
+          TextSpan(
+            children: [
+              TextSpan(
+                text: AppLocalizations.of(context)?.totalCoordinators ?? 'Total Coordinators: ',
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF2D1B18)),
               ),
-              child: Text(
-                _isLoading ? '' : _coordinators.length.toString(),
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+              WidgetSpan(
+                alignment: PlaceholderAlignment.middle,
+                child: Container(
+                  margin: const EdgeInsets.only(left: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF5D1712),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    _isLoading ? '' : _coordinators.length.toString(),
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                  ),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
         const SizedBox(height: 16),
         // Table

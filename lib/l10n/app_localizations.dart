@@ -161,7 +161,7 @@ abstract class AppLocalizations {
   /// No description provided for @coordinatorDetails.
   ///
   /// In en, this message translates to:
-  /// **'My Coordinator Details'**
+  /// **'My Village Committee Coordinator Details'**
   String get coordinatorDetails;
 
   /// No description provided for @termsAndConditions.
@@ -239,7 +239,7 @@ abstract class AppLocalizations {
   /// No description provided for @coordinators.
   ///
   /// In en, this message translates to:
-  /// **'Coordinators'**
+  /// **'Village Committee Coordinators'**
   String get coordinators;
 
   /// No description provided for @members.
@@ -287,7 +287,7 @@ abstract class AppLocalizations {
   /// No description provided for @coordinatorRole.
   ///
   /// In en, this message translates to:
-  /// **'Coordinator'**
+  /// **'Village Committee Coordinator'**
   String get coordinatorRole;
 
   /// No description provided for @memberRole.
@@ -539,13 +539,13 @@ abstract class AppLocalizations {
   /// No description provided for @coordinatorsManagement.
   ///
   /// In en, this message translates to:
-  /// **'Coordinators Management'**
+  /// **'Village Committee Coordinators Management'**
   String get coordinatorsManagement;
 
   /// No description provided for @totalCoordinators.
   ///
   /// In en, this message translates to:
-  /// **'Total Coordinators:'**
+  /// **'Total Village Committee Coordinators:'**
   String get totalCoordinators;
 
   /// No description provided for @filterBtn.
@@ -617,7 +617,7 @@ abstract class AppLocalizations {
   /// No description provided for @statCoordinators.
   ///
   /// In en, this message translates to:
-  /// **'COORDINATORS'**
+  /// **'VILLAGE COMMITTEE COORDINATORS'**
   String get statCoordinators;
 
   /// No description provided for @statTotalMembers.
@@ -1685,7 +1685,7 @@ abstract class AppLocalizations {
   /// No description provided for @assignCoordinatorHeader.
   ///
   /// In en, this message translates to:
-  /// **'Assign Coordinator'**
+  /// **'Assign Village Committee Coordinator'**
   String get assignCoordinatorHeader;
 
   /// No description provided for @searchMember.
@@ -1697,7 +1697,7 @@ abstract class AppLocalizations {
   /// No description provided for @searchCoordinator.
   ///
   /// In en, this message translates to:
-  /// **'Search Coordinator'**
+  /// **'Search Village Committee Coordinator'**
   String get searchCoordinator;
 
   /// No description provided for @searchNewMember.
@@ -1769,7 +1769,7 @@ abstract class AppLocalizations {
   /// No description provided for @reassignCoordinatorHeader.
   ///
   /// In en, this message translates to:
-  /// **'Reassign Coordinator'**
+  /// **'Reassign Village Committee Coordinator'**
   String get reassignCoordinatorHeader;
 
   /// No description provided for @reassignAction.
@@ -1781,13 +1781,13 @@ abstract class AppLocalizations {
   /// No description provided for @removeCoordinatorHeader.
   ///
   /// In en, this message translates to:
-  /// **'Remove Coordinator'**
+  /// **'Remove Village Committee Coordinator'**
   String get removeCoordinatorHeader;
 
   /// No description provided for @removeCoordinatorAction.
   ///
   /// In en, this message translates to:
-  /// **'Remove Coordinator'**
+  /// **'Remove Village Committee Coordinator'**
   String get removeCoordinatorAction;
 
   /// No description provided for @addVillageHeader.
@@ -1817,7 +1817,7 @@ abstract class AppLocalizations {
   /// No description provided for @assignCoordinatorsBreadcrumb.
   ///
   /// In en, this message translates to:
-  /// **' / Assigncoordinators'**
+  /// **' / Assign Village Committee Coordinators'**
   String get assignCoordinatorsBreadcrumb;
 
   /// No description provided for @paidAmount.

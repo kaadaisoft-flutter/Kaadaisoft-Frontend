@@ -39,7 +39,7 @@ class AppLocalizationsTa extends AppLocalizations {
   String get register => 'பதிவு செய்';
 
   @override
-  String get coordinatorDetails => 'பொறுப்பாளர் விவரங்கள்';
+  String get coordinatorDetails => 'எனது கிராமக் குழு பொறுப்பாளர் விவரங்கள்';
 
   @override
   String get termsAndConditions => 'விதிமுறைகள் மற்றும் நிபந்தனைகள்';
@@ -81,7 +81,7 @@ class AppLocalizationsTa extends AppLocalizations {
   String get idCardBenefits => 'அடையாள அட்டை சலுகைகள்';
 
   @override
-  String get coordinators => 'பொறுப்பாளர்கள்';
+  String get coordinators => 'கிராமக் குழு பொறுப்பாளர்கள்';
 
   @override
   String get members => 'உறுப்பினர்கள்';
@@ -105,7 +105,7 @@ class AppLocalizationsTa extends AppLocalizations {
   String get searchPlaceholder => 'தேடு ...';
 
   @override
-  String get coordinatorRole => 'பொறுப்பாளர்';
+  String get coordinatorRole => 'கிராமக் குழு பொறுப்பாளர்';
 
   @override
   String get memberRole => 'உறுப்பினர்';
@@ -233,10 +233,10 @@ class AppLocalizationsTa extends AppLocalizations {
   String get totalEvents => 'மொத்த விசேஷங்கள்:';
 
   @override
-  String get coordinatorsManagement => 'பொறுப்பாளர்கள் மேலாண்மை';
+  String get coordinatorsManagement => 'கிராமக் குழு பொறுப்பாளர்கள் மேலாண்மை';
 
   @override
-  String get totalCoordinators => 'மொத்த பொறுப்பாளர்கள்:';
+  String get totalCoordinators => 'மொத்த கிராமக் குழு பொறுப்பாளர்கள்:';
 
   @override
   String get filterBtn => 'தேடல்';
@@ -272,7 +272,7 @@ class AppLocalizationsTa extends AppLocalizations {
   String get ofPage => 'மொத்தம்';
 
   @override
-  String get statCoordinators => 'பொறுப்பாளர்கள்';
+  String get statCoordinators => 'கிராமக் குழு பொறுப்பாளர்கள்';
 
   @override
   String get statTotalMembers => 'மொத்த உறுப்பினர்கள்';
@@ -849,13 +849,13 @@ class AppLocalizationsTa extends AppLocalizations {
   String get eventParticipationTitle => 'விசேஷங்களில் பங்கேற்பு:';
 
   @override
-  String get assignCoordinatorHeader => 'பொறுப்பாளரை சேர்';
+  String get assignCoordinatorHeader => 'கிராமக் குழு பொறுப்பாளரை சேர்';
 
   @override
   String get searchMember => 'உறுப்பினரைத் தேடு';
 
   @override
-  String get searchCoordinator => 'பொறுப்பாளரைத் தேடு';
+  String get searchCoordinator => 'கிராமக் குழு பொறுப்பாளரைத் தேடு';
 
   @override
   String get searchNewMember => 'புதிய உறுப்பினரைத் தேடு';
@@ -891,16 +891,17 @@ class AppLocalizationsTa extends AppLocalizations {
   String get assignAction => 'சேர்';
 
   @override
-  String get reassignCoordinatorHeader => 'பொறுப்பாளரை மீண்டும் சேர்';
+  String get reassignCoordinatorHeader =>
+      'கிராமக் குழு பொறுப்பாளரை மீண்டும் சேர்';
 
   @override
   String get reassignAction => 'மீண்டும் சேர்';
 
   @override
-  String get removeCoordinatorHeader => 'பொறுப்பாளரை அகற்று';
+  String get removeCoordinatorHeader => 'கிராமக் குழு பொறுப்பாளரை அகற்று';
 
   @override
-  String get removeCoordinatorAction => 'பொறுப்பாளரை அகற்று';
+  String get removeCoordinatorAction => 'கிராமக் குழு பொறுப்பாளரை அகற்று';
 
   @override
   String get addVillageHeader => 'கிராமத்தைச் சேர்';
@@ -915,7 +916,7 @@ class AppLocalizationsTa extends AppLocalizations {
   String get removeVillageAction => 'கிராமத்தை அகற்று';
 
   @override
-  String get assignCoordinatorsBreadcrumb => ' / பொறுப்பாளரை சேர்';
+  String get assignCoordinatorsBreadcrumb => ' / கிராமக் குழு பொறுப்பாளரை சேர்';
 
   @override
   String get paidAmount => 'செலுத்திய தொகை';
