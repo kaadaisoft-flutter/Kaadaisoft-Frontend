@@ -126,8 +126,10 @@ class _EventsContentState extends State<EventsContent> {
   }
 
   void _showUpdateEventDialog(Map<String, dynamic> event) {
-    final nameController = TextEditingController(text: event['EventName']?.toString() ?? '');
-    final taxController = TextEditingController(text: event['TaxAmount']?.toString() ?? '0.00');
+    final initialName = event['EventName']?.toString() ?? '';
+    final initialTax = event['TaxAmount']?.toString() ?? '0.00';
+    final nameController = TextEditingController(text: initialName);
+    final taxController = TextEditingController(text: initialTax);
     
     DateTime parseDate(dynamic dateStr) {
       if (dateStr == null || dateStr == 'N/A' || dateStr.toString().isEmpty) return DateTime.now();
@@ -148,8 +150,10 @@ class _EventsContentState extends State<EventsContent> {
       }
     }
 
-    DateTime fromDate = parseDate(event['From_date']);
-    DateTime toDate = parseDate(event['To_date']);
+    DateTime initialFromDate = parseDate(event['From_date']);
+    DateTime initialToDate = parseDate(event['To_date']);
+    DateTime fromDate = initialFromDate;
+    DateTime toDate = initialToDate;
     bool isSaving = false;
 
     showDialog(
@@ -186,6 +190,7 @@ class _EventsContentState extends State<EventsContent> {
                   const SizedBox(height: 8),
                   TextField(
                     controller: nameController,
+                    onChanged: (value) => setDialogState(() {}),
                     decoration: InputDecoration(
                       hintText: 'Enter event name',
                       filled: true,
@@ -211,9 +216,11 @@ class _EventsContentState extends State<EventsContent> {
                           _buildDatePicker(context, fromDate, (date) {
                             setDialogState(() {
                               fromDate = date;
-                              if (toDate.isBefore(fromDate)) toDate = fromDate;
+                              if (!toDate.isAfter(fromDate)) {
+                                toDate = fromDate.add(const Duration(days: 1));
+                              }
                             });
-                          }),
+                          }, minDate: DateTime.now()),
                         ],
                       );
                       
@@ -222,7 +229,7 @@ class _EventsContentState extends State<EventsContent> {
                         children: [
                           Text(AppLocalizations.of(context)?.addEventTo ?? 'To', style: TextStyle(fontSize: 11, color: Colors.black45)),
                           const SizedBox(height: 4),
-                          _buildDatePicker(context, toDate, (date) => setDialogState(() => toDate = date), minDate: fromDate),
+                          _buildDatePicker(context, toDate, (date) => setDialogState(() => toDate = date), minDate: fromDate.add(const Duration(days: 1))),
                         ],
                       );
 
@@ -250,6 +257,7 @@ class _EventsContentState extends State<EventsContent> {
                   const SizedBox(height: 8),
                   TextField(
                     controller: taxController,
+                    onChanged: (value) => setDialogState(() {}),
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
            inputFormatters: [
              FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
@@ -275,9 +283,26 @@ class _EventsContentState extends State<EventsContent> {
                     width: double.infinity,
                     height: 54,
                     child: ElevatedButton(
-                      onPressed: isSaving ? null : () async {
-                        if (toDate.isBefore(fromDate)) {
-                          showStatusDialog(context, title: 'Error', message: 'To date cannot be earlier than From date', type: DialogType.error);
+                      onPressed: isSaving ||
+                                 (nameController.text == initialName &&
+                                  taxController.text == initialTax &&
+                                  fromDate == initialFromDate &&
+                                  toDate == initialToDate)
+                          ? null : () async {
+                        if (nameController.text.isEmpty) {
+                          showStatusDialog(context, title: 'Error', message: 'Please enter an event name', type: DialogType.error);
+                          return;
+                        }
+                        if (!RegExp(r'\d{4}$').hasMatch(nameController.text.trim())) {
+                          showStatusDialog(context, title: 'Error', message: 'Event name must end with a year (e.g. Event_2026)', type: DialogType.error);
+                          return;
+                        }
+                        if (!toDate.isAfter(fromDate)) {
+                          showStatusDialog(context, title: 'Error', message: 'To date must be greater than From date', type: DialogType.error);
+                          return;
+                        }
+                        if (taxController.text.isEmpty || double.tryParse(taxController.text) == null) {
+                          showStatusDialog(context, title: 'Error', message: 'Please enter a valid tax amount', type: DialogType.error);
                           return;
                         }
                         setDialogState(() => isSaving = true);
@@ -547,7 +572,7 @@ class _EventsContentState extends State<EventsContent> {
 
   void _showAddEventDialog() {
     final nameController = TextEditingController();
-    final taxController = TextEditingController(text: '0.00');
+    final taxController = TextEditingController();
     DateTime? fromDate;
     DateTime? toDate;
     PlatformFile? selectedBanner;
@@ -685,8 +710,8 @@ class _EventsContentState extends State<EventsContent> {
                           _buildDatePicker(context, fromDate, (date) {
                             setDialogState(() {
                               fromDate = date;
-                              if (toDate != null && toDate!.isBefore(fromDate!)) {
-                                toDate = fromDate;
+                              if (toDate != null && !toDate!.isAfter(fromDate!)) {
+                                toDate = fromDate!.add(const Duration(days: 1));
                               }
                             });
                           }, minDate: DateTime.now()),
@@ -698,7 +723,7 @@ class _EventsContentState extends State<EventsContent> {
                         children: [
                           Text(AppLocalizations.of(context)?.addEventTo ?? 'To', style: TextStyle(fontSize: 11, color: Colors.black45)),
                           const SizedBox(height: 4),
-                          _buildDatePicker(context, toDate, (date) => setDialogState(() => toDate = date), minDate: fromDate ?? DateTime.now()),
+                          _buildDatePicker(context, toDate, (date) => setDialogState(() => toDate = date), minDate: fromDate != null ? fromDate!.add(const Duration(days: 1)) : DateTime.now().add(const Duration(days: 1))),
                         ],
                       );
 
@@ -755,12 +780,24 @@ class _EventsContentState extends State<EventsContent> {
                           showStatusDialog(context, title: 'Error', message: 'Please enter an event name', type: DialogType.error);
                           return;
                         }
+                        if (!RegExp(r'\d{4}$').hasMatch(nameController.text.trim())) {
+                          showStatusDialog(context, title: 'Error', message: 'Event name must end with a year (e.g. Event_2026)', type: DialogType.error);
+                          return;
+                        }
+                        if (selectedBanner == null) {
+                          showStatusDialog(context, title: 'Error', message: 'Please select an event banner', type: DialogType.error);
+                          return;
+                        }
                         if (fromDate == null || toDate == null) {
                           showStatusDialog(context, title: 'Error', message: 'Please select event duration', type: DialogType.error);
                           return;
                         }
-                        if (toDate!.isBefore(fromDate!)) {
-                          showStatusDialog(context, title: 'Error', message: 'To date cannot be earlier than From date', type: DialogType.error);
+                        if (!toDate!.isAfter(fromDate!)) {
+                          showStatusDialog(context, title: 'Error', message: 'To date must be greater than From date', type: DialogType.error);
+                          return;
+                        }
+                        if (taxController.text.isEmpty || double.tryParse(taxController.text) == null) {
+                          showStatusDialog(context, title: 'Error', message: 'Please enter a valid tax amount', type: DialogType.error);
                           return;
                         }
 

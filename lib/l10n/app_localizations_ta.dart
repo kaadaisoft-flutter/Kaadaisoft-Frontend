@@ -81,7 +81,7 @@ class AppLocalizationsTa extends AppLocalizations {
   String get idCardBenefits => 'அடையாள அட்டை சலுகைகள்';
 
   @override
-  String get coordinators => 'கிராமக் குழு பொறுப்பாளர்கள்';
+  String get coordinators => 'ஊர் கமிட்டி பொறுப்பாளர்கள்';
 
   @override
   String get members => 'உறுப்பினர்கள்';
@@ -233,10 +233,10 @@ class AppLocalizationsTa extends AppLocalizations {
   String get totalEvents => 'மொத்த விசேஷங்கள்:';
 
   @override
-  String get coordinatorsManagement => 'கிராமக் குழு பொறுப்பாளர்கள் மேலாண்மை';
+  String get coordinatorsManagement => 'ஊர் கமிட்டி பொறுப்பாளர்கள் மேலாண்மை';
 
   @override
-  String get totalCoordinators => 'மொத்த கிராமக் குழு பொறுப்பாளர்கள்:';
+  String get totalCoordinators => 'மொத்த ஊர் கமிட்டி பொறுப்பாளர்கள்:';
 
   @override
   String get filterBtn => 'தேடல்';
@@ -272,7 +272,7 @@ class AppLocalizationsTa extends AppLocalizations {
   String get ofPage => 'மொத்தம்';
 
   @override
-  String get statCoordinators => 'கிராமக் குழு பொறுப்பாளர்கள்';
+  String get statCoordinators => 'ஊர் கமிட்டி பொறுப்பாளர்கள்';
 
   @override
   String get statTotalMembers => 'மொத்த உறுப்பினர்கள்';

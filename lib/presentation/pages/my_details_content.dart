@@ -10,6 +10,8 @@ import '../widgets/add_family_member_form.dart';
 import '../widgets/update_family_member_form.dart';
 import '../../utils/notification_helper.dart';
 import '../widgets/custom_dialog.dart';
+import '../widgets/custom_dropdown_search.dart';
+import '../widgets/custom_phone_field.dart';
 
 
 class MyDetailsContent extends StatefulWidget {
@@ -31,6 +33,9 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
   final ScrollController _treeScrollController = ScrollController();
   Map<String, dynamic>? _myCoordinator;
   bool _isLoadingCoordinator = true;
+  List<dynamic> _linkedFamilies = [];
+  Map<String, List<dynamic>> _linkedFamilyMembers = {};
+  bool _isLoadingLinkedFamilies = true;
 
   @override
   void dispose() {
@@ -155,6 +160,7 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
             _isLoading = false;
           });
           _fetchMyCoordinator();
+          _fetchLinkedFamilies();
         }
       } else {
         if (mounted) {
@@ -202,6 +208,350 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
       print('Error fetching coordinator details: $e');
       if (mounted) setState(() => _isLoadingCoordinator = false);
     }
+  }
+
+  Future<void> _fetchLinkedFamilies() async {
+    try {
+      final fid = _userData?['Familymembershipid'];
+      if (fid != null && fid.toString().isNotEmpty) {
+        final response = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/family-links/$fid'));
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          final links = data['links'] as List<dynamic>;
+          
+          Map<String, List<dynamic>> linkedMembers = {};
+          
+          for (var link in links) {
+            if (link['status'] == 'Approved') {
+              final isParent = link['parent_family_id'] == fid;
+              final otherFamilyId = isParent ? link['child_family_id'] : link['parent_family_id'];
+              
+              try {
+                final memRes = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/family-members/$otherFamilyId'));
+                if (memRes.statusCode == 200) {
+                  final memData = jsonDecode(memRes.body);
+                  linkedMembers[otherFamilyId.toString()] = memData['data'];
+                }
+              } catch (e) {
+                print('Error fetching linked family members: $e');
+              }
+            }
+          }
+          
+          if (mounted) {
+            setState(() {
+              _linkedFamilies = links;
+              _linkedFamilyMembers = linkedMembers;
+              _isLoadingLinkedFamilies = false;
+            });
+          }
+        } else {
+           if (mounted) setState(() => _isLoadingLinkedFamilies = false);
+        }
+      } else {
+         if (mounted) setState(() => _isLoadingLinkedFamilies = false);
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isLoadingLinkedFamilies = false);
+    }
+  }
+
+  void _showLinkFamilyDialog() {
+    final _formKey = GlobalKey<FormState>();
+    final _familyIdController = TextEditingController();
+    final _mobileController = TextEditingController();
+    String? _selectedRel;
+    final _rels = ['Grand Father','Grand Mother','Father','Mother','Husband','Wife','Son','Daughter','Son-in-law','Daughter-in-law','Brother','Sister','Other'];
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setStateDialog) => AlertDialog(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text('Link Another Family', style: TextStyle(color: Color(0xFF5D1712), fontWeight: FontWeight.bold)),
+          content: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('Provide either the Target Family ID or the Mobile Number of the Target Family Head:', style: TextStyle(fontSize: 13, color: Colors.black87)),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _familyIdController,
+                  decoration: InputDecoration(
+                    labelText: 'Target Family ID', 
+                    hintText: 'e.g. KDS-1234',
+                    fillColor: Colors.white,
+                    filled: true,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Colors.black26)),
+                  ),
+                  validator: (val) {
+                    if ((val == null || val.trim().isEmpty) && _mobileController.text.trim().isEmpty) {
+                      return 'Enter Family ID or Mobile Number';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 12),
+                const Text('OR', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black54)),
+                const SizedBox(height: 12),
+                CustomPhoneField(
+                  label: 'Mobile Number',
+                  hint: 'e.g. 9876543210',
+                  controller: _mobileController,
+                  validator: (val) {
+                    if ((val == null || val.trim().isEmpty) && _familyIdController.text.trim().isEmpty) {
+                      return 'Enter Family ID or Mobile Number';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+                CustomDropdownSearch(
+                  label: 'Relationship *',
+                  dropdownItems: _rels,
+                  value: _selectedRel,
+                  onChanged: (val) {
+                    if (val != null) setStateDialog(() => _selectedRel = val);
+                  },
+                  requiredMark: true,
+                  validator: (val) => (val == null || val.isEmpty) ? 'Required' : null,
+                ),
+              ],
+            ),
+          ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () async {
+              if (_formKey.currentState!.validate()) {
+                final myFid = _userData?['Familymembershipid'];
+                if (myFid == null) return;
+                
+                try {
+                  final reqBody = {
+                    'parent_family_id': myFid,
+                    'relationship_type': _selectedRel ?? 'Other',
+                  };
+                  if (_familyIdController.text.trim().isNotEmpty) {
+                    reqBody['child_family_id'] = _familyIdController.text.trim();
+                  }
+                  if (_mobileController.text.trim().isNotEmpty) {
+                    reqBody['child_mobile_number'] = _mobileController.text.trim();
+                  }
+                  
+                  final res = await http.post(
+                    Uri.parse('${ApiConfig.baseUrl}/api/family-links/'),
+                    headers: {'Content-Type': 'application/json'},
+                    body: jsonEncode(reqBody),
+                  );
+                  if (res.statusCode == 200) {
+                    Navigator.pop(context);
+                    _fetchLinkedFamilies();
+                  } else {
+                    try {
+                      final body = jsonDecode(res.body);
+                      NotificationHelper.showError(context, body['detail'] ?? 'Failed to link family');
+                    } catch (e) {
+                      NotificationHelper.showError(context, 'Failed to link family');
+                    }
+                  }
+                } catch (e) {
+                  NotificationHelper.showError(context, 'Error connecting to server');
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF5D1712), foregroundColor: Colors.white),
+            child: const Text('Link'),
+          ),
+        ],
+      )),
+    );
+  }
+
+  Future<void> _deleteFamilyLink(int linkId) async {
+    try {
+      final res = await http.delete(Uri.parse('${ApiConfig.baseUrl}/api/family-links/$linkId'));
+      if (res.statusCode == 200) {
+        _fetchLinkedFamilies();
+      } else {
+        NotificationHelper.showError(context, 'Failed to delete link');
+      }
+    } catch (e) {
+      NotificationHelper.showError(context, 'Error connecting to server');
+    }
+  }
+
+  Future<void> _approveFamilyLink(int linkId) async {
+    try {
+      final res = await http.put(Uri.parse('${ApiConfig.baseUrl}/api/family-links/$linkId/approve'));
+      if (res.statusCode == 200) {
+        _fetchLinkedFamilies();
+      } else {
+        NotificationHelper.showError(context, 'Failed to approve link');
+      }
+    } catch (e) {
+      NotificationHelper.showError(context, 'Error connecting to server');
+    }
+  }
+
+  String _getInverseRelationship(String rel) {
+    final myGender = _userData?['Gender']?.toString().toLowerCase() ?? 'male';
+    switch (rel) {
+      case 'Father':
+      case 'Mother':
+        return myGender == 'female' ? 'Daughter' : 'Son';
+      case 'Grand Father':
+      case 'Grand Mother':
+        return myGender == 'female' ? 'Grand Daughter' : 'Grand Son';
+      case 'Son':
+      case 'Daughter':
+        return myGender == 'female' ? 'Mother' : 'Father';
+      case 'Son-in-law':
+      case 'Daughter-in-law':
+        return myGender == 'female' ? 'Mother-in-law' : 'Father-in-law';
+      case 'Husband':
+        return 'Wife';
+      case 'Wife':
+        return 'Husband';
+      case 'Brother':
+      case 'Sister':
+        return myGender == 'female' ? 'Sister' : 'Brother';
+      default:
+        return rel;
+    }
+  }
+
+  Widget _buildLinkedFamiliesCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      margin: const EdgeInsets.only(top: 24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.black38),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.link, color: Color(0xFF5D1712), size: 28),
+                  const SizedBox(width: 12),
+                  const Flexible(
+                    child: Text(
+                      'Linked Families',
+                      style: TextStyle(
+                        color: Color(0xFF5D1712),
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+              ElevatedButton.icon(
+                onPressed: _showLinkFamilyDialog,
+                icon: const Icon(Icons.add_link, size: 16),
+                label: const Text('Link Family'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF5D1712),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          if (_isLoadingLinkedFamilies)
+            const Center(child: CircularProgressIndicator())
+          else if (_linkedFamilies.isEmpty)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.all(16.0),
+                child: Text('No linked families.', style: TextStyle(color: Colors.black54)),
+              ),
+            )
+          else
+            ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: _linkedFamilies.length,
+              itemBuilder: (context, index) {
+                final link = _linkedFamilies[index];
+                final isParent = link['parent_family_id'] == _userData?['Familymembershipid'];
+                final otherFamilyId = isParent ? link['child_family_id'] : link['parent_family_id'];
+                final otherHeadName = isParent ? link['child_head_name'] : link['parent_head_name'];
+                final displayRel = isParent ? link['relationship_type'] : _getInverseRelationship(link['relationship_type'] ?? '');
+                
+                Widget trailingWidget;
+                if (link['status'] == 'Pending') {
+                  if (isParent) {
+                    trailingWidget = Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text('Pending Approval...', style: TextStyle(color: Colors.orange, fontSize: 12, fontWeight: FontWeight.bold)),
+                        IconButton(
+                          icon: const Icon(Icons.cancel, color: Colors.red),
+                          tooltip: 'Cancel Request',
+                          onPressed: () => _deleteFamilyLink(link['Id']),
+                        ),
+                      ],
+                    );
+                  } else {
+                    trailingWidget = Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        ElevatedButton(
+                          onPressed: () => _approveFamilyLink(link['Id']),
+                          style: ElevatedButton.styleFrom(backgroundColor: Colors.green, padding: const EdgeInsets.symmetric(horizontal: 12), minimumSize: const Size(0, 36)),
+                          child: const Text('Approve', style: TextStyle(color: Colors.white)),
+                        ),
+                        const SizedBox(width: 8),
+                        ElevatedButton(
+                          onPressed: () => _deleteFamilyLink(link['Id']),
+                          style: ElevatedButton.styleFrom(backgroundColor: Colors.red, padding: const EdgeInsets.symmetric(horizontal: 12), minimumSize: const Size(0, 36)),
+                          child: const Text('Reject', style: TextStyle(color: Colors.white)),
+                        ),
+                      ],
+                    );
+                  }
+                } else {
+                  trailingWidget = IconButton(
+                    icon: const Icon(Icons.delete, color: Colors.red),
+                    onPressed: () => _deleteFamilyLink(link['Id']),
+                  );
+                }
+
+                return ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.family_restroom, color: Colors.black54),
+                  title: Text('Family: $otherFamilyId', style: const TextStyle(fontWeight: FontWeight.bold)),
+                  subtitle: Text('Head: $otherHeadName\nRel: $displayRel'),
+                  isThreeLine: true,
+                  trailing: trailingWidget,
+                );
+              },
+            ),
+        ],
+      ),
+    );
   }
 
   Widget _buildMyCoordinatorCard() {
@@ -345,6 +695,7 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
                     const SizedBox(height: 32),
                     _buildDetailsCard(isMobile),
                     _buildMyCoordinatorCard(),
+                    _buildLinkedFamiliesCard(),
                   ],
                 )
               else
@@ -359,6 +710,7 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
                         children: [
                           _buildDetailsCard(isMobile),
                           _buildMyCoordinatorCard(),
+                          _buildLinkedFamiliesCard(),
                         ],
                       ),
                     ),
@@ -580,7 +932,7 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
   }
 
   Widget _buildFamilyTree(bool isMobile) {
-    if (_familyMembers.isEmpty) {
+    if (_familyMembers.isEmpty && _linkedFamilies.isEmpty) {
       return Container(
         height: 100,
         decoration: BoxDecoration(
@@ -592,14 +944,127 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
       );
     }
 
+    String _mapLinkedRole(String linkRel, String memberRole) {
+      if (memberRole == 'Head') return linkRel;
+      if (memberRole == 'Other') return 'Other';
+      
+      if (linkRel == 'Father' || linkRel == 'Mother') {
+        if (memberRole == 'Wife' && linkRel == 'Father') return 'Mother';
+        if (memberRole == 'Husband' && linkRel == 'Mother') return 'Father';
+        if (memberRole == 'Son') return 'Brother';
+        if (memberRole == 'Daughter') return 'Sister';
+      }
+      
+      if (linkRel == 'Grand Father' || linkRel == 'Grand Mother') {
+        if (memberRole == 'Wife' && linkRel == 'Grand Father') return 'Grand Mother';
+        if (memberRole == 'Husband' && linkRel == 'Grand Mother') return 'Grand Father';
+        if (memberRole == 'Son') return 'Uncle';
+        if (memberRole == 'Daughter') return 'Aunt';
+      }
+
+      if (linkRel == 'Son' || linkRel == 'Daughter') {
+        if (memberRole == 'Wife' && linkRel == 'Son') return 'Daughter-in-law';
+        if (memberRole == 'Husband' && linkRel == 'Daughter') return 'Son-in-law';
+        if (memberRole == 'Son') return 'Grand Son';
+        if (memberRole == 'Daughter') return 'Grand Daughter';
+      }
+      
+      if (linkRel == 'Brother' || linkRel == 'Sister') {
+        if (memberRole == 'Wife' && linkRel == 'Brother') return 'Sister-in-law';
+        if (memberRole == 'Husband' && linkRel == 'Sister') return 'Brother-in-law';
+        if (memberRole == 'Son') return 'Nephew';
+        if (memberRole == 'Daughter') return 'Niece';
+      }
+      
+      if (linkRel == 'Husband' || linkRel == 'Wife') {
+        if (memberRole == 'Wife' && linkRel == 'Husband') return 'Self';
+        if (memberRole == 'Husband' && linkRel == 'Wife') return 'Self';
+        if (memberRole == 'Son') return 'Son';
+        if (memberRole == 'Daughter') return 'Daughter';
+      }
+
+      return 'Relative';
+    }
+
+    List<dynamic> synthLinked = [];
+    for (var link in _linkedFamilies.where((l) => l['status'] == 'Approved')) {
+      final isParent = link['parent_family_id'] == _userData?['Familymembershipid'];
+      final otherFamilyId = isParent ? link['child_family_id'] : link['parent_family_id'];
+      final linkRel = isParent ? link['relationship_type'] : _getInverseRelationship(link['relationship_type'] ?? '');
+      
+      final members = _linkedFamilyMembers[otherFamilyId?.toString()] ?? [];
+      
+      if (members.isEmpty) {
+        final otherHeadName = isParent ? link['child_head_name'] : link['parent_head_name'];
+        final otherHeadDob = isParent ? link['child_head_dob'] : link['parent_head_dob'];
+        final otherHeadImage = isParent ? link['child_head_image'] : link['parent_head_image'];
+        final otherHeadGender = isParent ? link['child_head_gender'] : link['parent_head_gender'];
+        final otherHeadIsDead = isParent ? link['child_head_is_dead'] : link['parent_head_is_dead'];
+        synthLinked.add({
+          'Id': 'link_${link['Id']}',
+          'Name': otherHeadName ?? 'Unknown',
+          'MemberRole': linkRel,
+          'Gender': otherHeadGender ?? 'unknown',
+          'isSynthetic': true,
+          'is_dead': otherHeadIsDead ?? '0',
+          'Dob': otherHeadDob ?? '',
+          'Memberimage': otherHeadImage,
+          'Existfamilyid': _userData?['Familymembershipid'] ?? '',
+        });
+      } else {
+        for (var m in members) {
+          String originalRole = m['MemberRole'] ?? 'Other';
+          String mappedRole = _mapLinkedRole(linkRel ?? '', originalRole);
+          if (mappedRole == 'Self') continue; 
+          
+          String newExistId = m['Existfamilyid'] ?? '';
+          if (originalRole == 'Head' && newExistId.trim().isEmpty) {
+             newExistId = _userData?['Familymembershipid'] ?? '';
+          }
+          
+          synthLinked.add({
+            'Id': 'link_${link['Id']}_${m['Id']}',
+            'Name': m['Name'] ?? 'Unknown',
+            'MemberRole': mappedRole,
+            'Gender': m['Gender'] ?? 'unknown',
+            'isSynthetic': true,
+            'is_dead': m['is_dead'] ?? '0',
+            'Dob': m['Dob'] ?? '',
+            'Memberimage': m['Memberimage'],
+            'Familymembershipid': m['Familymembershipid'] ?? '',
+            'Existfamilyid': newExistId, 
+            'Married': m['Married'] ?? '',
+            'husband_name': m['husband_name'] ?? '',
+            'husband_dob': m['husband_dob'] ?? '',
+          });
+        }
+      }
+    }
+    
+    List<dynamic> allMembers = [..._familyMembers, ...synthLinked];
+
     bool isSubHead(dynamic m) {
       if (m['MemberRole'] == 'Head' && (m['Existfamilyid']?.toString().trim() ?? '').isNotEmpty) return true;
       if (['Daughter', 'Sister'].contains(m['MemberRole'])) {
           bool hasHusband = m['husband_name'] != null && m['husband_name'].toString().trim().isNotEmpty;
           if (hasHusband) return true;
       }
-      if (['Son', 'Brother', 'Uncle'].contains(m['MemberRole']) && m['Married']?.toString().toLowerCase() == 'yes') {
-          return true;
+      if (['Son', 'Brother', 'Uncle'].contains(m['MemberRole'])) {
+          if (m['Married']?.toString().toLowerCase() == 'yes') return true;
+          
+          String fmId = m['Familymembershipid']?.toString() ?? '';
+          if (fmId.isNotEmpty) {
+              bool hasSpouseInTree = allMembers.any((s) {
+                  if (s['Existfamilyid']?.toString() != fmId || s['Id'] == m['Id']) return false;
+                  
+                  if (m['MemberRole'] == 'Son' && s['MemberRole'] != 'Daughter-in-law') return false;
+                  if (m['MemberRole'] == 'Brother' && s['MemberRole'] != 'Sister-in-law') return false;
+                  if (m['MemberRole'] == 'Uncle' && s['MemberRole'] != 'Aunt') return false;
+                  
+                  return true;
+              });
+              if (hasSpouseInTree) return true;
+          }
       }
       return false;
     }
@@ -607,7 +1072,7 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
     String currentFmId = _userData?['Familymembershipid']?.toString() ?? '';
     String currentExistId = _userData?['Existfamilyid']?.toString() ?? '';
     String topLevelId = '';
-    for (var fm in _familyMembers) {
+    for (var fm in allMembers) {
       if ((fm['Existfamilyid']?.toString().trim() ?? '').isEmpty && fm['MemberRole'] == 'Head') {
         topLevelId = fm['Familymembershipid']?.toString() ?? '';
         break;
@@ -617,29 +1082,30 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
         topLevelId = currentFmId.isNotEmpty ? currentFmId : currentExistId;
     }
     
-    Set<String> subHeadFmIds = _familyMembers
+    Set<String> subHeadFmIds = allMembers
         .where((m) => isSubHead(m) && !['Daughter', 'Sister', 'Niece', 'Grand Daughter', 'Great Grand Daughter'].contains(m['MemberRole']))
         .map((m) => m['Familymembershipid']?.toString() ?? '')
         .where((id) => id.isNotEmpty)
         .toSet();
         
     bool isSubSpouse(dynamic m) {
-      if (!['Wife', 'Husband'].contains(m['MemberRole'])) return false;
+      const spouseRoles = ['Wife', 'Husband', 'Son-in-law', 'Daughter-in-law', 'Sister-in-law', 'Brother-in-law', 'Aunt', 'Uncle', 'Grand Son-in-law', 'Great Grand Son-in-law', 'Nephew-in-law', 'Grand Nephew-in-law', 'Great Grand Nephew-in-law'];
+      if (!spouseRoles.contains(m['MemberRole'])) return false;
       String existId = m['Existfamilyid']?.toString().trim() ?? '';
       return subHeadFmIds.contains(existId);
     }
 
-    final grandparents = _familyMembers.where((m) => m['MemberRole'] == 'Grand Father' || m['MemberRole'] == 'Grand Mother').toList();
-    final parents = _familyMembers.where((m) => m['MemberRole'] == 'Father' || m['MemberRole'] == 'Mother').toList();
-    final headAndSpouse = _familyMembers.where((m) => ['Head', 'Wife', 'Husband'].contains(m['MemberRole']) && !isSubHead(m) && !isSubSpouse(m)).toList();
-    final siblings = _familyMembers.where((m) => ['Brother', 'Sister'].contains(m['MemberRole'])).toList();
+    final grandparents = allMembers.where((m) => m['MemberRole'] == 'Grand Father' || m['MemberRole'] == 'Grand Mother').toList();
+    final parents = allMembers.where((m) => m['MemberRole'] == 'Father' || m['MemberRole'] == 'Mother').toList();
+    final headAndSpouse = allMembers.where((m) => ['Head', 'Wife', 'Husband'].contains(m['MemberRole']) && !isSubHead(m) && !isSubSpouse(m)).toList();
+    final siblings = allMembers.where((m) => ['Brother', 'Sister'].contains(m['MemberRole'])).toList();
     
-    final grandchildren = _familyMembers.where((m) {
+    final grandchildren = allMembers.where((m) {
       String existId = m['Existfamilyid']?.toString().trim() ?? '';
-      return subHeadFmIds.contains(existId) && !['Head', 'Wife', 'Husband'].contains(m['MemberRole']);
+      return subHeadFmIds.contains(existId) && !isSubSpouse(m) && !['Head'].contains(m['MemberRole']);
     }).toList();
 
-    final children = _familyMembers.where((m) {
+    final children = allMembers.where((m) {
       String existId = m['Existfamilyid']?.toString().trim() ?? '';
       
       if (existId == topLevelId && topLevelId.isNotEmpty) {
@@ -660,7 +1126,7 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
       return false;
     }).toList();
     
-    final others = _familyMembers.where((m) => !grandparents.contains(m) && !parents.contains(m) && !headAndSpouse.contains(m) && !siblings.contains(m) && !children.contains(m) && !grandchildren.contains(m)).toList();
+    final others = allMembers.where((m) => !grandparents.contains(m) && !parents.contains(m) && !headAndSpouse.contains(m) && !siblings.contains(m) && !children.contains(m) && !grandchildren.contains(m)).toList();
 
     Widget buildVerticalLine() {
       return Container(
@@ -716,7 +1182,7 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
         
         if (isAnyHead) {
           String mFmId = m['Familymembershipid']?.toString() ?? '';
-          spouse = _familyMembers.where((s) => ['Wife', 'Husband'].contains(s['MemberRole']) && s['Existfamilyid']?.toString() == mFmId).toList();
+          spouse = allMembers.where((s) => ['Wife', 'Husband'].contains(s['MemberRole']) && s['Existfamilyid']?.toString() == mFmId).toList();
         } else if (isFather) {
           String mExId = m['Existfamilyid']?.toString() ?? '';
           spouse = members.where((s) => s['MemberRole'] == 'Mother' && s['Existfamilyid']?.toString() == mExId).toList();
@@ -728,11 +1194,16 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
           if (!isFemaleSubHead) {
             String mFmId = m['Familymembershipid']?.toString() ?? '';
             if (mFmId.isNotEmpty) {
-              spouse = _familyMembers.where((s) => 
-                ['Wife', 'Husband', 'Son-in-law', 'Daughter-in-law'].contains(s['MemberRole']) && 
-                s['Existfamilyid']?.toString() == mFmId && 
-                s['Id'] != m['Id']
-              ).toList();
+              spouse = allMembers.where((s) {
+                if (s['Existfamilyid']?.toString() != mFmId || s['Id'] == m['Id']) return false;
+                
+                if (m['MemberRole'] == 'Son' && s['MemberRole'] != 'Daughter-in-law') return false;
+                if (m['MemberRole'] == 'Brother' && s['MemberRole'] != 'Sister-in-law') return false;
+                if (m['MemberRole'] == 'Uncle' && s['MemberRole'] != 'Aunt') return false;
+                if (m['MemberRole'] == 'Head' && s['MemberRole'] != 'Wife') return false;
+                
+                return ['Wife', 'Husband', 'Son-in-law', 'Daughter-in-law', 'Sister-in-law', 'Aunt'].contains(s['MemberRole']);
+              }).toList();
             }
           }
         }
@@ -1000,11 +1471,7 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
     // Grandchildren are now rendered recursively under their respective Sub-Head parents
     
     // Remove spouses of Sub-Heads from others so they aren't rendered twice
-    others.removeWhere((o) {
-      if (!['Wife', 'Husband', 'Son-in-law', 'Daughter-in-law'].contains(o['MemberRole'])) return false;
-      String oExId = o['Existfamilyid']?.toString() ?? '';
-      return _familyMembers.any((fm) => fm['Familymembershipid']?.toString() == oExId && isSubHead(fm) && fm['Id'] != o['Id']);
-    });
+    others.removeWhere((o) => isSubSpouse(o));
     
     if (others.isNotEmpty) {
       if (treeWidgets.isNotEmpty) {
@@ -1014,6 +1481,7 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
       }
       treeWidgets.add(buildTreeRow(others, 'Others'));
     }
+
 
     return Container(
       width: double.infinity,
@@ -1585,13 +2053,15 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
                   onTap: (hasImage && !imageLoadFailed) ? () => _showFullScreenImage('${ApiConfig.baseUrl}/assets/uploads/${member['Memberimage']}') : null,
                   child: MouseRegion(
                     cursor: (hasImage && !imageLoadFailed) ? SystemMouseCursors.click : SystemMouseCursors.basic,
-                    child: Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: iconBgColor,
-                        shape: BoxShape.circle,
-                      ),
+                    child: Stack(
+                      children: [
+                        Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: iconBgColor,
+                            shape: BoxShape.circle,
+                          ),
                       clipBehavior: Clip.antiAlias,
                       child: hasImage && !imageLoadFailed
                           ? (isDead ? ColorFiltered(
@@ -1622,6 +2092,22 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
                               },
                             ))
                           : Icon(icon, color: iconColor, size: 28),
+                        ),
+                        if (member['isSynthetic'] == true)
+                          Positioned(
+                            bottom: 0,
+                            right: 0,
+                            child: Container(
+                              padding: const EdgeInsets.all(2),
+                              decoration: const BoxDecoration(
+                                color: Color(0xFFE65100),
+                                shape: BoxShape.circle,
+                                boxShadow: [BoxShadow(color: Colors.white, spreadRadius: 1.5)],
+                              ),
+                              child: const Icon(Icons.link, size: 10, color: Colors.white),
+                            ),
+                          ),
+                      ],
                     ),
                   ),
                 ),

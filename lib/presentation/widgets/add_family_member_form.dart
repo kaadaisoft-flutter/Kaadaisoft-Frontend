@@ -69,6 +69,7 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
   final _currFullAddressController = TextEditingController();
 
   // Husband Details for Married Daughter
+  final _otherRelationshipController = TextEditingController();
   final _husbandNameController = TextEditingController();
   final _husbandDobController = TextEditingController();
   final _husbandMobileController = TextEditingController();
@@ -476,6 +477,14 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
                           ),
                         ]),
                         
+                        if (_selectedRelationship == 'Other') ...[
+                            _buildResponsiveRow(isMobile, [
+                              _buildInputField('Other Relationship *', _otherRelationshipController, isMobile, maxLength: 50, validator: (v) => (v == null || v.isEmpty) ? 'Required' : null),
+                              if (!isMobile) const SizedBox.shrink(),
+                              if (!isMobile) const SizedBox.shrink(),
+                            ]),
+                          ],
+
                         _buildResponsiveRow(isMobile, [
                           _buildDatePickerField('Date Of Birth *', _dobController, isMobile),
                           _buildGenderSelector(isMobile),
@@ -1084,7 +1093,7 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
       request.fields['thottam'] = _thottamController.text;
       request.fields['education'] = _selectedEducation == 'Others' ? _educationController.text : (_selectedEducation ?? '');
       request.fields['profession'] = _selectedProfession == 'Others' ? _professionController.text : (_selectedProfession ?? '');
-      request.fields['relationship'] = _selectedRelationship ?? '';
+      request.fields['relationship'] = _selectedRelationship == 'Other' ? _otherRelationshipController.text : (_selectedRelationship ?? '');
       request.fields['family_id'] = widget.parentData['Familymembershipid'] ?? '';
       
       if (_selectedRelationship == 'Daughter' && _selectedMarried == 'Yes') {

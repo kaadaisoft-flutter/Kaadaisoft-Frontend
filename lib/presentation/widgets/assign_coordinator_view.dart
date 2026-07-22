@@ -644,8 +644,9 @@ class _AssignCoordinatorViewState extends State<AssignCoordinatorView> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Wrap(
-          spacing: 24, runSpacing: 24,
-          children: [
+            spacing: 24, runSpacing: 24,
+            crossAxisAlignment: WrapCrossAlignment.end,
+            children: [
             _buildField(
               label: AppLocalizations.of(context)?.searchMember ?? 'Search Member',
               child: _buildSearchField(type: 'member'),
@@ -719,8 +720,9 @@ class _AssignCoordinatorViewState extends State<AssignCoordinatorView> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Wrap(
-          spacing: 24, runSpacing: 24,
-          children: [
+            spacing: 24, runSpacing: 24,
+            crossAxisAlignment: WrapCrossAlignment.end,
+            children: [
             _buildField(
               label: AppLocalizations.of(context)?.searchCoordinator ?? 'Search Coordinator',
               child: _buildSearchField(type: 'coordinator'),
@@ -863,8 +865,9 @@ class _AssignCoordinatorViewState extends State<AssignCoordinatorView> {
 
   Widget _buildAddVillageFormContent() {
     return Wrap(
-      spacing: 24, runSpacing: 24,
-      children: [
+            spacing: 24, runSpacing: 24,
+            crossAxisAlignment: WrapCrossAlignment.end,
+            children: [
         _buildField(
           label: AppLocalizations.of(context)?.districtsLabel ?? 'Districts:',
           child: _buildDropdown(
@@ -994,8 +997,9 @@ class _AssignCoordinatorViewState extends State<AssignCoordinatorView> {
 
   Widget _buildRemoveVillageFormContent() {
     return Wrap(
-      spacing: 24, runSpacing: 24,
-      children: [
+            spacing: 24, runSpacing: 24,
+            crossAxisAlignment: WrapCrossAlignment.end,
+            children: [
         _buildField(
           label: AppLocalizations.of(context)?.districtsLabel ?? 'Districts:',
           child: _buildDropdown(
@@ -1258,8 +1262,11 @@ class _SearchUserDialogState extends State<_SearchUserDialog> {
   Future<void> _fetchInitial() async {
     setState(() => _isLoading = true);
     try {
-      final endpoint = widget.isMember ? 'members' : 'coordinators';
-      final response = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/$endpoint'));
+      final endpoint = widget.isMember ? 'members?exclude_coordinators=true' : 'coordinators';
+      final url = widget.isMember 
+          ? '${ApiConfig.baseUrl}/api/$endpoint'
+          : '${ApiConfig.baseUrl}/api/$endpoint';
+      final response = await http.get(Uri.parse(url));
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         setState(() {
@@ -1280,7 +1287,10 @@ class _SearchUserDialogState extends State<_SearchUserDialog> {
     setState(() => _isLoading = true);
     try {
       final endpoint = widget.isMember ? 'members' : 'coordinators';
-      final response = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/$endpoint?search=${_controller.text}'));
+      final queryParams = widget.isMember 
+          ? '?exclude_coordinators=true&search=${_controller.text}'
+          : '?search=${_controller.text}';
+      final response = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/$endpoint$queryParams'));
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         setState(() {
@@ -1413,3 +1423,4 @@ class _SearchUserDialogState extends State<_SearchUserDialog> {
     );
   }
 }
+
