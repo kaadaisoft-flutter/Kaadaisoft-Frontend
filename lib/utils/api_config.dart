@@ -4,16 +4,17 @@ class ApiConfig {
   // Use 127.0.0.1 for Web and Desktop
   // Use 10.0.2.2 for Android Emulator to access host localhost
   static String get baseUrl {
-    // Live backend URL:
-    return 'https://kaadaisoft-backend.onrender.com';
-
-    // Local development (Uncomment to use locally):
-    // if (kIsWeb) {
-    //   return 'http://localhost:8000';
-    // } else {
-    //   // Laptop local IP for physical/wireless mobile debugging access
-    //   return 'http://192.168.68.110:8000';
-    // }
+    if (kIsWeb) {
+      // If we are running on a local web server, use localhost
+      if (Uri.base.origin.contains('localhost') || Uri.base.origin.contains('127.0.0.1')) {
+        return 'http://localhost:8000';
+      }
+      // Otherwise, use the live backend URL
+      return 'https://kaadaisoft-backend.onrender.com';
+    } else {
+      // Laptop local IP for physical/wireless mobile debugging access
+      return 'http://192.168.68.110:8000';
+    }
   }
 
   // Safe getter for origin that won't crash on mobile apps
