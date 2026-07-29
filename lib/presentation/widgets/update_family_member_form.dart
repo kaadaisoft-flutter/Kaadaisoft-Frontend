@@ -635,7 +635,7 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
                       _buildResponsiveRow(isMobile, [
                         _buildFileUploadField('Passport size photo *', 'member_image'),
                         _buildFileUploadField('Community Certificate', 'community_cert'),
-                        if (!isMobile) const Spacer(), if (!isMobile) const Spacer(),
+                        if (!isMobile) const SizedBox(), if (!isMobile) const SizedBox(),
                       ]),
                       const SizedBox(height: 32),
                       _buildAgreement(),
@@ -707,10 +707,15 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
   }
 
   Widget _buildResponsiveRow(bool isMobile, List<Widget> children) {
-    if (isMobile) return Column(crossAxisAlignment: CrossAxisAlignment.start, children: children.map((c) => Padding(padding: const EdgeInsets.only(bottom: 16), child: c)).toList());
+    if (isMobile) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start, 
+        children: children.map((c) => Padding(padding: const EdgeInsets.only(bottom: 16), child: c is Expanded ? c.child : c)).toList()
+      );
+    }
     return Padding(
       padding: const EdgeInsets.only(bottom: 20),
-      child: Row(children: children.map((c) => Expanded(child: Padding(padding: const EdgeInsets.symmetric(horizontal: 8), child: c))).toList()),
+      child: Row(children: children.map((c) => Expanded(child: Padding(padding: const EdgeInsets.symmetric(horizontal: 8), child: c is Expanded ? c.child : c))).toList()),
     );
   }
 
