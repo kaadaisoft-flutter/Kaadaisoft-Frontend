@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:file_picker/file_picker.dart' as fp_pkg;
 import 'package:cross_file/cross_file.dart';
+import 'package:intl_phone_field/countries.dart';
 import 'dart:io';
 import '../../l10n/app_localizations.dart';
 import '../widgets/custom_dropdown_search.dart';
@@ -27,6 +28,7 @@ class UpdateDetailsContent extends StatefulWidget {
 
 class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
   final _formKey = GlobalKey<FormState>();
+  final ScrollController _scrollController = ScrollController();
   bool _isSaving = false;
   bool _whatsappSameAsPhone = false;
 
@@ -57,7 +59,7 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
   TextEditingController _nriStateCtrl = TextEditingController();
   TextEditingController _nriCityCtrl = TextEditingController();
 
-
+  late TextEditingController _otherRelationshipCtrl;
   String? _relationship;
   String? _gender;
   String? _bloodGroup;
@@ -88,6 +90,9 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
   List<String> _currPanchayats = [];
   List<String> _currVillages = [];
   
+  String _phoneCountryCode = 'IN';
+  String _whatsappCountryCode = 'IN';
+  
   List<dynamic> _allCountriesData = [];
   List<String> _countryNames = [];
   List<String> _stateNames = [];
@@ -101,6 +106,30 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
   
   String? _education;
   String? _profession;
+
+  String _initialStateHash = '';
+  
+  String _getFormStateHash() {
+    return [
+      _nameCtrl.text.trim(), _phoneCtrl.text.trim(), _whatsappCtrl.text.trim(),
+      _phoneCountryCode, _whatsappCountryCode, _emailCtrl.text.trim(),
+      _dobCtrl.text.trim(), _valuvuCtrl.text.trim(), _thottamCtrl.text.trim(),
+      _streetCtrl.text.trim(), _pincodeCtrl.text.trim(), _professionCtrl.text.trim(),
+      _curStreetCtrl.text.trim(), _curPincodeCtrl.text.trim(), _curTalukCtrl.text.trim(),
+      _curPanchayatCtrl.text.trim(), _curVillageCtrl.text.trim(), _nriZipCtrl.text.trim(),
+      _nriFullAddressCtrl.text.trim(), _nriCountryCtrl.text.trim(), _nriStateCtrl.text.trim(),
+      _nriCityCtrl.text.trim(), _relationship == 'Other' ? _otherRelationshipCtrl.text.trim() : (_relationship ?? ''), _gender ?? '', _bloodGroup ?? '',
+      _married ?? '', _aliveStatus ?? '', _kulam ?? '', _district ?? '', _taluk ?? '',
+      _panchayat ?? '', _village ?? '', _education ?? '', _profession ?? '',
+      _curAddressType ?? '', _curState ?? '', _curDistrict ?? '', _nriCountry ?? '',
+      _nriState ?? '', _nriCity ?? '', _memberImage != null ? 'img' : 'no_img',
+      _communityCert != null ? 'cert' : 'no_cert',
+    ].join('|');
+  }
+
+  bool _hasChanges() {
+    return _initialStateHash.isNotEmpty && _getFormStateHash() != _initialStateHash;
+  }
 
   static const Color _darkBrown = const Color(0xFF322E2E);
   static const Color _gold = const Color(0xFFC5A028);
@@ -123,6 +152,25 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
       _whatsappSameAsPhone = true;
     }
     _emailCtrl = TextEditingController(text: d['Email'] ?? '');
+    
+    final mDial = d['mobile_country_code']?.toString();
+    if (mDial != null && mDial.isNotEmpty) {
+      final cleanDial = mDial.replaceAll('+', '');
+      try {
+        final c = countries.firstWhere((element) => element.dialCode == cleanDial);
+        _phoneCountryCode = c.code;
+      } catch (_) {}
+    }
+    
+    final wDial = d['whatsapp_country_code']?.toString();
+    if (wDial != null && wDial.isNotEmpty) {
+      final cleanDial = wDial.replaceAll('+', '');
+      try {
+        final c = countries.firstWhere((element) => element.dialCode == cleanDial);
+        _whatsappCountryCode = c.code;
+      } catch (_) {}
+    }
+
     _dobCtrl = TextEditingController(text: d['Dob'] ?? '');
     _valuvuCtrl = TextEditingController(text: d['Valuvu'] ?? '');
     _thottamCtrl = TextEditingController(text: d['Thottam'] ?? '');
@@ -147,8 +195,13 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
     _nriStateCtrl = TextEditingController(text: d['Curnristate'] ?? '');
     _nriCityCtrl = TextEditingController(text: d['Curnricity'] ?? '');
 
-
     _relationship = d['MemberRole'];
+    if (_relationship != null && !_relationships.contains(_relationship)) {
+      _otherRelationshipCtrl = TextEditingController(text: _relationship);
+      _relationship = 'Other';
+    } else {
+      _otherRelationshipCtrl = TextEditingController();
+    }
     _gender = d['Gender'];
     _bloodGroup = d['Bloodgroup'];
     final rawMarried = d['Married']?.toString().trim().toLowerCase();
@@ -192,6 +245,7 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
        // Wait for geo data to load before updating states/cities?
        // Actually _loadGeoData is async. 
     }
+    _initialStateHash = _getFormStateHash();
   }
 
   Future<void> _loadGeoData() async {
@@ -244,13 +298,15 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
 
   @override
   void dispose() {
+    _scrollController.dispose();
     final ctrls = [
       _nameCtrl, _phoneCtrl, _whatsappCtrl, _emailCtrl, _dobCtrl, 
       _valuvuCtrl, _thottamCtrl, _streetCtrl, 
       _doorNoCtrl, _pincodeCtrl, _professionCtrl, 
       _curStreetCtrl, _curDoorNoCtrl, _curPincodeCtrl, 
       _curTalukCtrl, _curPanchayatCtrl, _curVillageCtrl, _nriZipCtrl, 
-      _nriFullAddressCtrl, _nriCountryCtrl, _nriStateCtrl, _nriCityCtrl
+      _nriFullAddressCtrl, _nriCountryCtrl, _nriStateCtrl, _nriCityCtrl,
+      _otherRelationshipCtrl
     ];
     for (final c in ctrls) { c.dispose(); }
     super.dispose();
@@ -340,7 +396,10 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
   }
 
   Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) {
+      _scrollController.animateTo(0, duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+      return;
+    }
     setState(() => _isSaving = true);
     try {
       var request = http.MultipartRequest('POST', Uri.parse(ApiConfig.updateMember));
@@ -351,13 +410,20 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
       request.fields['name'] = _nameCtrl.text.trim();
       request.fields['phone'] = _phoneCtrl.text.trim();
       request.fields['whatsapp'] = _whatsappCtrl.text.trim();
+      
+      final phoneCountry = countries.firstWhere((c) => c.code == _phoneCountryCode, orElse: () => countries.firstWhere((c) => c.code == 'IN'));
+      request.fields['mobile_country_code'] = '+${phoneCountry.dialCode}';
+      
+      final whatsappCountry = countries.firstWhere((c) => c.code == _whatsappCountryCode, orElse: () => countries.firstWhere((c) => c.code == 'IN'));
+      request.fields['whatsapp_country_code'] = '+${whatsappCountry.dialCode}';
+
       request.fields['email'] = _emailCtrl.text.trim();
       request.fields['dob'] = _dobCtrl.text.trim();
       request.fields['gender'] = _gender ?? '';
       request.fields['blood_group'] = _bloodGroup ?? '';
       request.fields['married'] = _married ?? '';
       request.fields['alive_status'] = _aliveStatus ?? 'Alive';
-      request.fields['relationship'] = _relationship ?? '';
+      request.fields['relationship'] = _relationship == 'Other' ? _otherRelationshipCtrl.text.trim() : (_relationship ?? '');
       request.fields['valuvu'] = _valuvuCtrl.text.trim();
       request.fields['thottam'] = _thottamCtrl.text.trim();
       request.fields['kulam'] = _kulam ?? '';
@@ -518,6 +584,7 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
       child: Container(
         color: Colors.white,
         child: SingleChildScrollView(
+          controller: _scrollController,
           physics: const BouncingScrollPhysics(),
           child: Column(
             children: [
@@ -562,6 +629,9 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
             padding: const EdgeInsets.all(24),
             child: Form(
               key: _formKey,
+              onChanged: () {
+                setState(() {});
+              },
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -602,7 +672,7 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
                       width: 250,
                       height: 50,
                       child: ElevatedButton(
-                        onPressed: _isSaving || !_isConfirmed ? null : _submit,
+                        onPressed: _isSaving || !_isConfirmed || !_hasChanges() ? null : _submit,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: _darkBrown,
                           foregroundColor: Colors.white,
@@ -656,7 +726,16 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         // Row 1: Relationship, Name, Phone
         _row(isMobile, [
-          _dropField('Relationship *', _relationships, _relationship, (v) => setState(() => _relationship = v)),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _dropField('Relationship *', _relationships, _relationship, (v) => setState(() => _relationship = v)),
+              if (_relationship == 'Other') ...[
+                const SizedBox(height: 16),
+                _textField('Specify Relationship *', _otherRelationshipCtrl, required: true),
+              ]
+            ],
+          ),
           _textField('Name *', _nameCtrl, required: true),
           _intlPhoneField('Phone Number *', _phoneCtrl, required: true),
         ]),
@@ -691,7 +770,10 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
                           value: _whatsappSameAsPhone,
                           onChanged: (v) => setState(() {
                             _whatsappSameAsPhone = v!;
-                            if (v) _whatsappCtrl.text = _phoneCtrl.text;
+                            if (v) {
+                              _whatsappCtrl.text = _phoneCtrl.text;
+                              _whatsappCountryCode = _phoneCountryCode;
+                            }
                           }),
                           materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                           visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
@@ -706,6 +788,13 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
               CustomPhoneField(
                 label: '',
                 controller: _whatsappCtrl,
+                initialCountryCode: _whatsappCountryCode,
+                onCountryChanged: (c) {
+                  setState(() {
+                    _whatsappCountryCode = c.code;
+                    _whatsappCtrl.clear();
+                  });
+                },
                 validator: (v) {
                   return null;
                 },
@@ -1038,7 +1127,7 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
 
   Widget _textField(String label, TextEditingController ctrl, {TextInputType? inputType, bool required = false, List<TextInputFormatter>? inputFormatters, Widget? suffix, int maxLines = 1, int? maxLength}) {
     List<TextInputFormatter>? formatters = inputFormatters;
-    if (label.contains('Name') && !label.contains('Street') && !label.contains('Village')) {
+    if ((label.contains('Name') || label.contains('Thottam') || label.contains('Valuvu')) && !label.contains('Street') && !label.contains('Village')) {
       formatters = (formatters?.toList() ?? [])..add(FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z\s\.]')));
     }
 
@@ -1069,6 +1158,9 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
             if (val.trim().isNotEmpty && val.trim().length < 3) return 'Name must be at least 3 characters';
             if (val.trim().isNotEmpty && !RegExp(r'^[a-zA-Z\s\.]+$').hasMatch(val.trim())) return 'Only letters, spaces, and dots allowed';
           }
+          if ((label.contains('Thottam') || label.contains('Valuvu')) && val.trim().isNotEmpty) {
+            if (!RegExp(r'^[a-zA-Z\s\.]+$').hasMatch(val.trim())) return 'Only letters, spaces, and dots allowed';
+          }
           if (required && val.isEmpty) return 'Required';
           return null;
         },
@@ -1083,6 +1175,17 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
       CustomPhoneField(
         label: '',
         controller: ctrl,
+        initialCountryCode: _phoneCountryCode,
+        onCountryChanged: (c) {
+          setState(() {
+            _phoneCountryCode = c.code;
+            ctrl.clear();
+            if (_whatsappSameAsPhone) {
+              _whatsappCountryCode = c.code;
+              _whatsappCtrl.clear();
+            }
+          });
+        },
         validator: (v) {
           final val = ctrl.text;
           if (required && val.isEmpty) return 'Required';

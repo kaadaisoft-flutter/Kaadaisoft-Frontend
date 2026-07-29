@@ -96,6 +96,11 @@ class _ForgotPasswordDialogState extends State<ForgotPasswordDialog> {
       return true;
     }
 
+    if (newPassword.isEmpty) {
+      showStatusDialog(context, title: 'Validation Error', message: 'New Password is required.', type: DialogType.warning);
+      return;
+    }
+
     if (!isValidPassword(newPassword)) {
       showStatusDialog(
         context, 
@@ -179,7 +184,7 @@ class _ForgotPasswordDialogState extends State<ForgotPasswordDialog> {
             const SizedBox(height: 16),
             if (_step == 1) ...[
               Text(
-                localizations?.forgotPasswordInstruction ?? 'Enter your registered mobile number. We will send an OTP to the email address linked to your account.',
+                localizations?.forgotPasswordInstruction ?? 'Enter your registered mobile number. We will send an OTP to your WhatsApp number and email address.',
                 style: const TextStyle(color: Colors.black87, fontSize: 14),
               ),
               const SizedBox(height: 20),
@@ -212,7 +217,7 @@ class _ForgotPasswordDialogState extends State<ForgotPasswordDialog> {
               ),
             ] else ...[
               Text(
-                localizations?.resetPasswordInstruction ?? 'Please enter the 6-digit OTP sent to your email and your new password.',
+                localizations?.resetPasswordInstruction ?? 'Please enter the 6-digit OTP sent to your WhatsApp/Email and your new password.',
                 style: const TextStyle(color: Colors.black87, fontSize: 14),
               ),
               const SizedBox(height: 20),

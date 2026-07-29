@@ -107,6 +107,10 @@ class _RegistrationFormState extends State<RegistrationForm> {
   final _manualCurrVillageController = TextEditingController();
   
   // Selection States
+  String _phoneCountryCode = 'IN';
+  String _phoneCountryDialCode = '+91';
+  String _whatsappCountryCode = 'IN';
+  String _whatsappCountryDialCode = '+91';
   String? _selectedGender;
   String? _selectedBloodGroup;
   String? _selectedMarried;
@@ -208,7 +212,7 @@ class _RegistrationFormState extends State<RegistrationForm> {
       await _geoService.loadData();
     }
     setState(() {
-      _countryNames = _geoService.countryNames;
+      _countryNames = _geoService.countryNames.where((c) => c.toLowerCase() != 'india').toList();
       _isLoadingGeoData = false;
       if (_selectedCurrentAddressType == 'Other State') {
         _updateStates('India');
@@ -218,7 +222,12 @@ class _RegistrationFormState extends State<RegistrationForm> {
 
   void _updateStates(String countryName) {
     setState(() {
-      _stateNames = _geoService.getStates(countryName);
+      final states = _geoService.getStates(countryName);
+      if (countryName.toLowerCase() == 'india') {
+        _stateNames = states.where((s) => s.toLowerCase() != 'tamil nadu').toList();
+      } else {
+        _stateNames = states;
+      }
       _selectedCurrState = null;
       _cityNames = [];
       _selectedCurrCity = null;
@@ -255,6 +264,10 @@ class _RegistrationFormState extends State<RegistrationForm> {
       _isLoadingTaluks = true;
       _taluks = [];
       _selectedTaluk = null;
+      _panchayats = [];
+      _selectedPanchayat = null;
+      _villages = [];
+      _selectedVillage = null;
     });
     try {
       final response = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/taluks/$district'));
@@ -277,6 +290,8 @@ class _RegistrationFormState extends State<RegistrationForm> {
       _isLoadingPanchayats = true;
       _panchayats = [];
       _selectedPanchayat = null;
+      _villages = [];
+      _selectedVillage = null;
     });
     try {
       final response = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/panchayats/$taluk'));
@@ -330,7 +345,11 @@ class _RegistrationFormState extends State<RegistrationForm> {
   }
 
   Future<void> _fetchCurrTaluks(String district) async {
-    setState(() { _currTaluks = []; _selectedCurrTaluk = null; });
+    setState(() { 
+      _currTaluks = []; _selectedCurrTaluk = null; 
+      _currPanchayats = []; _selectedCurrPanchayat = null;
+      _currVillages = []; _selectedCurrVillage = null;
+    });
     try {
       final response = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/taluks/$district'));
       if (response.statusCode == 200) {
@@ -344,7 +363,10 @@ class _RegistrationFormState extends State<RegistrationForm> {
   }
 
   Future<void> _fetchCurrPanchayats(String taluk) async {
-    setState(() { _currPanchayats = []; _selectedCurrPanchayat = null; });
+    setState(() { 
+      _currPanchayats = []; _selectedCurrPanchayat = null; 
+      _currVillages = []; _selectedCurrVillage = null;
+    });
     try {
       final response = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/panchayats/$taluk'));
       if (response.statusCode == 200) {
@@ -426,11 +448,15 @@ class _RegistrationFormState extends State<RegistrationForm> {
       else if (_emailController.text.isNotEmpty && !RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(_emailController.text)) firstErrorField = 'Email';
       else if (_whatsappController.text.length != 10) firstErrorField = 'WhatsApp Number';
       else if (_selectedMarried == null) firstErrorField = 'Married';
-      else if (_selectedEducation == 'Others' && _educationController.text.isEmpty) firstErrorField = 'Education';
-      else if (_selectedProfession == 'Others' && _professionController.text.isEmpty) firstErrorField = 'Profession';
+      else if (_selectedEducation == 'Others' && (_educationController.text.isEmpty || !RegExp(r'[a-zA-Z]').hasMatch(_educationController.text.trim()))) firstErrorField = 'Education';
+      else if (_selectedProfession == 'Others' && (_professionController.text.isEmpty || !RegExp(r'[a-zA-Z]').hasMatch(_professionController.text.trim()))) firstErrorField = 'Profession';
+      else if (_selectedDistrict == 'Others' && (_manualDistrictController.text.isEmpty || !RegExp(r'[a-zA-Z]').hasMatch(_manualDistrictController.text.trim()))) firstErrorField = 'District';
       else if (_selectedDistrict == null) firstErrorField = 'District';
+      else if (_selectedTaluk == 'Others' && (_manualTalukController.text.isEmpty || !RegExp(r'[a-zA-Z]').hasMatch(_manualTalukController.text.trim()))) firstErrorField = 'Taluk';
       else if (_selectedTaluk == null) firstErrorField = 'Taluk';
+      else if (_selectedPanchayat == 'Others' && (_manualPanchayatController.text.isEmpty || !RegExp(r'[a-zA-Z]').hasMatch(_manualPanchayatController.text.trim()))) firstErrorField = 'Panchayat';
       else if (_selectedPanchayat == null) firstErrorField = 'Panchayat';
+      else if (_selectedVillage == 'Others' && (_manualVillageController.text.isEmpty || !RegExp(r'[a-zA-Z]').hasMatch(_manualVillageController.text.trim()))) firstErrorField = 'Village Name';
       else if (_selectedVillage == null) firstErrorField = 'Village Name';
       else if (_streetController.text.isEmpty) firstErrorField = 'Street Name';
       else if (_pinCodeController.text.length != 6) firstErrorField = 'Pin Code';
@@ -460,44 +486,50 @@ class _RegistrationFormState extends State<RegistrationForm> {
         }
       }
 
-      if (firstErrorField != null) {
-        final focusNode = _focusNodes[firstErrorField];
-        if (focusNode != null && focusNode.context != null) {
-          Scrollable.ensureVisible(
-            focusNode.context!,
-            duration: const Duration(milliseconds: 500),
-            curve: Curves.easeInOut,
-            alignment: 0.5,
-          );
-          focusNode.requestFocus();
-        }
-      }
-
       showStatusDialog(
         context,
         title: 'Mandatory Fields',
         message: 'Please fill all the mandatory fields marked with * correctly.',
         type: DialogType.warning,
+        onOk: () {
+          if (firstErrorField != null) {
+            final focusNode = _focusNodes[firstErrorField];
+            if (focusNode != null && focusNode.context != null) {
+              Future.delayed(const Duration(milliseconds: 100), () {
+                Scrollable.ensureVisible(
+                  focusNode.context!,
+                  duration: const Duration(milliseconds: 500),
+                  curve: Curves.easeInOut,
+                  alignment: 0.5,
+                );
+                focusNode.requestFocus();
+              });
+            }
+          }
+        },
       );
       return;
     }
 
     if (!documentsValid) {
-      final focusNode = _focusNodes['Documents'];
-      if (focusNode != null && focusNode.context != null) {
-        Scrollable.ensureVisible(
-          focusNode.context!,
-          duration: const Duration(milliseconds: 500),
-          curve: Curves.easeInOut,
-          alignment: 0.5,
-        );
-      }
-      
       showStatusDialog(
         context,
         title: AppLocalizations.of(context)?.missingDocumentTitle ?? 'Missing Document',
         message: 'Please upload your $missingDoc.',
         type: DialogType.warning,
+        onOk: () {
+          final focusNode = _focusNodes['Documents'];
+          if (focusNode != null && focusNode.context != null) {
+            Future.delayed(const Duration(milliseconds: 100), () {
+              Scrollable.ensureVisible(
+                focusNode.context!,
+                duration: const Duration(milliseconds: 500),
+                curve: Curves.easeInOut,
+                alignment: 0.5,
+              );
+            });
+          }
+        },
       );
       return;
     }
@@ -520,13 +552,15 @@ class _RegistrationFormState extends State<RegistrationForm> {
       final request = http.MultipartRequest('POST', Uri.parse(ApiConfig.register));
       
       // Add text fields
-      request.fields['name'] = _nameController.text;
+      request.fields['name'] = _nameController.text.trim();
       request.fields['phone'] = _phoneController.text;
       request.fields['dob'] = _dobController.text.contains('-') ? _dobController.text.split('-').reversed.join('-') : _dobController.text;
       request.fields['gender'] = _selectedGender ?? '';
       request.fields['blood_group'] = _selectedBloodGroup ?? '';
       request.fields['email'] = _emailController.text;
       request.fields['whatsapp'] = _whatsappController.text;
+      request.fields['mobile_country_code'] = _phoneCountryDialCode;
+      request.fields['whatsapp_country_code'] = _whatsappCountryDialCode;
       request.fields['married'] = _selectedMarried ?? '';
       request.fields['valuvu'] = _valuvuController.text;
       request.fields['thottam'] = _thottamController.text;
@@ -620,6 +654,14 @@ class _RegistrationFormState extends State<RegistrationForm> {
         try {
           final errorData = jsonDecode(response.body);
           errorMsg = errorData['detail'] ?? errorMsg;
+          if (errorMsg.contains('value too long for type character varying')) {
+            final match = RegExp(r'varying\((\d+)\)').firstMatch(errorMsg);
+            if (match != null) {
+              errorMsg = 'Maximum ${match.group(1)} characters allowed for one of the text fields.';
+            } else {
+              errorMsg = 'Input exceeds the maximum allowed characters for a field.';
+            }
+          }
         } catch (e) {}
         
         if (errorMsg.contains('Phone number')) {
@@ -726,7 +768,7 @@ class _RegistrationFormState extends State<RegistrationForm> {
                       const SizedBox(height: 16),
                       
                       _buildResponsiveRow(isMobile, [
-                        _buildInputField('Name *', _nameController, isMobile, focusNode: _focusNodes['Name'], maxLength: 254),
+                        _buildInputField('Name *', _nameController, isMobile, focusNode: _focusNodes['Name'], maxLength: 100),
                         _buildIntlPhoneField('Phone Number *', _phoneController, isMobile, focusNode: _focusNodes['Phone Number'], fieldKey: _phoneFieldKey),
                         _buildDatePickerField('Date Of Birth *', _dobController, isMobile, focusNode: _focusNodes['Date Of Birth']),
                       ]),
@@ -743,13 +785,13 @@ class _RegistrationFormState extends State<RegistrationForm> {
                           value: _selectedMarried, 
                           focusNode: _focusNodes['Married'],
                           onChanged: (v) => setState(() => _selectedMarried = v)),
-                        _buildInputField('Valuvu', _valuvuController, isMobile, focusNode: _focusNodes['Valuvu'], maxLength: 254),
+                        _buildInputField('Valuvu', _valuvuController, isMobile, focusNode: _focusNodes['Valuvu'], maxLength: 100),
                       ]),
                       
                       _buildResponsiveRow(isMobile, [
-                        _buildInputField('Thottam', _thottamController, isMobile, focusNode: _focusNodes['Thottam'], maxLength: 254),
+                        _buildInputField('Thottam', _thottamController, isMobile, focusNode: _focusNodes['Thottam'], maxLength: 100),
                         _buildInputField('Kulam *', TextEditingController(text: 'Poondurai Kaadai'), isMobile, readOnly: true),
-                        if (!isMobile) const Spacer(),
+                        if (!isMobile) const SizedBox.shrink(),
                       ]),
 
                       const SizedBox(height: 32),
@@ -782,7 +824,7 @@ class _RegistrationFormState extends State<RegistrationForm> {
                               _buildInputField('Enter Profession', _professionController, isMobile, maxLength: 254),
                           ],
                         ),
-                        if (!isMobile) const Spacer(),
+                        if (!isMobile) const SizedBox.shrink(),
                       ]),
 
                       const SizedBox(height: 32),
@@ -863,9 +905,9 @@ class _RegistrationFormState extends State<RegistrationForm> {
                         ),
                       ]),
                       _buildResponsiveRow(isMobile, [
-                        _buildInputField('Door No & Street Name *', _streetController, isMobile, focusNode: _focusNodes['Street Name'], maxLength: 254),
+                        _buildInputField('Door No & Street Name *', _streetController, isMobile, hint: 'e.g. 1/4, Nehru Street', focusNode: _focusNodes['Street Name'], maxLength: 254),
                         _buildInputField('Pin Code *', _pinCodeController, isMobile, keyboardType: TextInputType.number, maxLength: 6, focusNode: _focusNodes['Pin Code']),
-                        if (!isMobile) const Spacer(),
+                        if (!isMobile) const SizedBox.shrink(),
                       ]),
 
                       const SizedBox(height: 32),
@@ -891,8 +933,21 @@ class _RegistrationFormState extends State<RegistrationForm> {
                             _selectedCurrentAddressType = v;
                             _selectedCurrState = null;
                             _selectedCurrCity = null;
+                            _selectedCountry = null;
+                            _selectedCurrDistrict = null;
+                            _selectedCurrTaluk = null;
+                            _selectedCurrPanchayat = null;
+                            _selectedCurrVillage = null;
                             _stateNames = [];
                             _cityNames = [];
+                            _currTaluks = [];
+                            _currPanchayats = [];
+                            _currVillages = [];
+                            _currZipController.clear();
+                            _currPinCodeController.clear();
+                            _currFullAddressController.clear();
+                            _currStreetController.clear();
+                            _manualCurrVillageController.clear();
                           });
                           if (v == 'Tamil Nadu') _fetchCurrDistricts();
                           if (v == 'Other State') _updateStates('India');
@@ -973,10 +1028,10 @@ class _RegistrationFormState extends State<RegistrationForm> {
                           ),
                         ]),
                         _buildResponsiveRow(isMobile, [
-                          _buildInputField('Door No & Street Name *', _currStreetController, isMobile, focusNode: _focusNodes['Curr Street'], maxLength: 254),
+                          _buildInputField('Door No & Street Name *', _currStreetController, isMobile, hint: 'e.g. 1/4, Nehru Street', focusNode: _focusNodes['Curr Street'], maxLength: 254),
                           _buildInputField('Pin Code *', _currPinCodeController, isMobile, keyboardType: TextInputType.number, maxLength: 6, focusNode: _focusNodes['Curr Pin']),
-                          if (!isMobile) const Spacer(),
-                          if (!isMobile) const Spacer(),
+                          if (!isMobile) const SizedBox.shrink(),
+                          if (!isMobile) const SizedBox.shrink(),
                         ]),
                       ] else if (_selectedCurrentAddressType == 'Other State') ...[
                         const SizedBox(height: 16),
@@ -994,7 +1049,7 @@ class _RegistrationFormState extends State<RegistrationForm> {
                             value: _selectedCurrCity,
                             focusNode: _focusNodes['Curr City'],
                             onChanged: (v) => setState(() => _selectedCurrCity = v)),
-                          _buildInputField('Zip / Postal Code *', _currZipController, isMobile, focusNode: _focusNodes['Curr Zip']),
+                          _buildInputField('Zip / Postal Code *', _currZipController, isMobile, keyboardType: TextInputType.number, maxLength: 6, focusNode: _focusNodes['Curr Zip']),
                         ]),
                         _buildTextArea('Full Address (House no, street, area) *', _currFullAddressController, isMobile, focusNode: _focusNodes['Curr Full Address']),
                       ] else if (_selectedCurrentAddressType == 'NRI') ...[
@@ -1022,7 +1077,7 @@ class _RegistrationFormState extends State<RegistrationForm> {
                             value: _selectedCurrCity,
                             focusNode: _focusNodes['Curr City'],
                             onChanged: (v) => setState(() => _selectedCurrCity = v)),
-                          _buildInputField('Zip / Postal Code *', _currZipController, isMobile, focusNode: _focusNodes['Curr Zip']),
+                          _buildInputField('Zip / Postal Code *', _currZipController, isMobile, keyboardType: TextInputType.number, maxLength: 6, focusNode: _focusNodes['Curr Zip']),
                         ]),
                         _buildTextArea('Full Address (House no, street, area) *', _currFullAddressController, isMobile, focusNode: _focusNodes['Curr Full Address']),
                       ],
@@ -1038,8 +1093,8 @@ class _RegistrationFormState extends State<RegistrationForm> {
                       _buildResponsiveRow(isMobile, [
                         _buildFileUploadField('Upload Your Passport size photo *', isMobile),
                         _buildFileUploadField('Upload Community Certificate', isMobile),
-                        if (!isMobile) const Spacer(),
-                        if (!isMobile) const Spacer(),
+                        if (!isMobile) const SizedBox.shrink(),
+                        if (!isMobile) const SizedBox.shrink(),
                       ]),
                       
                       const SizedBox(height: 12),
@@ -1122,11 +1177,37 @@ class _RegistrationFormState extends State<RegistrationForm> {
   );
 }
 
+  Future<void> _handleClose() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
+        title: const Text('Discard Changes?'),
+        content: const Text('Are you sure you want to close this form? Any unsaved data will be lost.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Stay'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Discard', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true && mounted) {
+      Navigator.pop(context);
+    }
+  }
+
   Widget _buildExitButton() {
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
-        onTap: () => Navigator.pop(context),
+        onTap: _handleClose,
         child: Container(
           width: 44,
           height: 44,
@@ -1235,7 +1316,7 @@ class _RegistrationFormState extends State<RegistrationForm> {
           autovalidateMode: autovalidateMode ?? AutovalidateMode.onUserInteraction,
           inputFormatters: (keyboardType == TextInputType.phone || keyboardType == TextInputType.number)
               ? [FilteringTextInputFormatter.digitsOnly]
-              : ((label.contains('Name') && !label.contains('Street') && !label.contains('Village')) ? [FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z\s\.]'))] : null),
+              : (((label.contains('Name') || label.contains('Thottam') || label.contains('Valuvu')) && !label.contains('Street') && !label.contains('Village')) ? [FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z\s\.]'))] : null),
           style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: const Color(0xFF333333)),
           validator: (value) {
             final val = value ?? '';
@@ -1244,13 +1325,29 @@ class _RegistrationFormState extends State<RegistrationForm> {
               if (val.trim().isNotEmpty && val.trim().length < 3) return 'Name must be at least 3 characters';
               if (val.trim().isNotEmpty && !RegExp(r'^[a-zA-Z\s\.]+$').hasMatch(val.trim())) return 'Only letters, spaces, and dots allowed';
             }
+            if ((label.contains('Thottam') || label.contains('Valuvu')) && val.trim().isNotEmpty) {
+              if (!RegExp(r'^[a-zA-Z\s\.]+$').hasMatch(val.trim())) return 'Only letters, spaces, and dots allowed';
+            }
+            if ((label.contains('Education') || label.contains('Profession') || label.contains('District') || label.contains('Taluk') || label.contains('Panchayat') || label.contains('Village')) && val.trim().isNotEmpty) {
+              if (!RegExp(r'[a-zA-Z]').hasMatch(val.trim())) return 'Must contain at least one letter';
+            }
             if (label.contains('Phone')) {
               if (val.isEmpty) return _showMandatoryErrors ? 'Please fill this field' : null;
               if (val.length < 10) return 'Phone number should contain 10 digits.';
               if (_phoneExists) return 'Phone number already exist.';
             }
+            if ((label.toLowerCase().contains('pin code') || label.toLowerCase().contains('zip')) && val.isNotEmpty) {
+              if (!RegExp(r'^[0-9]+$').hasMatch(val)) return 'Only numbers allowed';
+              if (int.tryParse(val) == 0) return 'Invalid PIN code';
+            }
             if (label.contains('*') && val.trim().isEmpty && _showMandatoryErrors) {
               return 'Please fill this field';
+            }
+            if (label.contains('Street Name') && val.trim().isNotEmpty) {
+              if (RegExp(r'^[^a-zA-Z0-9]+$').hasMatch(val.trim())) return 'Please enter a valid address';
+            }
+            if ((label.contains('Manual') || label.contains('Enter')) && val.trim().isNotEmpty) {
+              if (RegExp(r'^[^a-zA-Z0-9]+$').hasMatch(val.trim())) return 'Please enter a valid name';
             }
             return null;
           },
@@ -1288,6 +1385,19 @@ class _RegistrationFormState extends State<RegistrationForm> {
             if (_phoneExists) return 'Phone number already exist.';
             return null;
           },
+          initialCountryCode: _phoneCountryCode,
+          onCountryChanged: (c) {
+            setState(() {
+              _phoneCountryCode = c.code;
+              _phoneCountryDialCode = '+${c.dialCode}';
+              _phoneController.clear();
+              if (_whatsappSameAsPhone) {
+                _whatsappCountryCode = c.code;
+                _whatsappCountryDialCode = '+${c.dialCode}';
+                _whatsappController.clear();
+              }
+            });
+          },
         ),
       ],
     );
@@ -1307,6 +1417,21 @@ class _RegistrationFormState extends State<RegistrationForm> {
           validator: (value) {
             if (label.contains('*') && (value == null || value.isEmpty) && _showMandatoryErrors) {
               return 'Please select date';
+            }
+            if (value != null && value.isNotEmpty) {
+              try {
+                final parts = value.split('-');
+                if (parts.length == 3) {
+                  final date = DateTime(int.parse(parts[2]), int.parse(parts[1]), int.parse(parts[0]));
+                  final now = DateTime.now();
+                  final today = DateTime(now.year, now.month, now.day);
+                  if (!date.isBefore(today)) {
+                    return 'Date of Birth must be a past date';
+                  }
+                }
+              } catch (e) {
+                // ignore
+              }
             }
             return null;
           },
@@ -1444,7 +1569,7 @@ class _RegistrationFormState extends State<RegistrationForm> {
             if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(val)) return 'Invalid email';
             return null;
           },
-          maxLength: 254,
+          maxLength: 100,
           decoration: InputDecoration(
             counterText: "",
             hintText: 'Email address',
@@ -1482,7 +1607,11 @@ class _RegistrationFormState extends State<RegistrationForm> {
                     value: _whatsappSameAsPhone, 
                     onChanged: (v) => setState(() {
                       _whatsappSameAsPhone = v!;
-                      if (v) _whatsappController.text = _phoneController.text;
+                      if (_whatsappSameAsPhone) {
+                        _whatsappController.text = _phoneController.text;
+                        _whatsappCountryCode = _phoneCountryCode;
+                        _whatsappCountryDialCode = _phoneCountryDialCode;
+                      }
                     }), 
                     activeColor: primaryBrown
                   ),
@@ -1498,6 +1627,14 @@ class _RegistrationFormState extends State<RegistrationForm> {
           label: '', // Handled above
           controller: _whatsappController,
           focusNode: focusNode,
+          initialCountryCode: _whatsappCountryCode,
+          onCountryChanged: (c) {
+            setState(() {
+              _whatsappCountryCode = c.code;
+              _whatsappCountryDialCode = '+${c.dialCode}';
+              _whatsappController.clear();
+            });
+          },
           validator: (value) {
             return null;
           },
@@ -1584,8 +1721,12 @@ class _RegistrationFormState extends State<RegistrationForm> {
                 allowedExtensions: ['jpg', 'jpeg', 'png'],
               );
               if (result != null && (result.files.single.path != null || result.files.single.bytes != null)) {
+                final file = result.files.single;
+                if (file.size > 2 * 1024 * 1024) {
+                  if (mounted) showStatusDialog(context, title: 'Validation Error', message: 'Maximum allowed file size is 2 MB.', type: DialogType.error);
+                  return;
+                }
                 setState(() {
-                  final file = result.files.single;
                   final xFile = file.path != null ? XFile(file.path!, name: file.name) : XFile.fromData(file.bytes!, name: file.name);
                   if (label.contains('Passport')) _memberImage = xFile;
                   else if (label.contains('Community')) _communityCert = xFile;

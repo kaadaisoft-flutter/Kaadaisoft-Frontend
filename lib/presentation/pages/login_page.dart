@@ -34,6 +34,7 @@ class _LoginPageState extends State<LoginPage> {
   bool _isLoading = false;
   int _selectedMinLength = 10;
   int _selectedMaxLength = 10;
+  String _selectedDialCode = '+91';
 
   Future<void> _handleLogin() async {
     final mobile = _mobileController.text.trim();
@@ -84,6 +85,7 @@ class _LoginPageState extends State<LoginPage> {
         body: jsonEncode({
           'mobile': mobile,
           'password': password,
+          'mobile_country_code': _selectedDialCode,
         }),
       );
 
@@ -241,6 +243,7 @@ class _LoginPageState extends State<LoginPage> {
                       TextField(
                         controller: confirmPasswordController,
                         obscureText: !isConfirmPasswordVisible,
+                        enableInteractiveSelection: false,
                         decoration: InputDecoration(
                           labelText: 'Confirm Password',
                           border: const OutlineInputBorder(),
@@ -444,14 +447,22 @@ class _LoginPageState extends State<LoginPage> {
             child: Column(
               children: [
                 Expanded(
-                  child: Center(
-                    child: SingleChildScrollView(
-                      physics: const BouncingScrollPhysics(),
-                      padding: EdgeInsets.symmetric(
-                        horizontal: isMobile ? 20 : 40,
-                        vertical: 20,
-                      ),
-                      child: Container(
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      return SingleChildScrollView(
+                        physics: const ClampingScrollPhysics(),
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(
+                            minHeight: constraints.maxHeight,
+                            minWidth: constraints.maxWidth,
+                          ),
+                          child: Center(
+                            child: Padding(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: isMobile ? 20 : 40,
+                                vertical: 20,
+                              ),
+                              child: Container(
                         constraints: const BoxConstraints(maxWidth: 420),
                         padding: EdgeInsets.symmetric(
                           horizontal: isMobile ? 24 : 40,
@@ -530,6 +541,9 @@ class _LoginPageState extends State<LoginPage> {
                                     setState(() {
                                       _selectedMinLength = country.minLength;
                                       _selectedMaxLength = country.maxLength;
+                                      _selectedDialCode = '+${country.dialCode}';
+                                      _mobileController.clear();
+                                      _passwordController.clear();
                                     });
                                   },
                                 ),
@@ -641,8 +655,12 @@ class _LoginPageState extends State<LoginPage> {
                             ),
                           ],
                         ),
-                      ),
-                    ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    },
                   ),
                 ),
                 _buildFooter(localizations),

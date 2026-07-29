@@ -19,6 +19,7 @@ class GeoDataService {
       final String jsonString = await rootBundle.loadString('assets/countries_states_cities.json');
       _allCountriesData = await compute(json.decode, jsonString) as List<dynamic>;
       _countryNames = _allCountriesData!.map((c) => c['name'].toString()).toList();
+      _countryNames!.sort((a, b) => a.compareTo(b));
     } catch (e) {
       debugPrint('Error loading geo data: $e');
     }
@@ -33,9 +34,12 @@ class GeoDataService {
       (c) => c['name'] == countryName, 
       orElse: () => null
     );
-    return country != null 
-        ? (country['states'] as List).map((s) => s['name'].toString()).toList() 
-        : [];
+    if (country != null) {
+      final states = (country['states'] as List).map((s) => s['name'].toString()).toList();
+      states.sort((a, b) => a.compareTo(b));
+      return states;
+    }
+    return [];
   }
 
   List<String> getCities(String countryName, String stateName) {
@@ -49,9 +53,11 @@ class GeoDataService {
         (s) => s['name'] == stateName, 
         orElse: () => null
       );
-      return state != null 
-          ? (state['cities'] as List).map((c) => c['name'].toString()).toList() 
-          : [];
+      if (state != null) {
+        final cities = (state['cities'] as List).map((c) => c['name'].toString()).toList();
+        cities.sort((a, b) => a.compareTo(b));
+        return cities;
+      }
     }
     return [];
   }

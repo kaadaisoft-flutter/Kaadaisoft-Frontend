@@ -350,16 +350,17 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
                   if (res.statusCode == 200) {
                     Navigator.pop(context);
                     _fetchLinkedFamilies();
+                    if (mounted) showStatusDialog(context, title: 'Success', message: 'Family link request created successfully.', type: DialogType.success);
                   } else {
                     try {
                       final body = jsonDecode(res.body);
-                      NotificationHelper.showError(context, body['detail'] ?? 'Failed to link family');
+                      if (mounted) showStatusDialog(context, title: 'Error', message: body['detail'] ?? 'Failed to link family', type: DialogType.error);
                     } catch (e) {
-                      NotificationHelper.showError(context, 'Failed to link family');
+                      if (mounted) showStatusDialog(context, title: 'Error', message: 'Failed to link family', type: DialogType.error);
                     }
                   }
                 } catch (e) {
-                  NotificationHelper.showError(context, 'Error connecting to server');
+                  if (mounted) showStatusDialog(context, title: 'Error', message: 'Error connecting to server', type: DialogType.error);
                 }
               }
             },
@@ -376,11 +377,12 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
       final res = await http.delete(Uri.parse('${ApiConfig.baseUrl}/api/family-links/$linkId'));
       if (res.statusCode == 200) {
         _fetchLinkedFamilies();
+        if (mounted) showStatusDialog(context, title: 'Success', message: 'Link deleted successfully.', type: DialogType.success);
       } else {
-        NotificationHelper.showError(context, 'Failed to delete link');
+        if (mounted) showStatusDialog(context, title: 'Error', message: 'Failed to delete link.', type: DialogType.error);
       }
     } catch (e) {
-      NotificationHelper.showError(context, 'Error connecting to server');
+      if (mounted) showStatusDialog(context, title: 'Error', message: 'Error connecting to server.', type: DialogType.error);
     }
   }
 
@@ -389,11 +391,12 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
       final res = await http.put(Uri.parse('${ApiConfig.baseUrl}/api/family-links/$linkId/approve'));
       if (res.statusCode == 200) {
         _fetchLinkedFamilies();
+        if (mounted) showStatusDialog(context, title: 'Success', message: 'Link approved successfully.', type: DialogType.success);
       } else {
-        NotificationHelper.showError(context, 'Failed to approve link');
+        if (mounted) showStatusDialog(context, title: 'Error', message: 'Failed to approve link.', type: DialogType.error);
       }
     } catch (e) {
-      NotificationHelper.showError(context, 'Error connecting to server');
+      if (mounted) showStatusDialog(context, title: 'Error', message: 'Error connecting to server.', type: DialogType.error);
     }
   }
 

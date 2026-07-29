@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart' show FilteringTextInputFormatter, rootBundle;
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:intl_phone_field/countries.dart';
 import 'package:file_picker/file_picker.dart' as fp_pkg;
 import 'package:cross_file/cross_file.dart';
 import 'package:flutter/services.dart';
@@ -98,6 +99,8 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
   final List<String> _kulams = ['Poondurai Kaadai', 'Aanthuvan Kulam', 'Azhagu Kulam', 'Aathe Kulam', 'Aanthai Kulam', 'Aadar Kulam', 'Aavan Kulam', 'Eenjan Kulam', 'Ozukkar Kulam', 'Oothaalar Kulam', 'Kannakkan Kulam', 'Kannan Kulam', 'Kannaanthai Kulam', 'Kaadai Kulam', 'Kaari Kulam', 'Keeran Kulam', 'Kuzhlaayan Kulam', 'Koorai Kulam', 'Koovendhar Kulam', 'Saathanthai Kulam', 'Sellan Kulam', 'Semban Kulam', 'Sengkannan Kulam', 'Sembuthan Kulam', 'Senkunnier Kulam', 'Sevvaayar Kulam', 'Cheran Kulam', 'Chedan Kulam', 'Dananjayan Kulam', 'Thazhinji Kulam', 'Thooran Kulam', 'Devendran Kulam', 'Thoodar Kulam', 'Neerunniyar Kulam', 'Pavazhalar Kulam', 'Panayan Kulam', 'Pathuman Kulam', 'Payiran Kulam', 'Panagkaadar Kulam', 'Pathariar Kulam', 'Pandiyan Kulam', 'Pillar Kulam', 'Poosan Kulam', 'Poochanthai Kulam', 'Periyan Kulam', 'Perunkudiyaan Kulam', 'Porulaanthai Kulam', 'Ponnar Kulam', 'Maniyan Kulam', 'Mayilar Kulam', 'Maadar Kulam', 'Mutthan Kulam', 'Muzhukathan Kulam', 'Medhi Kulam', 'Vannakkan Kulam', 'Villiyar Kulam', 'Vilayan Kulam', 'Vizhiyar Kulam', 'Venduvan Kulam', 'Vennag Kulam', 'Vellampar Kulam', 'Others'];
 
   bool _whatsappSameAsPhone = false;
+  String _phoneCountryCode = 'IN';
+  String _whatsappCountryCode = 'IN';
   bool _showMandatoryErrors = false;
   bool _isAgreed = false;
   bool _phoneExists = false;
@@ -419,6 +422,7 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
               // Form
               Expanded(
                 child: SingleChildScrollView(
+                  controller: _scrollController,
                   padding: const EdgeInsets.all(24),
                   child: Form(
                     key: _formKey,
@@ -480,8 +484,8 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
                         if (_selectedRelationship == 'Other') ...[
                             _buildResponsiveRow(isMobile, [
                               _buildInputField('Other Relationship *', _otherRelationshipController, isMobile, maxLength: 50, validator: (v) => (v == null || v.isEmpty) ? 'Required' : null),
-                              if (!isMobile) const SizedBox.shrink(),
-                              if (!isMobile) const SizedBox.shrink(),
+                              if (!isMobile) const SizedBox(),
+                              if (!isMobile) const SizedBox(),
                             ]),
                           ],
 
@@ -756,6 +760,17 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
           fieldKey: fieldKey,
           label: '',
           controller: controller,
+          initialCountryCode: _phoneCountryCode,
+          onCountryChanged: (c) {
+            setState(() {
+              _phoneCountryCode = c.code;
+              controller.clear();
+              if (_whatsappSameAsPhone) {
+                _whatsappCountryCode = c.code;
+                _whatsappController.clear();
+              }
+            });
+          },
           validator: (v) => validator?.call(controller.text),
         ),
       ],
@@ -898,7 +913,10 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
                   height: 24,
                   child: Checkbox(value: _whatsappSameAsPhone, onChanged: (v) => setState(() {
                     _whatsappSameAsPhone = v!;
-                    if (v) _whatsappController.text = _phoneController.text;
+                    if (v) {
+                      _whatsappController.text = _phoneController.text;
+                      _whatsappCountryCode = _phoneCountryCode;
+                    }
                   }), materialTapTargetSize: MaterialTapTargetSize.shrinkWrap, visualDensity: const VisualDensity(horizontal: -4, vertical: -4)),
                 ),
                 const SizedBox(width: 6),
@@ -910,6 +928,13 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
         CustomPhoneField(
           label: '',
           controller: _whatsappController,
+          initialCountryCode: _whatsappCountryCode,
+          onCountryChanged: (c) {
+            setState(() {
+              _whatsappCountryCode = c.code;
+              _whatsappController.clear();
+            });
+          },
           validator: (value) {
             return null;
           },
@@ -1044,7 +1069,10 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
   }
 
   Future<void> _submit() async {
-    if (!_formKey.currentState!.validate() || _phoneExists) return;
+    if (!_formKey.currentState!.validate() || _phoneExists) {
+      _scrollController.animateTo(0, duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+      return;
+    }
     
     if (_selectedMarried == 'Yes' && _dobController.text.isNotEmpty) {
       try {
@@ -1083,11 +1111,18 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
       
       request.fields['name'] = _nameController.text;
       request.fields['phone'] = _phoneController.text;
+      request.fields['whatsapp'] = _whatsappController.text;
+      
+      final phoneCountry = countries.firstWhere((c) => c.code == _phoneCountryCode, orElse: () => countries.firstWhere((c) => c.code == 'IN'));
+      request.fields['mobile_country_code'] = '+${phoneCountry.dialCode}';
+      
+      final whatsappCountry = countries.firstWhere((c) => c.code == _whatsappCountryCode, orElse: () => countries.firstWhere((c) => c.code == 'IN'));
+      request.fields['whatsapp_country_code'] = '+${whatsappCountry.dialCode}';
+
       request.fields['dob'] = _dobController.text.contains('-') ? _dobController.text.split('-').reversed.join('-') : _dobController.text;
       request.fields['gender'] = _selectedGender ?? '';
       request.fields['blood_group'] = _selectedBloodGroup ?? '';
       request.fields['email'] = _emailController.text;
-      request.fields['whatsapp'] = _whatsappController.text;
       request.fields['married'] = _selectedMarried ?? '';
       request.fields['valuvu'] = _valuvuController.text;
       request.fields['thottam'] = _thottamController.text;
@@ -1244,3 +1279,4 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
     return Text(translatedLabel, style: TextStyle(fontSize: fontSize, fontWeight: FontWeight.bold, color: Colors.black87));
   }
 }
+

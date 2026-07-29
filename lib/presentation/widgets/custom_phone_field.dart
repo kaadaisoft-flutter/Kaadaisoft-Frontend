@@ -13,6 +13,7 @@ class CustomPhoneField extends StatefulWidget {
   final bool isDarkTheme;
   final ValueChanged<Country>? onCountryChanged;
   final bool showDropdownOnRight;
+  final String initialCountryCode;
 
   const CustomPhoneField({
     Key? key,
@@ -25,6 +26,7 @@ class CustomPhoneField extends StatefulWidget {
     this.isDarkTheme = false,
     this.onCountryChanged,
     this.showDropdownOnRight = false,
+    this.initialCountryCode = 'IN',
   }) : super(key: key);
 
   @override
@@ -32,11 +34,25 @@ class CustomPhoneField extends StatefulWidget {
 }
 
 class _CustomPhoneFieldState extends State<CustomPhoneField> {
-  Country _selectedCountry = countries.firstWhere((c) => c.code == 'IN');
+  late Country _selectedCountry;
   OverlayEntry? _countryOverlayEntry;
   final GlobalKey _mobileFieldKey = GlobalKey();
   final LayerLink _layerLink = LayerLink();
   bool _isCountryDropdownOpen = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedCountry = countries.firstWhere((c) => c.code == widget.initialCountryCode, orElse: () => countries.firstWhere((c) => c.code == 'IN'));
+  }
+
+  @override
+  void didUpdateWidget(CustomPhoneField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.initialCountryCode != oldWidget.initialCountryCode) {
+      _selectedCountry = countries.firstWhere((c) => c.code == widget.initialCountryCode, orElse: () => countries.firstWhere((c) => c.code == 'IN'));
+    }
+  }
 
   void _toggleCountryDropdown() {
     if (_isCountryDropdownOpen) {
@@ -84,6 +100,7 @@ class _CustomPhoneFieldState extends State<CustomPhoneField> {
                     initialCountry: _selectedCountry,
                     onSelect: (country) {
                       setState(() => _selectedCountry = country);
+                      widget.controller.clear();
                       if (widget.onCountryChanged != null) {
                         widget.onCountryChanged!(country);
                       }
@@ -237,6 +254,11 @@ class _CustomPhoneFieldState extends State<CustomPhoneField> {
             validator: (value) {
               final val = widget.controller.text.replaceAll(' ', '').trim();
               if (val.isNotEmpty) {
+                if (_selectedCountry.code == 'IN') {
+                  if (!RegExp(r'^[6-9]').hasMatch(val)) {
+                    return 'Indian mobile numbers must start with 6, 7, 8, or 9';
+                  }
+                }
                 if (val.length < _selectedCountry.minLength || val.length > _selectedCountry.maxLength) {
                   if (_selectedCountry.minLength == _selectedCountry.maxLength) {
                     return 'Enter a valid ${_selectedCountry.minLength}-digit number';

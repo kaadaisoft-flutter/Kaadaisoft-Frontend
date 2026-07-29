@@ -389,7 +389,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
       {'title': 'Reports', 'icon': Icons.file_copy_outlined, 'color': const Color(0xFFF97316)},
       {'title': 'Update Requests', 'icon': Icons.person_add_alt_1, 'color': const Color(0xFF06B6D4)},
       {'title': 'Payment Requests', 'icon': Icons.receipt_long, 'color': const Color(0xFF6366F1)},
-      {'title': 'Logout', 'icon': Icons.power_settings_new, 'color': Colors.red},
+      {'title': 'Logout', 'icon': Icons.logout, 'color': Colors.red},
     ];
 
     // Role 3 (Member) view
@@ -482,6 +482,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
                   TextField(
                     controller: confirmPasswordController,
                     obscureText: !confirmVisible,
+                    enableInteractiveSelection: false,
                     decoration: InputDecoration(
                       border: const OutlineInputBorder(),
                       isDense: true,
@@ -891,14 +892,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
             },
             onTap: () async {
               if (item['title'] == 'Logout') {
-                final prefs = await SharedPreferences.getInstance();
-                await prefs.clear();
-                if (mounted) {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(builder: (context) => const LoginPage()),
-                  );
-                }
+                _handleLogout();
                 return;
               }
               if (item['title'] == 'Dashboard') {
@@ -1207,6 +1201,38 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
       ),
     );
   }
+  Future<void> _handleLogout() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
+        title: const Text('Confirm Logout'),
+        content: const Text('Are you sure you want to logout?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Logout', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.clear();
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const LoginPage()),
+        );
+      }
+    }
+  }
 
   Widget _buildProfileMenu({bool inDrawer = false}) {
     return PopupMenuButton<String>(
@@ -1215,14 +1241,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       onSelected: (value) async {
         if (value == 'logout') {
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.clear();
-          if (context.mounted) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => const LoginPage()),
-            );
-          }
+          _handleLogout();
         } else if (value == 'change_password') {
           _showChangePasswordDialog();
         }
@@ -1242,7 +1261,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
           value: 'logout',
           child: Row(
             children: [
-              const Icon(Icons.power_settings_new, size: 18, color: Colors.red),
+              const Icon(Icons.logout, size: 18, color: Colors.red),
               const SizedBox(width: 12),
               Text(AppLocalizations.of(context)?.logout ?? 'Logout', style: const TextStyle(fontSize: 14, color: Colors.red)),
             ],

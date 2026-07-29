@@ -184,18 +184,10 @@ class _PaymentRequestsContentState extends State<PaymentRequestsContent> {
           padding: const EdgeInsets.all(24),
           child: _isLoading
               ? const Center(child: CircularProgressIndicator())
-              : _requests.isEmpty
-                  ? Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(32.0),
-                        child: Text(
-                          AppLocalizations.of(context)?.noPendingPaymentRequests ?? 'No pending payment requests.',
-                          style: const TextStyle(color: Colors.grey, fontSize: 16),
-                        ),
-                      ),
-                    )
-                  : SingleChildScrollView(
-                      child: Row(
+              : SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           // Fixed Columns
@@ -206,13 +198,17 @@ class _PaymentRequestsContentState extends State<PaymentRequestsContent> {
                               ),
                             ),
                             child: DataTable(
-                              headingRowColor: MaterialStateProperty.all(const Color(0xFFF8FAFC)),
+                              border: const TableBorder(
+                                verticalInside: BorderSide(color: Color(0xFFE2E8F0), width: 1),
+                                horizontalInside: BorderSide(color: Color(0xFFE2E8F0), width: 1),
+                              ),
+                              headingRowColor: MaterialStateProperty.all(const Color(0xFF2D1B18)),
                               dataRowMinHeight: 60,
                               dataRowMaxHeight: 60,
                               headingRowHeight: 56,
                               columns: [
-                                DataColumn(label: Text(AppLocalizations.of(context)?.memberIdHeader ?? 'Member ID', style: const TextStyle(fontWeight: FontWeight.bold))),
-                                DataColumn(label: Text(AppLocalizations.of(context)?.nameHeader ?? 'Name', style: const TextStyle(fontWeight: FontWeight.bold))),
+                                DataColumn(label: Text(AppLocalizations.of(context)?.memberIdHeader ?? 'Member ID', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
+                                DataColumn(label: Text(AppLocalizations.of(context)?.nameHeader ?? 'Name', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
                               ],
                               rows: _requests.map((req) {
                                 return DataRow(
@@ -234,17 +230,21 @@ class _PaymentRequestsContentState extends State<PaymentRequestsContent> {
                                 controller: _scrollController,
                                 scrollDirection: Axis.horizontal,
                                 child: DataTable(
-                                  headingRowColor: MaterialStateProperty.all(const Color(0xFFF8FAFC)),
+                                  border: const TableBorder(
+                                    verticalInside: BorderSide(color: Color(0xFFE2E8F0), width: 1),
+                                    horizontalInside: BorderSide(color: Color(0xFFE2E8F0), width: 1),
+                                  ),
+                                  headingRowColor: MaterialStateProperty.all(const Color(0xFF2D1B18)),
                                   dataRowMinHeight: 60,
                                   dataRowMaxHeight: 60,
                                   headingRowHeight: 56,
                                   columns: [
-                                    DataColumn(label: Text(AppLocalizations.of(context)?.eventLabel ?? 'Event', style: const TextStyle(fontWeight: FontWeight.bold))),
-                                    DataColumn(label: Text(AppLocalizations.of(context)?.totalAmountHeader ?? 'Total Amount', style: const TextStyle(fontWeight: FontWeight.bold))),
-                                    DataColumn(label: Text(AppLocalizations.of(context)?.paidAmountHeader ?? 'Paid Amount', style: const TextStyle(fontWeight: FontWeight.bold))),
-                                    DataColumn(label: Text(AppLocalizations.of(context)?.methodHeader ?? 'Method', style: const TextStyle(fontWeight: FontWeight.bold))),
-                                    DataColumn(label: Text(AppLocalizations.of(context)?.dateHeader ?? 'Date', style: const TextStyle(fontWeight: FontWeight.bold))),
-                                    DataColumn(label: Text(AppLocalizations.of(context)?.actionsHeader ?? 'Actions', style: const TextStyle(fontWeight: FontWeight.bold))),
+                                    DataColumn(label: Text(AppLocalizations.of(context)?.eventLabel ?? 'Event', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
+                                    DataColumn(label: Text(AppLocalizations.of(context)?.totalAmountHeader ?? 'Total Amount', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
+                                    DataColumn(label: Text(AppLocalizations.of(context)?.paidAmountHeader ?? 'Paid Amount', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
+                                    DataColumn(label: Text(AppLocalizations.of(context)?.methodHeader ?? 'Method', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
+                                    DataColumn(label: Text(AppLocalizations.of(context)?.dateHeader ?? 'Date', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
+                                    DataColumn(label: Text(AppLocalizations.of(context)?.actionsHeader ?? 'Actions', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
                                   ],
                                   rows: _requests.map((req) {
                                     return DataRow(
@@ -285,7 +285,19 @@ class _PaymentRequestsContentState extends State<PaymentRequestsContent> {
                           ),
                         ],
                       ),
-                    ),
+                      if (_requests.isEmpty)
+                        Padding(
+                          padding: const EdgeInsets.all(48.0),
+                          child: Center(
+                            child: Text(
+                              AppLocalizations.of(context)?.noPendingPaymentRequests ?? 'No pending payment requests.',
+                              style: const TextStyle(color: Colors.grey, fontSize: 16),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
         ),
       ),
       ],

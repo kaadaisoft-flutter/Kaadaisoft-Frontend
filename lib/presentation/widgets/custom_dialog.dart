@@ -146,7 +146,7 @@ Future<void> showStatusDialog(BuildContext context, {
   bool? autoDismiss,
   Duration duration = const Duration(seconds: 2),
 }) {
-  final bool shouldAutoDismiss = autoDismiss ?? (type == DialogType.success);
+  final bool shouldAutoDismiss = autoDismiss ?? false;
   final dialog = showDialog(
     context: context,
     barrierDismissible: true,

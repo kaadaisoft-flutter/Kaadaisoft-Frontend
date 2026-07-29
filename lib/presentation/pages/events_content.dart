@@ -1033,22 +1033,28 @@ class _EventsContentState extends State<EventsContent> {
                         controller: _scrollController,
                         scrollDirection: Axis.horizontal,
                         child: SizedBox(
-                          width: widget.role == 1 ? 960 : 810,
+                          width: widget.role == 1 ? 992 : 842,
                           child: Column(
                             children: [
                               // Table Header
                               Container(
-                                color: const Color(0xFF2D1B18),
-                                height: 48,
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFF2D1B18),
+                                  borderRadius: BorderRadius.only(
+                                    topLeft: Radius.circular(12),
+                                    topRight: Radius.circular(12),
+                                  ),
+                                ),
+                                padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
                                 child: Row(
                                   children: [
                                     _buildHeaderCell(AppLocalizations.of(context)?.sNo ?? 'S.NO', 60),
                                     _buildHeaderCell(AppLocalizations.of(context)?.eventNameHeader ?? 'EVENT NAME', 250),
                                     _buildHeaderCell(AppLocalizations.of(context)?.bannerHeader ?? 'BANNER', 150),
                                     _buildHeaderCell(AppLocalizations.of(context)?.durationHeader ?? 'DURATION', 200),
-                                    _buildHeaderCell(AppLocalizations.of(context)?.taxAmount ?? 'TAX AMOUNT', 150, hasDivider: widget.role == 1),
+                                    _buildHeaderCell(AppLocalizations.of(context)?.taxAmount ?? 'TAX AMOUNT', 150),
                                     if (widget.role == 1)
-                                      _buildHeaderCell('ACTIONS', 150, hasDivider: false),
+                                      _buildHeaderCell('ACTIONS', 150),
                                   ],
                                 ),
                               ),
@@ -1067,14 +1073,14 @@ class _EventsContentState extends State<EventsContent> {
                                     itemBuilder: (context, index) {
                                       final event = _filteredEvents[index];
                                       return Container(
-                                        height: 60,
-                                        color: index % 2 == 0 ? Colors.white : const Color(0xFFF8FAFC),
+                                        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
                                         child: Row(
                                           children: [
                                             _buildDataCell('${index + 1}', 60),
                                             _buildDataCell(event['EventName'] ?? 'N/A', 250, isBold: true),
                                             // Banner Column
-                                            _buildDataCell('', 150, child: Center(
+                                            _buildDataCell('', 150, child: Align(
+                                              alignment: Alignment.centerLeft,
                                               child: Container(
                                                 width: 80,
                                                 height: 46,
@@ -1136,7 +1142,8 @@ class _EventsContentState extends State<EventsContent> {
                                               ],
                                             )),
                                             // Tax Amount Column
-                                            _buildDataCell('', 150, hasDivider: widget.role == 1, child: Center(
+                                            _buildDataCell('', 150, child: Align(
+                                              alignment: Alignment.centerLeft,
                                               child: Container(
                                                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                                                 decoration: BoxDecoration(
@@ -1152,8 +1159,8 @@ class _EventsContentState extends State<EventsContent> {
                                             )),
                                             // Actions Column
                                             if (widget.role == 1)
-                                              _buildDataCell('', 150, hasDivider: false, child: Row(
-                                                mainAxisAlignment: MainAxisAlignment.center,
+                                              _buildDataCell('', 150, child: Row(
+                                                mainAxisAlignment: MainAxisAlignment.start,
                                                 children: [
                                                   _buildIconButton(Icons.edit_outlined, const Color(0xFF5D1712), () => _showUpdateEventDialog(event), tooltip: 'Edit'),
                                                   const SizedBox(width: 8),
@@ -1519,38 +1526,26 @@ class _EventsContentState extends State<EventsContent> {
     );
   }
 
-  Widget _buildHeaderCell(String label, double width, {bool hasDivider = true}) {
-    return Container(
+  Widget _buildHeaderCell(String label, double width) {
+    return SizedBox(
       width: width,
-      height: double.infinity,
-      decoration: BoxDecoration(
-        border: hasDivider ? const Border(right: BorderSide(color: Colors.white24, width: 1)) : null,
-      ),
-      alignment: Alignment.center,
       child: Text(
-        label,
-        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
-        textAlign: TextAlign.center,
+        label.toUpperCase(),
+        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
       ),
     );
   }
 
-  Widget _buildDataCell(String text, double width, {bool isBlue = false, bool isBold = false, bool hasDivider = true, Widget? child}) {
-    return Container(
+  Widget _buildDataCell(String text, double width, {bool isBlue = false, bool isBold = false, Widget? child}) {
+    return SizedBox(
       width: width,
-      height: double.infinity,
-      decoration: BoxDecoration(
-        border: hasDivider ? Border(right: BorderSide(color: Colors.grey.shade200, width: 1)) : null,
-      ),
-      alignment: Alignment.center,
       child: child ?? Text(
         text,
         style: TextStyle(
           color: isBlue ? const Color(0xFF5D1712) : Colors.black87,
           fontWeight: isBlue || isBold ? FontWeight.bold : FontWeight.normal,
-          fontSize: 12,
+          fontSize: 13,
         ),
-        textAlign: TextAlign.center,
         overflow: TextOverflow.ellipsis,
       ),
     );
