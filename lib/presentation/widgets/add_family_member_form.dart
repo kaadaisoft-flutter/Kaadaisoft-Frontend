@@ -525,7 +525,7 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
                         _buildResponsiveRow(isMobile, [
                           _buildDropdownField('Education', _educations, isMobile, value: _selectedEducation, onChanged: (v) => setState(() => _selectedEducation = v)),
                           _buildDropdownField('Profession', _professions, isMobile, value: _selectedProfession, onChanged: (v) => setState(() => _selectedProfession = v)),
-                          if (!isMobile) const Spacer(),
+                          if (!isMobile) const SizedBox(),
                         ]),
 
                         const SizedBox(height: 32),
@@ -632,8 +632,8 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
                           ]),
                           _buildResponsiveRow(isMobile, [
                             _buildInputField('Zip/Postal Code *', _currPinCodeController, isMobile),
-                            if (!isMobile) const Spacer(),
-                            if (!isMobile) const Spacer(),
+                            if (!isMobile) const SizedBox(),
+                            if (!isMobile) const SizedBox(),
                           ]),
                           _buildTextArea('Full Address *', _currFullAddressController, isMobile),
                         ],
@@ -644,8 +644,8 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
                         _buildResponsiveRow(isMobile, [
                           _buildFileUploadField('Passport size photo *', 'member_image'),
                           _buildFileUploadField('Community Certificate', 'community_cert'),
-                          if (!isMobile) const Spacer(),
-                          if (!isMobile) const Spacer(),
+                          if (!isMobile) const SizedBox(),
+                          if (!isMobile) const SizedBox(),
                         ]),
 
                         const SizedBox(height: 32),
@@ -703,11 +703,16 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
   }
 
   Widget _buildResponsiveRow(bool isMobile, List<Widget> children) {
-    if (isMobile) return Column(crossAxisAlignment: CrossAxisAlignment.start, children: children.map((c) => Padding(padding: const EdgeInsets.only(bottom: 16), child: c)).toList());
+    if (isMobile) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: children.map((c) => Padding(padding: const EdgeInsets.only(bottom: 16), child: c is Expanded ? c.child : c)).toList()
+      );
+    }
     return Padding(
       padding: const EdgeInsets.only(bottom: 20),
       child: Row(
-        children: children.map((c) => Expanded(child: Padding(padding: const EdgeInsets.symmetric(horizontal: 8), child: c))).toList(),
+        children: children.map((c) => Expanded(child: Padding(padding: const EdgeInsets.symmetric(horizontal: 8), child: c is Expanded ? c.child : c))).toList(),
       ),
     );
   }
