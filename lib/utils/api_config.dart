@@ -10,7 +10,7 @@ class ApiConfig {
         return 'http://localhost:8000';
       }
       // Otherwise, use the live backend URL
-      return 'https://kanavu-divine-soft-backend-2itk.onrender.com';
+      return 'https://kaadaisoft-backend-ld91.onrender.com';
     } else {
       // Laptop local IP for physical/wireless mobile debugging access
       return 'http://192.168.68.110:8000';
