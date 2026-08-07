@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:intl/intl.dart';
 import 'dart:async';
 import '../../l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
@@ -54,6 +55,8 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
   int _coordinatorsCount = 3;
   int _approvalsCount = 0;
   int _notificationsCount = 0;
+  int _seenApprovalsCount = 0;
+  int _seenUpdateRequestsCount = 0;
   bool _isLoadingStats = true;
   bool _isLoadingPayments = true;
   bool _shouldShowAssignCoordinator = false;
@@ -74,6 +77,36 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
       _activeItem = item;
     });
     _saveActiveItem(item);
+  }
+
+  void _handleSearchSubmit(String query) {
+    if (query.trim().isEmpty) return;
+    final lowerQuery = query.trim().toLowerCase();
+    
+    // Exact match
+    for (var item in _menuItems) {
+      if (item['title'].toString().toLowerCase() == lowerQuery) {
+        _globalSearchController.clear();
+        _navigateTo(item['title']);
+        return;
+      }
+    }
+    // Starts-with match
+    for (var item in _menuItems) {
+      if (item['title'].toString().toLowerCase().startsWith(lowerQuery)) {
+        _globalSearchController.clear();
+        _navigateTo(item['title']);
+        return;
+      }
+    }
+    // Contains match
+    for (var item in _menuItems) {
+      if (item['title'].toString().toLowerCase().contains(lowerQuery)) {
+        _globalSearchController.clear();
+        _navigateTo(item['title']);
+        return;
+      }
+    }
   }
 
   Future<bool> _handleBackNavigation() async {
@@ -113,6 +146,22 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
     }
   }
 
+  Future<void> _loadSeenCounts() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (mounted) {
+      setState(() {
+        _seenApprovalsCount = prefs.getInt('seenApprovalsCount') ?? 0;
+        _seenUpdateRequestsCount = prefs.getInt('seenUpdateRequestsCount') ?? 0;
+      });
+    }
+  }
+
+  Future<void> _saveSeenCounts() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('seenApprovalsCount', _seenApprovalsCount);
+    await prefs.setInt('seenUpdateRequestsCount', _seenUpdateRequestsCount);
+  }
+
   List<dynamic> _pendingPayments = [];
 
   @override
@@ -139,6 +188,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
     _fetchPaymentDetails();
     _fetchMyCoordinator();
     _loadActiveItem();
+    _loadSeenCounts();
     
     // Set up polling for stats
     _statsTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
@@ -164,6 +214,10 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
             _membersCount = data['data']['members'];
             _coordinatorsCount = data['data']['coordinators'];
             _approvalsCount = data['data']['approvals'];
+            if (_seenApprovalsCount > _approvalsCount) {
+              _seenApprovalsCount = _approvalsCount;
+              _saveSeenCounts();
+            }
             _isLoadingStats = false;
           });
         }
@@ -176,6 +230,10 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
         if (mounted && updateData['status'] == 'success') {
           setState(() {
             _notificationsCount = (updateData['data'] as List).length;
+            if (_seenUpdateRequestsCount > _notificationsCount) {
+              _seenUpdateRequestsCount = _notificationsCount;
+              _saveSeenCounts();
+            }
           });
         }
       }
@@ -326,11 +384,11 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
             context: context,
             builder: (context) => ReceiptDialog(
               receiptData: eventReceipt,
-              memberData: data['member'],
+              memberData: userData,
             ),
           );
         } else if (mounted) {
-          showStatusDialog(context, title: 'Error', message: 'Receipt not found', type: DialogType.error);
+          showStatusDialog(context, title: 'Info', message: 'No payment receipt available', type: DialogType.info);
         }
       }
     } catch (e) {
@@ -1019,9 +1077,9 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
                     ),
                     const Spacer(),
                     if (widget.userRole != 3) ...[
-                      _buildNotificationIcon(Icons.person_add_alt_1, Colors.orange, _notificationsCount, 'Update Requests'),
+                      _buildNotificationIcon(Icons.person_add_alt_1, Colors.orange, _notificationsCount, _seenUpdateRequestsCount, 'Update Requests'),
                       const SizedBox(width: 12),
-                      _buildNotificationIcon(Icons.notifications_none, Colors.red, _approvalsCount, 'Received Applications'),
+                      _buildNotificationIcon(Icons.notifications_none, Colors.red, _approvalsCount, _seenApprovalsCount, 'Received Applications'),
                       const SizedBox(width: 12),
                     ],
                     IconButton(
@@ -1032,6 +1090,9 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
                       onPressed: () {
                         setState(() {
                           _showMobileSearchBar = !_showMobileSearchBar;
+                          if (!_showMobileSearchBar) {
+                            _globalSearchController.clear();
+                          }
                         });
                       },
                     ),
@@ -1055,7 +1116,8 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
                                 Expanded(
                                   child: TextField(
                                     controller: _globalSearchController,
-                                    style: TextStyle(color: Colors.white),
+                                    onSubmitted: _handleSearchSubmit,
+                                    style: const TextStyle(color: Colors.white),
                                     decoration: InputDecoration(
                                       hintText: AppLocalizations.of(context)?.searchPlaceholder ?? 'Search ...',
                                       hintStyle: TextStyle(color: Colors.white54),
@@ -1111,6 +1173,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
                       Expanded(
                         child: TextField(
                           controller: _globalSearchController,
+                          onSubmitted: _handleSearchSubmit,
                           style: const TextStyle(color: Colors.white),
                           decoration: InputDecoration(
                             hintText: AppLocalizations.of(context)?.searchPlaceholder ?? 'Search ...',
@@ -1135,9 +1198,9 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
                   _buildLanguageSwitcher(context),
                   const SizedBox(width: 12),
                   if (widget.userRole != 3) ...[
-                    _buildNotificationIcon(Icons.person_add_alt_1, Colors.orange, _notificationsCount, 'Update Requests'),
+                    _buildNotificationIcon(Icons.person_add_alt_1, Colors.orange, _notificationsCount, _seenUpdateRequestsCount, 'Update Requests'),
                     const SizedBox(width: 8),
-                    _buildNotificationIcon(Icons.notifications_none, Colors.red, _approvalsCount, 'Received Applications'),
+                    _buildNotificationIcon(Icons.notifications_none, Colors.red, _approvalsCount, _seenApprovalsCount, 'Received Applications'),
                     const SizedBox(width: 12),
                   ],
                   Container(width: 1, height: 30, color: Colors.white24),
@@ -1152,14 +1215,24 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
     );
   }
 
-  Widget _buildNotificationIcon(IconData icon, Color color, int count, String targetPage) {
+  Widget _buildNotificationIcon(IconData icon, Color color, int count, int seenCount, String targetPage) {
+    int unreadCount = count > seenCount ? count - seenCount : 0;
     return Badge(
-      label: Text(count.toString()),
-      isLabelVisible: count > 0,
+      label: Text(unreadCount.toString()),
+      isLabelVisible: unreadCount > 0,
       backgroundColor: color == Colors.white ? Colors.red : color,
       child: IconButton(
         icon: Icon(icon, color: color, size: 30),
-        onPressed: () => _navigateTo(targetPage),
+        onPressed: () {
+          if (targetPage == 'Update Requests') {
+            setState(() => _seenUpdateRequestsCount = count);
+            _saveSeenCounts();
+          } else if (targetPage == 'Received Applications') {
+            setState(() => _seenApprovalsCount = count);
+            _saveSeenCounts();
+          }
+          _navigateTo(targetPage);
+        },
         tooltip: targetPage,
       ),
     );
@@ -1387,8 +1460,47 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
     }
 
     if (_myCoordinator == null) {
-      return const Center(
-        child: Text('No coordinator assigned yet.', style: TextStyle(color: Colors.black54)),
+      final isDesktop = MediaQuery.of(context).size.width >= 800;
+      return Align(
+        alignment: isDesktop ? Alignment.centerLeft : Alignment.center,
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.grey.shade200),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.person_pin, color: Color(0xFF5D1712), size: 28),
+                  const SizedBox(width: 12),
+                  Text(
+                    AppLocalizations.of(context)?.coordinatorDetails ?? 'My Coordinator Details',
+                    style: const TextStyle(
+                      color: Color(0xFF5D1712),
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              const Text('No coordinator assigned yet.', style: TextStyle(color: Colors.black54)),
+            ],
+          ),
+        ),
       );
     }
 
@@ -1488,7 +1600,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _buildFilterTab('UNPAID', AppLocalizations.of(context)?.unpaidDetails ?? 'Unpaid Details', Icons.pending_actions_outlined),
+            _buildFilterTab('UNPAID', AppLocalizations.of(context)?.unpaidDetails ?? 'Unpaid Events', Icons.pending_actions_outlined),
             _buildFilterTab('PAID', AppLocalizations.of(context)?.paidEvents ?? 'Paid Events', Icons.check_circle_outline),
           ],
         ),
@@ -1735,7 +1847,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
             ),
           ),
           Text(
-            '₹${amount.toStringAsFixed(2)}',
+            NumberFormat.currency(locale: 'en_IN', symbol: '₹').format(amount),
             style: const TextStyle(
               color: Colors.white,
               fontSize: 22,

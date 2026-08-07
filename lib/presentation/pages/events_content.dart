@@ -258,6 +258,7 @@ class _EventsContentState extends State<EventsContent> {
                   TextField(
                     controller: taxController,
                     onChanged: (value) => setDialogState(() {}),
+                    maxLength: 9,
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
            inputFormatters: [
              FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
@@ -269,6 +270,7 @@ class _EventsContentState extends State<EventsContent> {
              );
            },
                     decoration: InputDecoration(
+                      counterText: '',
                       hintText: 'Enter tax amount',
                       filled: true,
                       fillColor: Colors.grey[50],
@@ -293,16 +295,20 @@ class _EventsContentState extends State<EventsContent> {
                           showStatusDialog(context, title: 'Error', message: 'Please enter an event name', type: DialogType.error);
                           return;
                         }
-                        if (!RegExp(r'\d{4}$').hasMatch(nameController.text.trim())) {
-                          showStatusDialog(context, title: 'Error', message: 'Event name must end with a year (e.g. Event_2026)', type: DialogType.error);
+                        if (!RegExp(r'_20\d{2}$').hasMatch(nameController.text.trim())) {
+                          showStatusDialog(context, title: 'Error', message: 'Event name must end with an underscore and a valid year (e.g. Event_2026)', type: DialogType.error);
                           return;
                         }
                         if (!toDate.isAfter(fromDate)) {
                           showStatusDialog(context, title: 'Error', message: 'To date must be greater than From date', type: DialogType.error);
                           return;
                         }
-                        if (taxController.text.isEmpty || double.tryParse(taxController.text) == null) {
-                          showStatusDialog(context, title: 'Error', message: 'Please enter a valid tax amount', type: DialogType.error);
+                        if (taxController.text.isEmpty || double.tryParse(taxController.text) == null || double.parse(taxController.text) <= 0) {
+                          showStatusDialog(context, title: 'Error', message: 'Tax amount must be greater than zero', type: DialogType.error);
+                          return;
+                        }
+                        if (double.parse(taxController.text) > 500000000) {
+                          showStatusDialog(context, title: 'Error', message: 'Tax amount cannot exceed 50 crores (500000000)', type: DialogType.error);
                           return;
                         }
                         setDialogState(() => isSaving = true);
@@ -394,7 +400,18 @@ class _EventsContentState extends State<EventsContent> {
                         type: FileType.image,
                         withData: true,
                       );
-                      if (result != null) setDialogState(() => selectedFile = result.files.first);
+                      if (result != null) {
+                        if (result.files.first.size > 2 * 1024 * 1024) {
+                          showStatusDialog(context, title: 'Error', message: 'Image size must be less than 2 MB', type: DialogType.error);
+                          return;
+                        }
+                        String? ext = result.files.first.extension?.toLowerCase();
+                        if (ext != 'jpg' && ext != 'png') {
+                          showStatusDialog(context, title: 'Error', message: 'Only JPG and PNG formats are supported', type: DialogType.error);
+                          return;
+                        }
+                        setDialogState(() => selectedFile = result.files.first);
+                      }
                     } catch (e) {
                       print("File picker error: $e");
                     }
@@ -645,6 +662,15 @@ class _EventsContentState extends State<EventsContent> {
                           withData: true,
                         );
                         if (result != null) {
+                          if (result.files.first.size > 2 * 1024 * 1024) {
+                            showStatusDialog(context, title: 'Error', message: 'Image size must be less than 2 MB', type: DialogType.error);
+                            return;
+                          }
+                          String? ext = result.files.first.extension?.toLowerCase();
+                          if (ext != 'jpg' && ext != 'png') {
+                            showStatusDialog(context, title: 'Error', message: 'Only JPG and PNG formats are supported', type: DialogType.error);
+                            return;
+                          }
                           setDialogState(() => selectedBanner = result.files.first);
                         }
                       } catch (e) {
@@ -752,6 +778,7 @@ class _EventsContentState extends State<EventsContent> {
                   const SizedBox(height: 8),
                   TextField(
                     controller: taxController,
+                    maxLength: 9,
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
                     inputFormatters: [
                       FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
@@ -763,6 +790,7 @@ class _EventsContentState extends State<EventsContent> {
                       );
                     },
                     decoration: InputDecoration(
+                      counterText: '',
                       filled: true,
                       fillColor: Colors.grey[50],
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey[200]!)),
@@ -780,8 +808,8 @@ class _EventsContentState extends State<EventsContent> {
                           showStatusDialog(context, title: 'Error', message: 'Please enter an event name', type: DialogType.error);
                           return;
                         }
-                        if (!RegExp(r'\d{4}$').hasMatch(nameController.text.trim())) {
-                          showStatusDialog(context, title: 'Error', message: 'Event name must end with a year (e.g. Event_2026)', type: DialogType.error);
+                        if (!RegExp(r'_20\d{2}$').hasMatch(nameController.text.trim())) {
+                          showStatusDialog(context, title: 'Error', message: 'Event name must end with an underscore and a valid year (e.g. Event_2026)', type: DialogType.error);
                           return;
                         }
                         if (selectedBanner == null) {
@@ -796,8 +824,12 @@ class _EventsContentState extends State<EventsContent> {
                           showStatusDialog(context, title: 'Error', message: 'To date must be greater than From date', type: DialogType.error);
                           return;
                         }
-                        if (taxController.text.isEmpty || double.tryParse(taxController.text) == null) {
-                          showStatusDialog(context, title: 'Error', message: 'Please enter a valid tax amount', type: DialogType.error);
+                        if (taxController.text.isEmpty || double.tryParse(taxController.text) == null || double.parse(taxController.text) <= 0) {
+                          showStatusDialog(context, title: 'Error', message: 'Tax amount must be greater than zero', type: DialogType.error);
+                          return;
+                        }
+                        if (double.parse(taxController.text) > 500000000) {
+                          showStatusDialog(context, title: 'Error', message: 'Tax amount cannot exceed 50 crores (500000000)', type: DialogType.error);
                           return;
                         }
 
@@ -1025,18 +1057,10 @@ class _EventsContentState extends State<EventsContent> {
                 ),
                 child: Column(
                   children: [
-                    // Main Scrollable Area (Header + Body)
-                    Scrollbar(
-                      controller: _scrollController,
-                      thumbVisibility: true,
-                      child: SingleChildScrollView(
-                        controller: _scrollController,
-                        scrollDirection: Axis.horizontal,
-                        child: SizedBox(
-                          width: widget.role == 1 ? 992 : 842,
-                          child: Column(
-                            children: [
-                              // Table Header
+                    // Main Area (Header + Body)
+                    Column(
+                      children: [
+                        // Table Header
                               Container(
                                 decoration: const BoxDecoration(
                                   color: Color(0xFF2D1B18),
@@ -1048,18 +1072,18 @@ class _EventsContentState extends State<EventsContent> {
                                 padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
                                 child: Row(
                                   children: [
-                                    _buildHeaderCell(AppLocalizations.of(context)?.sNo ?? 'S.NO', 60),
-                                    _buildHeaderCell(AppLocalizations.of(context)?.eventNameHeader ?? 'EVENT NAME', 250),
-                                    _buildHeaderCell(AppLocalizations.of(context)?.bannerHeader ?? 'BANNER', 150),
-                                    _buildHeaderCell(AppLocalizations.of(context)?.durationHeader ?? 'DURATION', 200),
-                                    _buildHeaderCell(AppLocalizations.of(context)?.taxAmount ?? 'TAX AMOUNT', 150),
+                                    _buildHeaderCell(AppLocalizations.of(context)?.sNo ?? 'S.NO', 60, alignment: Alignment.center),
+                                    Expanded(flex: 2, child: _buildHeaderCell(AppLocalizations.of(context)?.eventNameHeader ?? 'EVENT NAME', 150)),
+                                    _buildHeaderCell(AppLocalizations.of(context)?.bannerHeader ?? 'BANNER', 120, alignment: Alignment.center),
+                                    Expanded(flex: 2, child: _buildHeaderCell(AppLocalizations.of(context)?.durationHeader ?? 'DURATION', 150)),
+                                    _buildHeaderCell(AppLocalizations.of(context)?.taxAmount ?? 'TAX AMOUNT', 120, alignment: Alignment.center),
                                     if (widget.role == 1)
-                                      _buildHeaderCell('ACTIONS', 150),
+                                      _buildHeaderCell('ACTIONS', 120, alignment: Alignment.center),
                                   ],
                                 ),
                               ),
                               // Table Body
-                              _events.isEmpty && !_isLoading
+                              _filteredEvents.isEmpty && !_isLoading
                                 ? const Padding(
                                     padding: EdgeInsets.all(32),
                                     child: Center(child: Text('No events found', style: TextStyle(color: Colors.black54))),
@@ -1076,11 +1100,11 @@ class _EventsContentState extends State<EventsContent> {
                                         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
                                         child: Row(
                                           children: [
-                                            _buildDataCell('${index + 1}', 60),
-                                            _buildDataCell(event['EventName'] ?? 'N/A', 250, isBold: true),
+                                            _buildDataCell('${index + 1}', 60, alignment: Alignment.center),
+                                            Expanded(flex: 2, child: _buildDataCell(event['EventName'] ?? 'N/A', 150, isBold: true)),
                                             // Banner Column
-                                            _buildDataCell('', 150, child: Align(
-                                              alignment: Alignment.centerLeft,
+                                            _buildDataCell('', 120, child: Align(
+                                              alignment: Alignment.center,
                                               child: Container(
                                                 width: 80,
                                                 height: 46,
@@ -1094,11 +1118,11 @@ class _EventsContentState extends State<EventsContent> {
                                                     SizedBox.expand(
                                                       child: event['Image'] != null && event['Image'].toString().isNotEmpty && event['Image'].toString() != 'null' && event['Image'].toString() != 'N/A'
                                                         ? InkWell(
-                                                            onTap: () => _showFullScreenImage('${ApiConfig.baseUrl}/assets/uploads/${event['Image']}'),
+                                                            onTap: () => _showFullScreenImage(Uri.encodeFull('${ApiConfig.baseUrl}/assets/uploads/${event['Image']}')),
                                                             child: ClipRRect(
                                                               borderRadius: BorderRadius.circular(4),
                                                               child: Image.network(
-                                                                '${ApiConfig.baseUrl}/assets/uploads/${event['Image']}',
+                                                                Uri.encodeFull('${ApiConfig.baseUrl}/assets/uploads/${event['Image']}'),
                                                                 fit: BoxFit.cover,
                                                                 errorBuilder: (context, error, stackTrace) => GestureDetector(
                                                                   onTap: () {}, // Consume tap to prevent opening dialog
@@ -1133,17 +1157,18 @@ class _EventsContentState extends State<EventsContent> {
                                               ),
                                             )),
                                             // Duration Column
-                                            _buildDataCell('', 200, child: Column(
+                                            Expanded(flex: 2, child: _buildDataCell('', 150, child: Column(
                                               mainAxisAlignment: MainAxisAlignment.center,
+                                              crossAxisAlignment: CrossAxisAlignment.start,
                                               children: [
-                                                _buildDateInfo(AppLocalizations.of(context)?.fromDate ?? 'From:', event['From_date']),
+                                                _buildDateInfo(AppLocalizations.of(context)?.fromDate ?? 'From:', event['From_date'], alignment: MainAxisAlignment.start),
                                                 const SizedBox(height: 4),
-                                                _buildDateInfo(AppLocalizations.of(context)?.toDate ?? 'To:', event['To_date']),
+                                                _buildDateInfo(AppLocalizations.of(context)?.toDate ?? 'To:', event['To_date'], alignment: MainAxisAlignment.start),
                                               ],
-                                            )),
+                                            ))),
                                             // Tax Amount Column
-                                            _buildDataCell('', 150, child: Align(
-                                              alignment: Alignment.centerLeft,
+                                            _buildDataCell('', 120, child: Align(
+                                              alignment: Alignment.center,
                                               child: Container(
                                                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                                                 decoration: BoxDecoration(
@@ -1152,15 +1177,15 @@ class _EventsContentState extends State<EventsContent> {
                                                   border: Border.all(color: const Color(0xFF5D1712).withOpacity(0.2)),
                                                 ),
                                                 child: Text(
-                                                  '₹ ${event['TaxAmount'] ?? '0'}',
+                                                  '₹ ${_formatCurrency(event['TaxAmount'])}',
                                                   style: const TextStyle(color: const Color(0xFF5D1712), fontWeight: FontWeight.bold, fontSize: 13),
                                                 ),
                                               ),
                                             )),
                                             // Actions Column
                                             if (widget.role == 1)
-                                              _buildDataCell('', 150, child: Row(
-                                                mainAxisAlignment: MainAxisAlignment.start,
+                                              _buildDataCell('', 120, child: Row(
+                                                mainAxisAlignment: MainAxisAlignment.center,
                                                 children: [
                                                   _buildIconButton(Icons.edit_outlined, const Color(0xFF5D1712), () => _showUpdateEventDialog(event), tooltip: 'Edit'),
                                                   const SizedBox(width: 8),
@@ -1174,9 +1199,6 @@ class _EventsContentState extends State<EventsContent> {
                                   ),
                             ],
                           ),
-                        ),
-                      ),
-                    ),
                     // Footer
                     Container(
                       padding: const EdgeInsets.all(16),
@@ -1282,6 +1304,14 @@ class _EventsContentState extends State<EventsContent> {
         ),
       ),
     );
+  }
+
+  String _formatCurrency(dynamic amountStr) {
+    if (amountStr == null) return '0';
+    final amount = double.tryParse(amountStr.toString());
+    if (amount == null) return '0';
+    if (amount == amount.toInt()) return amount.toInt().toString();
+    return amount.toStringAsFixed(2);
   }
 
   String _formatDate(dynamic dateStr) {
@@ -1424,7 +1454,7 @@ class _EventsContentState extends State<EventsContent> {
                           border: Border.all(color: const Color(0xFF5D1712).withOpacity(0.2)),
                         ),
                         child: Text(
-                          '₹ ${event['TaxAmount'] ?? '0'}',
+                          '₹ ${_formatCurrency(event['TaxAmount'])}',
                           style: const TextStyle(color: Color(0xFF5D1712), fontWeight: FontWeight.bold, fontSize: 13),
                         ),
                       ),
@@ -1458,11 +1488,11 @@ class _EventsContentState extends State<EventsContent> {
                           SizedBox.expand(
                             child: event['Image'] != null && event['Image'].toString().isNotEmpty && event['Image'].toString() != 'null' && event['Image'].toString() != 'N/A'
                               ? InkWell(
-                                  onTap: () => _showFullScreenImage('${ApiConfig.baseUrl}/assets/uploads/${event['Image']}'),
+                                  onTap: () => _showFullScreenImage(Uri.encodeFull('${ApiConfig.baseUrl}/assets/uploads/${event['Image']}')),
                                   child: ClipRRect(
                                     borderRadius: BorderRadius.circular(8),
                                     child: Image.network(
-                                      '${ApiConfig.baseUrl}/assets/uploads/${event['Image']}',
+                                      Uri.encodeFull('${ApiConfig.baseUrl}/assets/uploads/${event['Image']}'),
                                       fit: BoxFit.cover,
                                       errorBuilder: (context, error, stackTrace) => GestureDetector(
                                         onTap: () {},
@@ -1526,27 +1556,33 @@ class _EventsContentState extends State<EventsContent> {
     );
   }
 
-  Widget _buildHeaderCell(String label, double width) {
+  Widget _buildHeaderCell(String label, double width, {Alignment alignment = Alignment.centerLeft}) {
     return SizedBox(
       width: width,
-      child: Text(
-        label.toUpperCase(),
-        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+      child: Align(
+        alignment: alignment,
+        child: Text(
+          label.toUpperCase(),
+          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+        ),
       ),
     );
   }
 
-  Widget _buildDataCell(String text, double width, {bool isBlue = false, bool isBold = false, Widget? child}) {
+  Widget _buildDataCell(String text, double width, {bool isBlue = false, bool isBold = false, Widget? child, Alignment alignment = Alignment.centerLeft}) {
     return SizedBox(
       width: width,
-      child: child ?? Text(
-        text,
-        style: TextStyle(
-          color: isBlue ? const Color(0xFF5D1712) : Colors.black87,
-          fontWeight: isBlue || isBold ? FontWeight.bold : FontWeight.normal,
-          fontSize: 13,
+      child: child ?? Align(
+        alignment: alignment,
+        child: Text(
+          text,
+          style: TextStyle(
+            color: isBlue ? const Color(0xFF5D1712) : Colors.black87,
+            fontWeight: isBlue || isBold ? FontWeight.bold : FontWeight.normal,
+            fontSize: 13,
+          ),
+          overflow: TextOverflow.ellipsis,
         ),
-        overflow: TextOverflow.ellipsis,
       ),
     );
   }

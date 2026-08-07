@@ -123,7 +123,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get paymentPendingDetails => 'My Payment Pending Details';
 
   @override
-  String get unpaidDetails => 'Unpaid Details';
+  String get unpaidDetails => 'Unpaid Events';
 
   @override
   String get paidEvents => 'Paid Events';

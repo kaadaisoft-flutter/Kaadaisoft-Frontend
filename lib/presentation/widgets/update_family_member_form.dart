@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart' show FilteringTextInputFormatter, rootBundle;
@@ -386,11 +387,6 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
   }
 
   Future<void> _fetchTaluks(String district) async {
-    if (mounted) setState(() {
-      _taluks = []; _selectedTaluk = null;
-      _panchayats = []; _selectedPanchayat = null;
-      _villages = []; _selectedVillage = null;
-    });
     try {
       final res = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/taluks/$district'));
       if (res.statusCode == 200) {
@@ -401,10 +397,6 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
   }
 
   Future<void> _fetchPanchayats(String taluk) async {
-    if (mounted) setState(() {
-      _panchayats = []; _selectedPanchayat = null;
-      _villages = []; _selectedVillage = null;
-    });
     try {
       final res = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/panchayats/$taluk'));
       if (res.statusCode == 200) {
@@ -415,9 +407,6 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
   }
 
   Future<void> _fetchVillages(String panchayat) async {
-    if (mounted) setState(() {
-      _villages = []; _selectedVillage = null;
-    });
     try {
       final res = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/villages/$panchayat'));
       if (res.statusCode == 200) {
@@ -438,11 +427,6 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
   }
 
   Future<void> _fetchCurrTaluks(String district) async {
-    if (mounted) setState(() {
-      _currTaluks = []; _selectedCurrTaluk = null;
-      _currPanchayats = []; _selectedCurrPanchayat = null;
-      _currVillages = []; _selectedCurrVillage = null;
-    });
     try {
       final res = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/taluks/$district'));
       if (res.statusCode == 200) {
@@ -453,10 +437,6 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
   }
 
   Future<void> _fetchCurrPanchayats(String taluk) async {
-    if (mounted) setState(() {
-      _currPanchayats = []; _selectedCurrPanchayat = null;
-      _currVillages = []; _selectedCurrVillage = null;
-    });
     try {
       final res = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/panchayats/$taluk'));
       if (res.statusCode == 200) {
@@ -467,9 +447,6 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
   }
 
   Future<void> _fetchCurrVillages(String panchayat) async {
-    if (mounted) setState(() {
-      _currVillages = []; _selectedCurrVillage = null;
-    });
     try {
       final res = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/villages/$panchayat'));
       if (res.statusCode == 200) {
@@ -559,9 +536,9 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
                       _buildSectionTitle(Icons.location_on_outlined, 'Native Address'),
                       const SizedBox(height: 16),
                       _buildResponsiveRow(isMobile, [
-                        _buildDropdownField('District *', _districts, _selectedDistrict, (v) { setState(() { _selectedDistrict = v; _selectedTaluk = null; }); if (v != null) _fetchTaluks(v); }),
-                        _buildDropdownField('Taluk *', _taluks, _selectedTaluk, (v) { setState(() { _selectedTaluk = v; _selectedPanchayat = null; }); if (v != null) _fetchPanchayats(v); }),
-                        _buildDropdownField('Panchayat *', _panchayats, _selectedPanchayat, (v) { setState(() { _selectedPanchayat = v; _selectedVillage = null; }); if (v != null) _fetchVillages(v); }),
+                        _buildDropdownField('District *', _districts, _selectedDistrict, (v) { setState(() { _selectedDistrict = v; _selectedTaluk = null; _taluks = []; _selectedPanchayat = null; _panchayats = []; _selectedVillage = null; _villages = []; }); if (v != null) _fetchTaluks(v); }),
+                        _buildDropdownField('Taluk *', _taluks, _selectedTaluk, (v) { setState(() { _selectedTaluk = v; _selectedPanchayat = null; _panchayats = []; _selectedVillage = null; _villages = []; }); if (v != null) _fetchPanchayats(v); }),
+                        _buildDropdownField('Panchayat *', _panchayats, _selectedPanchayat, (v) { setState(() { _selectedPanchayat = v; _selectedVillage = null; _villages = []; }); if (v != null) _fetchVillages(v); }),
                       ]),
                       _buildResponsiveRow(isMobile, [
                         _buildDropdownField('Village Name *', _villages, _selectedVillage, (v) => setState(() => _selectedVillage = v)),
@@ -601,9 +578,9 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
                       const SizedBox(height: 16),
                       if (_selectedCurrentAddressType == 'Tamil Nadu') ...[
                         _buildResponsiveRow(isMobile, [
-                          _buildDropdownField('District *', _currDistricts, _selectedCurrDistrict, (v) { setState(() { _selectedCurrDistrict = v; _selectedCurrTaluk = null; }); if (v != null) _fetchCurrTaluks(v); }),
-                          _buildDropdownField('Taluk *', _currTaluks, _selectedCurrTaluk, (v) { setState(() { _selectedCurrTaluk = v; _selectedCurrPanchayat = null; }); if (v != null) _fetchCurrPanchayats(v); }),
-                          _buildDropdownField('Panchayat *', _currPanchayats, _selectedCurrPanchayat, (v) { setState(() { _selectedCurrPanchayat = v; _selectedCurrVillage = null; }); if (v != null) _fetchCurrVillages(v); }),
+                          _buildDropdownField('District *', _currDistricts, _selectedCurrDistrict, (v) { setState(() { _selectedCurrDistrict = v; _selectedCurrTaluk = null; _currTaluks = []; _selectedCurrPanchayat = null; _currPanchayats = []; _selectedCurrVillage = null; _currVillages = []; }); if (v != null) _fetchCurrTaluks(v); }),
+                          _buildDropdownField('Taluk *', _currTaluks, _selectedCurrTaluk, (v) { setState(() { _selectedCurrTaluk = v; _selectedCurrPanchayat = null; _currPanchayats = []; _selectedCurrVillage = null; _currVillages = []; }); if (v != null) _fetchCurrPanchayats(v); }),
+                          _buildDropdownField('Panchayat *', _currPanchayats, _selectedCurrPanchayat, (v) { setState(() { _selectedCurrPanchayat = v; _selectedCurrVillage = null; _currVillages = []; }); if (v != null) _fetchCurrVillages(v); }),
                         ]),
                         _buildResponsiveRow(isMobile, [
                           _buildDropdownField('Village Name *', _currVillages, _selectedCurrVillage, (v) => setState(() => _selectedCurrVillage = v)),
@@ -748,6 +725,8 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
             if (int.tryParse(val) == 0) return 'Invalid PIN code';
           }
           if (label.contains('Street Name') && val.trim().isNotEmpty) {
+            if (val.trim().length < 4) return 'Address is too short';
+            if (!RegExp(r'[a-zA-Z]').hasMatch(val.trim())) return 'Must contain at least one letter';
             if (RegExp(r'^[^a-zA-Z0-9]+$').hasMatch(val.trim())) return 'Please enter a valid address';
           }
           if ((label.contains('Manual') || label.contains('Enter')) && val.trim().isNotEmpty) {
@@ -945,15 +924,7 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
   }
 
   Widget _buildGenderSelector() {
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      _buildLabelText('Gender *', fontSize: 14),
-      Wrap(children: [
-        Radio<String>(value: 'Male', groupValue: _selectedGender, onChanged: (v) { _markChanged(); setState(() => _selectedGender = v); }),
-        Text(AppLocalizations.of(context)?.maleLabel ?? 'Male'),
-        Radio<String>(value: 'Female', groupValue: _selectedGender, onChanged: (v) { _markChanged(); setState(() => _selectedGender = v); }),
-        Text(AppLocalizations.of(context)?.femaleLabel ?? 'Female'),
-      ]),
-    ]);
+    return _buildRadioField('Gender *', ['Male', 'Female', 'Other'], _selectedGender, (v) => setState(() => _selectedGender = v));
   }
 
   Widget _buildRadioField(String label, List<String> options, String? value, ValueChanged<String?> onChanged) {
@@ -1017,6 +988,32 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
       existingUrl = widget.memberData['community_cert'];
     }
 
+    Widget? previewWidget;
+    String displayFileName = AppLocalizations.of(context)?.chooseFile ?? 'Choose file...';
+
+    if (file != null) {
+      displayFileName = file.name;
+      bool isPdf = displayFileName.toLowerCase().endsWith('.pdf');
+      if (isPdf) {
+        previewWidget = const Icon(Icons.picture_as_pdf, color: Colors.red, size: 30);
+      } else {
+        if (kIsWeb) {
+          previewWidget = ClipRRect(borderRadius: BorderRadius.circular(4), child: Image.network(file.path, width: 40, height: 40, fit: BoxFit.cover, errorBuilder: (c,e,s) => Icon(Icons.image, size: 30, color: mediumBrown)));
+        } else {
+          previewWidget = ClipRRect(borderRadius: BorderRadius.circular(4), child: Image.file(File(file.path), width: 40, height: 40, fit: BoxFit.cover, errorBuilder: (c,e,s) => Icon(Icons.image, size: 30, color: mediumBrown)));
+        }
+      }
+    } else if (existingUrl != null && existingUrl.isNotEmpty && existingUrl != 'No image') {
+      displayFileName = existingUrl.split('/').last;
+      bool isPdf = displayFileName.toLowerCase().endsWith('.pdf');
+      if (isPdf) {
+        previewWidget = const Icon(Icons.picture_as_pdf, color: Colors.red, size: 30);
+      } else {
+        String url = existingUrl.startsWith('http') ? existingUrl : '/';
+        previewWidget = ClipRRect(borderRadius: BorderRadius.circular(4), child: Image.network(url, width: 40, height: 40, fit: BoxFit.cover, errorBuilder: (c,e,s) => Icon(Icons.image, size: 30, color: mediumBrown)));
+      }
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1043,7 +1040,7 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(border: Border.all(color: borderColor), borderRadius: BorderRadius.circular(10), color: Colors.white),
             child: Row(children: [
-              Icon(Icons.upload_file, size: 18, color: mediumBrown),
+              previewWidget ?? Icon(Icons.upload_file, size: 18, color: mediumBrown),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -1081,7 +1078,28 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate() || _phoneExists) return;
-    
+    if ((_selectedRelationship == 'Son' || _selectedRelationship == 'Daughter') && _dobController.text.isNotEmpty) {
+      try {
+        DateTime? dob;
+        final parts = _dobController.text.split('-');
+        if (parts.length == 3) {
+          if (parts[0].length == 4) {
+            dob = DateTime.parse(_dobController.text);
+          } else if (parts[2].length == 4) {
+            dob = DateTime.parse("${parts[2]}-${parts[1]}-${parts[0]}");
+          }
+        }
+        if (dob != null) {
+          final now = DateTime.now();
+          final threeMonthsAgo = DateTime(now.year, now.month - 3, now.day);
+          if (dob.isAfter(threeMonthsAgo)) {
+            showStatusDialog(context, title: 'Validation Error', message: 'A Son or Daughter must be at least 3 months old to be added.', type: DialogType.error);
+            return;
+          }
+        }
+      } catch (e) {}
+    }
+
     if (_selectedMarried == 'Yes' && _dobController.text.isNotEmpty) {
       try {
         DateTime? dob;

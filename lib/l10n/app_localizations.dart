@@ -323,7 +323,7 @@ abstract class AppLocalizations {
   /// No description provided for @unpaidDetails.
   ///
   /// In en, this message translates to:
-  /// **'Unpaid Details'**
+  /// **'Unpaid Events'**
   String get unpaidDetails;
 
   /// No description provided for @paidEvents.

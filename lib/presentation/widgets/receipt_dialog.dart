@@ -109,12 +109,6 @@ class _ReceiptDialogState extends State<ReceiptDialog> {
         alignment: WrapAlignment.center,
         children: [
           _ActionButton(
-            label: 'Close',
-            color: Colors.grey.shade600,
-            isMobile: isMobile,
-            onPressed: () => Navigator.pop(context),
-          ),
-          _ActionButton(
             label: _isDownloading ? 'Preparing...' : 'Download PDF',
             color: const Color(0xFF10B981),
             icon: _isDownloading ? null : Icons.download,

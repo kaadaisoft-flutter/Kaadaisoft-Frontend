@@ -7,6 +7,7 @@ import '../widgets/custom_dialog.dart';
 import '../widgets/image_load_state.dart';
 import '../../utils/api_config.dart';
 import 'update_details_content.dart';
+import 'package:intl/intl.dart';
 
 class MemberDetailsContent extends StatefulWidget {
   final String numericId;
@@ -422,6 +423,16 @@ class _MemberDetailsContentState extends State<MemberDetailsContent> {
     );
   }
 
+  String _formatDate(String? dateStr) {
+    if (dateStr == null || dateStr.isEmpty) return 'Never';
+    try {
+      final date = DateTime.parse(dateStr).toLocal();
+      return DateFormat('MMM dd, yyyy hh:mm a').format(date);
+    } catch (e) {
+      return dateStr;
+    }
+  }
+
   Widget _buildDetailsColumn() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -431,6 +442,8 @@ class _MemberDetailsContentState extends State<MemberDetailsContent> {
         _detailItem('Family Membership ID:', _userData!['Familymembershipid'] ?? 'N/A', isPill: true),
         const SizedBox(height: 24),
         _detailItem('Phone Number:', _userData!['Phonenumber']?.toString() ?? 'N/A'),
+        const SizedBox(height: 24),
+        _detailItem('Last Login:', _formatDate(_userData!['last_login']?.toString())),
         const SizedBox(height: 24),
         _addressItem('Address:', _userData!),
       ],
@@ -699,14 +712,38 @@ class _MemberDetailsContentState extends State<MemberDetailsContent> {
     );
   }
 
-  String _calculateAge(dynamic dobStr) {
-    if (dobStr == null || dobStr.toString().isEmpty) return 'N/A';
+  String _calculateAge(dynamic dobStrRaw) {
+    if (dobStrRaw == null || dobStrRaw.toString().trim().isEmpty) return 'N/A';
     try {
-      DateTime dob = DateTime.parse(dobStr.toString());
-      DateTime now = DateTime.now();
-      int age = now.year - dob.year;
-      if (now.month < dob.month || (now.month == dob.month && now.day < dob.day)) age--;
-      return age.toString();
+      DateTime? dob;
+      String dobStr = dobStrRaw.toString().trim().replaceAll('/', '-');
+      // Check if it's already an ISO 8601 string (contains 'T')
+      if (dobStr.contains('T')) {
+        dob = DateTime.parse(dobStr).toLocal();
+      } else {
+        final parts = dobStr.split('-');
+        if (parts.length == 3) {
+          if (parts[0].length == 4) {
+            dob = DateTime.parse("${parts[0]}-${parts[1].padLeft(2, '0')}-${parts[2].padLeft(2, '0')}");
+          } else if (parts[2].length == 4) {
+            dob = DateTime.parse("${parts[2]}-${parts[1].padLeft(2, '0')}-${parts[0].padLeft(2, '0')}");
+          }
+        }
+      }
+      
+      if (dob == null && !dobStr.contains('T')) {
+         dob = DateTime.parse(dobStr).toLocal();
+      }
+
+      if (dob != null) {
+        DateTime now = DateTime.now();
+        int age = now.year - dob.year;
+        if (now.month < dob.month || (now.month == dob.month && now.day < dob.day)) {
+          age--;
+        }
+        return age.toString();
+      }
+      return 'N/A';
     } catch (_) {
       return 'N/A';
     }

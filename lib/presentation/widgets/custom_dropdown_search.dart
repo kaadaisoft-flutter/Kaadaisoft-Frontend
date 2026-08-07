@@ -231,7 +231,7 @@ class _CustomDropdownSearchState extends State<CustomDropdownSearch> with Widget
             _fieldKey.currentState!.didChange(widget.value);
           }
           final displayValue = _allEntries[widget.value] ?? (widget.dropdownMap != null ? '' : widget.value ?? '');
-          if (displayValue != _textEditingController.text) {
+          if (_overlayEntry == null && displayValue != _textEditingController.text) {
             _textEditingController.text = displayValue;
           }
         }
@@ -335,6 +335,12 @@ class _CustomDropdownSearchState extends State<CustomDropdownSearch> with Widget
         // Flexible placement: show above if space below is tight and there is more space above
         final showAbove = spaceBelow < kDropdownMaxHeight && spaceAbove > spaceBelow;
 
+        // Calculate dynamic max height to prevent extending off-screen or behind keyboard
+        final double availableSpace = showAbove ? spaceAbove : spaceBelow;
+        final double finalMaxHeight = availableSpace < kDropdownMaxHeight 
+            ? (availableSpace < 120 ? 120 : availableSpace) // Ensure at least a small dropdown
+            : kDropdownMaxHeight;
+
         // When opening upward, anchor the follower's bottom to the target's top.
         final Offset offset = showAbove ? const Offset(0, -6) : Offset(0, size.height + 6);
         final Alignment tAnchor = showAbove ? Alignment.topLeft : Alignment.topLeft;
@@ -377,7 +383,7 @@ class _CustomDropdownSearchState extends State<CustomDropdownSearch> with Widget
                         ),
                       ],
                     ),
-                    constraints: const BoxConstraints(maxHeight: kDropdownMaxHeight),
+                    constraints: BoxConstraints(maxHeight: finalMaxHeight),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [

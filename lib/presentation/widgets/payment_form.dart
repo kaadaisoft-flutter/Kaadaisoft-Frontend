@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -10,6 +12,7 @@ import 'custom_dialog.dart';
 import '../../utils/bank_list.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'custom_dropdown_search.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 class PaymentForm extends StatefulWidget {
   final Map<String, dynamic> memberData;
   final VoidCallback onPaymentSuccess;
@@ -76,6 +79,11 @@ class _PaymentFormState extends State<PaymentForm> {
   void initState() {
     super.initState();
     _amountController.addListener(_updateDisplayedBalance);
+    _amountFocus.addListener(() {
+      if (_amountFocus.hasFocus && _amountController.text == '0') {
+        _amountController.clear();
+      }
+    });
     _fetchYears();
   }
 
@@ -198,7 +206,11 @@ class _PaymentFormState extends State<PaymentForm> {
   }
 
   Future<void> _saveReceipt() async {
-    setState(() => _autoValidate = true);
+    if (_isLoading) return;
+    setState(() {
+      _isLoading = true;
+      _autoValidate = true;
+    });
     bool isValid = _formKey.currentState!.validate();
     if (!isValid) {
       FocusNode? firstErrorNode;
@@ -208,15 +220,15 @@ class _PaymentFormState extends State<PaymentForm> {
         firstErrorNode = _amountFocus;
       } else if ((_paymentMethod == 'Bank' || _paymentMethod == 'Cheque') && (_selectedBank == null || _selectedBank!.isEmpty)) {
         firstErrorNode = _bankFocus;
-      } else if ((_paymentMethod == 'Bank' || _paymentMethod == 'Cheque') && _showOtherBank && _otherBankController.text.isEmpty) {
+      } else if ((_paymentMethod == 'Bank' || _paymentMethod == 'Cheque') && _showOtherBank && _otherBankController.text.trim().isEmpty) {
         firstErrorNode = _otherBankFocus;
-      } else if (_paymentMethod == 'UPI' && _upiIdController.text.isEmpty) {
+      } else if (_paymentMethod == 'UPI' && _upiIdController.text.trim().isEmpty) {
         firstErrorNode = _upiIdFocus;
-      } else if (_paymentMethod == 'Bank' && _refNoController.text.isEmpty) {
+      } else if (_paymentMethod == 'Bank' && _refNoController.text.trim().isEmpty) {
         firstErrorNode = _refNoFocus;
-      } else if (_paymentMethod == 'Cheque' && _chequeNoController.text.isEmpty) {
+      } else if (_paymentMethod == 'Cheque' && _chequeNoController.text.trim().isEmpty) {
         firstErrorNode = _chequeNoFocus;
-      } else if (_receiverController.text.isEmpty) {
+      } else if (_receiverController.text.trim().isEmpty) {
         firstErrorNode = _receiverFocus;
       }
 
@@ -229,20 +241,23 @@ class _PaymentFormState extends State<PaymentForm> {
         );
         firstErrorNode.requestFocus();
       }
+      setState(() => _isLoading = false);
       return;
     }
 
-    if (_paymentMethod == 'UPI' && _receiptImage == null) {
-      showStatusDialog(context, title: 'Receipt Required', message: 'Please upload the payment receipt for UPI transactions.', type: DialogType.warning);
+    if ((_paymentMethod == 'UPI' || _paymentMethod == 'Cheque') && _receiptImage == null) {
+      final type = _paymentMethod == 'UPI' ? 'UPI' : 'Cheque';
+      showStatusDialog(context, title: 'Receipt Required', message: 'Please upload the payment receipt for $type transactions.', type: DialogType.warning);
+      setState(() => _isLoading = false);
       return;
     }
 
     if (!_isConfirmed) {
       showStatusDialog(context, title: 'Confirmation Required', message: 'Please confirm the details before saving.', type: DialogType.warning);
+      setState(() => _isLoading = false);
       return;
     }
 
-    setState(() => _isLoading = true);
     try {
       var request = http.MultipartRequest('POST', Uri.parse(ApiConfig.saveReceipt));
       request.fields['member_id'] = widget.memberData['Familymembershipid'].toString();
@@ -251,6 +266,9 @@ class _PaymentFormState extends State<PaymentForm> {
       request.fields['payment_method'] = _paymentMethod;
       request.fields['received_by'] = _receiverController.text;
       request.fields['payment_date'] = DateFormat('yyyy-MM-dd').format(DateTime.now());
+      
+      final prefs = await SharedPreferences.getInstance();
+      request.fields['creator_role'] = prefs.getInt('userRole')?.toString() ?? '';
       
       if (_paymentMethod == 'Bank' || _paymentMethod == 'Cheque') {
           request.fields['bank_name'] = _selectedBank == 'Other Bank' ? _otherBankController.text : _selectedBank!;
@@ -272,26 +290,40 @@ class _PaymentFormState extends State<PaymentForm> {
 
       if (response.statusCode == 200) {
         if (mounted) {
-          showStatusDialog(
+          await showStatusDialog(
             context,
             title: 'Success',
             message: 'Payment receipt saved successfully.',
             type: DialogType.success,
-          ).then((_) {
+          );
+          if (mounted) {
+            Navigator.pop(context);
             widget.onPaymentSuccess();
-          });
+          }
         }
       } else {
         final decoded = jsonDecode(response.body);
         final detail = decoded['detail'];
-        final String error = detail is List ? detail.first['msg'].toString() : (detail?.toString() ?? 'Failed to save receipt');
+        String error = detail is List ? detail.first['msg'].toString() : (detail?.toString() ?? 'Failed to save receipt');
+        
+        if (error.contains('value too long for type character varying')) {
+          final match = RegExp(r'varying\((\d+)\)').firstMatch(error);
+          if (match != null) {
+            error = 'Maximum ${match.group(1)} characters are allowed.';
+          } else {
+            error = 'Input exceeds maximum allowed length.';
+          }
+        }
+        
         if (mounted) showStatusDialog(context, title: 'Error', message: error, type: DialogType.error);
       }
     } catch (e) {
       debugPrint('Save Receipt Error: $e');
       if (mounted) showStatusDialog(context, title: 'Connection Error', message: 'Unable to save receipt. \n$e', type: DialogType.error);
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -302,8 +334,9 @@ class _PaymentFormState extends State<PaymentForm> {
         String searchQuery = "";
         return StatefulBuilder(
           builder: (context, setDialogState) {
+            final query = searchQuery.trim().toLowerCase();
             final filteredBanks = bankList.where((bank) => 
-              bank.toLowerCase().contains(searchQuery.toLowerCase())
+              bank.toLowerCase().contains(query)
             ).toList();
 
             return Dialog(
@@ -415,18 +448,18 @@ class _PaymentFormState extends State<PaymentForm> {
           )
         ],
       ),
-      padding: EdgeInsets.all(isMobile ? 16 : 32),
+      clipBehavior: Clip.antiAlias,
       child: Form(
         key: _formKey,
         autovalidateMode: _autoValidate ? AutovalidateMode.onUserInteraction : AutovalidateMode.disabled,
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header
-              Row(
+        child: Column(
+          children: [
+            // Header
+            Padding(
+              padding: EdgeInsets.fromLTRB(isMobile ? 16 : 32, isMobile ? 16 : 32, isMobile ? 16 : 32, 0),
+              child: Row(
                 children: [
-                  Icon(Icons.receipt_long, color: const Color(0xFF5D1712), size: 28),
+                  const Icon(Icons.receipt_long, color: Color(0xFF5D1712), size: 28),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
@@ -442,7 +475,18 @@ class _PaymentFormState extends State<PaymentForm> {
                   IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close)),
                 ],
               ),
-              const Divider(height: 32),
+            ),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 32),
+              child: const Divider(height: 32),
+            ),
+
+            Flexible(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.fromLTRB(isMobile ? 16 : 32, 0, isMobile ? 16 : 32, isMobile ? 16 : 32),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
 
               if (isMobile) 
                 Column(children: [
@@ -491,11 +535,15 @@ class _PaymentFormState extends State<PaymentForm> {
           ),
         ),
       ),
+    ],
+  ),
+),
     );
   }
 
   Widget _buildCard({required String title, required IconData icon, required Widget child}) {
     return Container(
+      width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -622,6 +670,7 @@ class _PaymentFormState extends State<PaymentForm> {
           TextFormField(
             controller: _amountController,
             focusNode: _amountFocus,
+            maxLength: 7,
             keyboardType: TextInputType.number,
             inputFormatters: [
               FilteringTextInputFormatter.digitsOnly,
@@ -633,6 +682,7 @@ class _PaymentFormState extends State<PaymentForm> {
               }),
             ],
             decoration: InputDecoration(
+              counterText: '',
               prefixText: '₹ ',
               contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
@@ -715,16 +765,19 @@ class _PaymentFormState extends State<PaymentForm> {
       title: 'Payment Method',
       icon: Icons.payments_outlined,
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Wrap(
-            spacing: 24,
-            runSpacing: 16,
-            children: [
-              _methodRadio('Bank', Icons.account_balance),
-              _methodRadio('Cheque', Icons.article_outlined),
-              _methodRadio('UPI', Icons.qr_code_scanner),
-              _methodRadio('Cash', Icons.money),
-            ],
+          Center(
+            child: Wrap(
+              spacing: 24,
+              runSpacing: 16,
+              children: [
+                _methodRadio('Bank', Icons.account_balance),
+                _methodRadio('Cheque', Icons.article_outlined),
+                _methodRadio('UPI', Icons.qr_code_scanner),
+                _methodRadio('Cash', Icons.money),
+              ],
+            ),
           ),
           if (_paymentMethod != 'Cash') ...[
             const SizedBox(height: 24),
@@ -791,14 +844,47 @@ class _PaymentFormState extends State<PaymentForm> {
                       style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF64748B)),
                     ),
                     const SizedBox(height: 4),
-                    const Text(
-                      'KADAIKULANARPANIMANDRAM@iob',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF5D1712)),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text(
+                          'KADAIKULANARPANIMANDRAM@iob',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF5D1712)),
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          icon: const Icon(Icons.copy, size: 20, color: Color(0xFF5D1712)),
+                          tooltip: 'Copy UPI ID',
+                          onPressed: () {
+                            Clipboard.setData(const ClipboardData(text: 'KADAIKULANARPANIMANDRAM@iob'));
+                            showStatusDialog(
+                              context,
+                              title: 'Success',
+                              message: 'UPI ID copied to clipboard.',
+                              type: DialogType.success,
+                            );
+                          },
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 24),
                     Container(
                       constraints: const BoxConstraints(maxWidth: 400),
-                      child: _textField('UPI Transaction ID *', _upiIdController, focusNode: _upiIdFocus),
+                      child: _textField(
+                        'UPI Transaction ID *',
+                        _upiIdController,
+                        focusNode: _upiIdFocus,
+                        maxLength: 12,
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                        validator: (v) {
+                          if (v == null || v.trim().isEmpty) return 'Required';
+                          if (v.length != 12) return 'Must be exactly 12 digits';
+                          if (!RegExp(r'^[0-9]+$').hasMatch(v)) return 'Must contain only digits';
+                          return null;
+                        },
+                      ),
                     ),
                   ],
                 ),
@@ -809,13 +895,28 @@ class _PaymentFormState extends State<PaymentForm> {
               Row(
                 children: [
                   if (_paymentMethod == 'Bank')
-                    Expanded(child: _textField('Reference ID *', _refNoController, focusNode: _refNoFocus)),
+                    Expanded(child: _textField('Reference ID *', _refNoController, focusNode: _refNoFocus, maxLength: 30)),
                   if (_paymentMethod == 'Cheque')
-                    Expanded(child: _textField('Cheque Number *', _chequeNoController, focusNode: _chequeNoFocus)),
+                    Expanded(
+                      child: _textField(
+                        'Cheque Number *',
+                        _chequeNoController,
+                        focusNode: _chequeNoFocus,
+                        maxLength: 30,
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                        validator: (v) {
+                          if (v == null || v.trim().isEmpty) return 'Required';
+                          if (v.length > 30) return 'Maximum 30 characters allowed';
+                          if (!RegExp(r'^[0-9]+$').hasMatch(v)) return 'Must contain only digits';
+                          return null;
+                        },
+                      ),
+                    ),
                 ],
               ),
           ],
-          if (_paymentMethod == 'UPI')
+          if (_paymentMethod == 'UPI' || _paymentMethod == 'Cheque')
             _buildImagePicker(),
         ],
       ),
@@ -850,11 +951,22 @@ class _PaymentFormState extends State<PaymentForm> {
             ),
             child: Row(
               children: [
-                const Icon(Icons.image, color: Color(0xFF5D1712)),
+                if (kIsWeb)
+                  ClipRRect(borderRadius: BorderRadius.circular(4), child: Image.network(_receiptImage!.path ?? '', width: 40, height: 40, fit: BoxFit.cover, errorBuilder: (c,e,s) => const Icon(Icons.image, color: Color(0xFF5D1712))))
+                else
+                  ClipRRect(borderRadius: BorderRadius.circular(4), child: Image.file(File(_receiptImage!.path!), width: 40, height: 40, fit: BoxFit.cover, errorBuilder: (c,e,s) => const Icon(Icons.image, color: Color(0xFF5D1712)))),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(_receiptImage!.name, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500), overflow: TextOverflow.ellipsis),
                 ),
+                IconButton(
+                  icon: const Icon(Icons.visibility, color: Color(0xFF5D1712), size: 20),
+                  onPressed: _showImagePreview,
+                  tooltip: 'Preview Image',
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+                const SizedBox(width: 16),
                 IconButton(
                   icon: const Icon(Icons.close, color: Colors.red, size: 20),
                   onPressed: () => setState(() => _receiptImage = null),
@@ -889,17 +1001,68 @@ class _PaymentFormState extends State<PaymentForm> {
     );
   }
 
+  void _showImagePreview() {
+    if (_receiptImage == null) return;
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        clipBehavior: Clip.antiAlias,
+        child: Container(
+          constraints: BoxConstraints(
+            maxWidth: MediaQuery.of(context).size.width * 0.8,
+            maxHeight: MediaQuery.of(context).size.height * 0.8,
+          ),
+          child: Stack(
+            alignment: Alignment.topRight,
+            children: [
+              InteractiveViewer(
+                child: Center(
+                  child: kIsWeb
+                      ? Image.network(_receiptImage!.path ?? '', fit: BoxFit.contain)
+                      : Image.file(File(_receiptImage!.path!), fit: BoxFit.contain),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: IconButton(
+                  icon: const Icon(Icons.close, color: Colors.black87),
+                  style: IconButton.styleFrom(backgroundColor: Colors.white.withOpacity(0.8)),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _handlePaymentMethodChange(String method) {
+    if (_paymentMethod != method) {
+      setState(() {
+        _paymentMethod = method;
+        _refNoController.clear();
+        _chequeNoController.clear();
+        _upiIdController.clear();
+        _otherBankController.clear();
+        _selectedBank = null;
+        _receiptImage = null;
+      });
+    }
+  }
+
   Widget _methodRadio(String value, IconData icon) {
     bool isSelected = _paymentMethod == value;
     return InkWell(
-      onTap: () => setState(() => _paymentMethod = value),
+      onTap: () => _handlePaymentMethodChange(value),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Radio<String>(
             value: value,
             groupValue: _paymentMethod,
-            onChanged: (v) => setState(() => _paymentMethod = v!),
+            onChanged: (v) => _handlePaymentMethodChange(v!),
             activeColor: const Color(0xFF5D1712),
           ),
           Icon(icon, size: 20, color: isSelected ? const Color(0xFF5D1712) : const Color(0xFF64748B)),
@@ -910,7 +1073,7 @@ class _PaymentFormState extends State<PaymentForm> {
     );
   }
 
-  Widget _textField(String label, TextEditingController controller, {FocusNode? focusNode}) {
+  Widget _textField(String label, TextEditingController controller, {FocusNode? focusNode, int? maxLength, String? Function(String?)? validator, List<TextInputFormatter>? inputFormatters, TextInputType? keyboardType}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -919,12 +1082,20 @@ class _PaymentFormState extends State<PaymentForm> {
         TextFormField(
           controller: controller,
           focusNode: focusNode,
+          maxLength: maxLength,
+          keyboardType: keyboardType,
+          inputFormatters: inputFormatters,
           decoration: InputDecoration(
+            counterText: '',
             contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
             isDense: true,
           ),
-          validator: (v) => (v == null || v.isEmpty) ? 'Required' : null,
+          validator: validator ?? (v) {
+            if (v == null || v.trim().isEmpty) return 'Required';
+            if (maxLength != null && v.length > maxLength) return 'Maximum $maxLength characters allowed';
+            return null;
+          },
         ),
       ],
     );
@@ -943,12 +1114,20 @@ class _PaymentFormState extends State<PaymentForm> {
               TextFormField(
                 controller: _receiverController,
                 focusNode: _receiverFocus,
+                maxLength: 50,
                 decoration: InputDecoration(
+                  counterText: '',
                   hintText: 'Enter name of receiver',
                   contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                 ),
-                validator: (v) => (v == null || v.isEmpty) ? 'Required' : null,
+                validator: (v) {
+                  if (v == null || v.trim().isEmpty) return 'Required';
+                  if (v.trim().length < 3) return 'Minimum 3 characters required';
+                  if (v.length > 50) return 'Maximum 50 characters allowed';
+                  if (!RegExp(r'\p{L}', unicode: true).hasMatch(v)) return 'Enter a valid name';
+                  return null;
+                },
               ),
               const SizedBox(height: 16),
               Container(
@@ -983,12 +1162,20 @@ class _PaymentFormState extends State<PaymentForm> {
                     const SizedBox(height: 6),
                     TextFormField(
                       controller: _receiverController,
+                      maxLength: 50,
                       decoration: InputDecoration(
+                        counterText: '',
                         hintText: 'Enter name of receiver',
                         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                       ),
-                      validator: (v) => (v == null || v.isEmpty) ? 'Required' : null,
+                      validator: (v) {
+                        if (v == null || v.trim().isEmpty) return 'Required';
+                        if (v.trim().length < 3) return 'Minimum 3 characters required';
+                        if (v.length > 50) return 'Maximum 50 characters allowed';
+                        if (!RegExp(r'\p{L}', unicode: true).hasMatch(v)) return 'Enter a valid name';
+                        return null;
+                      },
                     ),
                   ],
                 ),

@@ -358,10 +358,8 @@ class _MembersContentState extends State<MembersContent> {
                         isNarrow
                             ? SizedBox(width: 750, child: rightPart)
                             : Expanded(
-                                child: Scrollbar(
-                                  controller: _horizontalScrollController,
-                                  thumbVisibility: true,
-                                  trackVisibility: true,
+                                  child: Scrollbar(
+                                    controller: _horizontalScrollController,
                                   child: SingleChildScrollView(
                                     controller: _horizontalScrollController,
                                     scrollDirection: Axis.horizontal,
@@ -378,8 +376,6 @@ class _MembersContentState extends State<MembersContent> {
                     if (isNarrow) {
                       return Scrollbar(
                         controller: _horizontalScrollController,
-                        thumbVisibility: true,
-                        trackVisibility: true,
                         child: SingleChildScrollView(
                           controller: _horizontalScrollController,
                           scrollDirection: Axis.horizontal,
@@ -577,6 +573,7 @@ class _MembersContentState extends State<MembersContent> {
                     border: OutlineInputBorder(),
                     contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   ),
+                  maxLength: 255,
                   maxLines: 2,
                 ),
               ],
@@ -1142,7 +1139,9 @@ class _MembersContentState extends State<MembersContent> {
       _isLoadingTaluks = true;
       _taluks = [];
       _selectedTaluk = null;
+      _panchayats = [];
       _selectedPanchayat = null;
+      _villages = [];
       _selectedVillage = null;
     });
     try {
@@ -1165,6 +1164,7 @@ class _MembersContentState extends State<MembersContent> {
       _isLoadingPanchayats = true;
       _panchayats = [];
       _selectedPanchayat = null;
+      _villages = [];
       _selectedVillage = null;
     });
     try {

@@ -165,7 +165,7 @@ class _ReceivedApplicationsContentState extends State<ReceivedApplicationsConten
                         controller: _scrollController,
                         scrollDirection: Axis.horizontal,
                         child: SizedBox(
-                          width: 952,
+                          width: 1162,
                           child: Column(
                             children: [
                               // Table Header
@@ -180,14 +180,14 @@ class _ReceivedApplicationsContentState extends State<ReceivedApplicationsConten
                                 padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
                                 child: Row(
                                   children: [
-                                    SizedBox(width: 50, child: Text(AppLocalizations.of(context)?.sNo?.toUpperCase() ?? 'S.NO', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13))),
-                                    SizedBox(width: 140, child: Text(AppLocalizations.of(context)?.memberNameHeader ?? 'MEMBER NAME', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13))),
-                                    SizedBox(width: 120, child: Text(AppLocalizations.of(context)?.memberIdHeader ?? 'MEMBER ID', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13))),
-                                    SizedBox(width: 110, child: Text(AppLocalizations.of(context)?.districtHeader ?? 'DISTRICT', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13))),
-                                    SizedBox(width: 110, child: Text(AppLocalizations.of(context)?.talukHeader ?? 'TALUK', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13))),
-                                    SizedBox(width: 130, child: Text(AppLocalizations.of(context)?.panchayatHeader ?? 'PANCHAYAT', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13))),
-                                    SizedBox(width: 110, child: Text(AppLocalizations.of(context)?.villageUpperHeader ?? 'VILLAGE', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13))),
-                                    SizedBox(width: 150, child: Text(AppLocalizations.of(context)?.actionHeader?.toUpperCase() ?? 'ACTIONS', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13))),
+                                    SizedBox(width: 60, child: Text(AppLocalizations.of(context)?.sNo?.toUpperCase() ?? 'S.NO', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13))),
+                                    SizedBox(width: 160, child: Text(AppLocalizations.of(context)?.memberNameHeader ?? 'MEMBER NAME', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13))),
+                                    SizedBox(width: 140, child: Text(AppLocalizations.of(context)?.memberIdHeader ?? 'MEMBER ID', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13))),
+                                    SizedBox(width: 150, child: Text(AppLocalizations.of(context)?.districtHeader ?? 'DISTRICT', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13))),
+                                    SizedBox(width: 150, child: Text(AppLocalizations.of(context)?.talukHeader ?? 'TALUK', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13))),
+                                    SizedBox(width: 160, child: Text(AppLocalizations.of(context)?.panchayatHeader ?? 'PANCHAYAT', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13))),
+                                    SizedBox(width: 150, child: Text(AppLocalizations.of(context)?.villageUpperHeader ?? 'VILLAGE', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13))),
+                                    SizedBox(width: 160, child: Text(AppLocalizations.of(context)?.actionHeader?.toUpperCase() ?? 'ACTIONS', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13))),
                                   ],
                                 ),
                               ),
@@ -252,14 +252,14 @@ class _ReceivedApplicationsContentState extends State<ReceivedApplicationsConten
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
         child: Row(
           children: [
-            SizedBox(width: 50, child: Text(sno.toString(), style: const TextStyle(color: Colors.black87))),
-            SizedBox(width: 140, child: Text(app['Name']?.toString() ?? '', style: const TextStyle(color: const Color(0xFF5D1712), fontWeight: FontWeight.w500, overflow: TextOverflow.ellipsis))),
-            SizedBox(width: 120, child: Text(app['Phonenumber']?.toString() ?? '', style: const TextStyle(color: Colors.black54))),
-            SizedBox(width: 110, child: _buildBadge(app['District']?.toString() ?? '', Colors.grey.shade200, textColor: Colors.black87)),
-            SizedBox(width: 110, child: Text(app['Taluk']?.toString() ?? '', style: const TextStyle(color: Colors.black54, overflow: TextOverflow.ellipsis))),
-            SizedBox(width: 130, child: Text(app['Panchayat']?.toString() ?? '', style: const TextStyle(color: Colors.black54, overflow: TextOverflow.ellipsis))),
-            SizedBox(width: 110, child: Text(app['Village']?.toString() ?? '', style: const TextStyle(color: Colors.black54, overflow: TextOverflow.ellipsis))),
-            SizedBox(width: 150, child: Row(
+            SizedBox(width: 60, child: Text(sno.toString(), style: const TextStyle(color: Colors.black87))),
+            SizedBox(width: 160, child: Text(app['Name']?.toString() ?? '', maxLines: 1, style: const TextStyle(color: const Color(0xFF5D1712), fontWeight: FontWeight.w500, overflow: TextOverflow.ellipsis))),
+            SizedBox(width: 140, child: Text(app['Phonenumber']?.toString() ?? '', style: const TextStyle(color: Colors.black54))),
+            SizedBox(width: 150, child: Align(alignment: Alignment.centerLeft, child: _buildBadge(app['District']?.toString() ?? '', Colors.grey.shade200, textColor: Colors.black87))),
+            SizedBox(width: 150, child: Text(app['Taluk']?.toString() ?? '', maxLines: 1, style: const TextStyle(color: Colors.black54, overflow: TextOverflow.ellipsis))),
+            SizedBox(width: 160, child: Text(app['Panchayat']?.toString() ?? '', maxLines: 1, style: const TextStyle(color: Colors.black54, overflow: TextOverflow.ellipsis))),
+            SizedBox(width: 150, child: Text(app['Village']?.toString() ?? '', maxLines: 1, style: const TextStyle(color: Colors.black54, overflow: TextOverflow.ellipsis))),
+            SizedBox(width: 160, child: Row(
               children: [
                 GestureDetector(
                   onTap: () => _confirmStatusUpdate(app['Id'], 'Verified'),
@@ -300,8 +300,10 @@ class _ReceivedApplicationsContentState extends State<ReceivedApplicationsConten
         builder: (context) => StatefulBuilder(
           builder: (context, setDialogState) => AlertDialog(
             title: Text(AppLocalizations.of(context)?.rejectApplicationTitle ?? 'Reject Application'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
+            content: SizedBox(
+              width: 400,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
               children: [
                 Text(AppLocalizations.of(context)?.selectRejectReason ?? 'Please select a reason for rejection:'),
                 const SizedBox(height: 16),
@@ -319,10 +321,14 @@ class _ReceivedApplicationsContentState extends State<ReceivedApplicationsConten
                     decoration: InputDecoration(
                       hintText: AppLocalizations.of(context)?.enterReasonManuallyHint ?? 'Enter reason manually...',
                       border: OutlineInputBorder(),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     ),
+                    maxLength: 255,
+                    maxLines: 2,
                   ),
                 ],
               ],
+              ),
             ),
             actions: [
               TextButton(
@@ -619,7 +625,7 @@ class _ReceivedApplicationsContentState extends State<ReceivedApplicationsConten
               children: [
                 labelWidget,
                 const SizedBox(height: 4),
-                Text(value),
+                SizedBox(width: double.infinity, child: Text(value)),
               ],
             )
           : Row(
@@ -711,6 +717,8 @@ class _ReceivedApplicationsContentState extends State<ReceivedApplicationsConten
       ),
       child: Text(
         text,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
         style: TextStyle(color: textColor, fontSize: 11, fontWeight: FontWeight.bold),
         textAlign: TextAlign.center,
       ),

@@ -110,7 +110,7 @@ class _UpdateRequestsContentState extends State<UpdateRequestsContent> {
                       controller: _horizontalScrollController,
                       scrollDirection: Axis.horizontal,
                       child: SizedBox(
-                        width: 1180, // 560 + 620
+                        width: 1260, // 1180 + 80 for new action buttons
                         child: Column(
                           children: [
                             Container(
@@ -126,7 +126,7 @@ class _UpdateRequestsContentState extends State<UpdateRequestsContent> {
                                   _buildHeaderCell(AppLocalizations.of(context)?.talukHeader ?? 'TALUK', 130),
                                   _buildHeaderCell(AppLocalizations.of(context)?.panchayatHeader ?? 'PANCHAYAT', 130),
                                   _buildHeaderCell(AppLocalizations.of(context)?.villageUpperHeader ?? 'VILLAGE', 130),
-                                  _buildHeaderCell(AppLocalizations.of(context)?.actionHeader?.toUpperCase() ?? 'REQUEST', 100, hasDivider: false),
+                                  _buildHeaderCell(AppLocalizations.of(context)?.actionHeader?.toUpperCase() ?? 'ACTION', 180, hasDivider: false),
                                 ],
                               ),
                             ),
@@ -244,13 +244,35 @@ class _UpdateRequestsContentState extends State<UpdateRequestsContent> {
           _buildDataCell(req['Taluk'] ?? '-', 130),
           _buildDataCell(req['Panchayat'] ?? '-', 130),
           _buildDataCell(req['Village'] ?? '-', 130),
-          _buildDataCell('', 100, hasDivider: false, child: IconButton(
-            onPressed: () {
-              _showRequestDetails(req);
-            },
-            icon: const Icon(Icons.visibility),
-            color: const Color(0xFF5D1712),
-            tooltip: 'View Details',
+          _buildDataCell('', 180, hasDivider: false, child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                onPressed: () => _showRequestDetails(req),
+                icon: const Icon(Icons.visibility, size: 18),
+                color: const Color(0xFF5D1712),
+                tooltip: 'View Details',
+                constraints: const BoxConstraints(),
+                padding: const EdgeInsets.symmetric(horizontal: 6),
+              ),
+              IconButton(
+                onPressed: () => _handleApprove(req['id']),
+                icon: const Icon(Icons.check_circle, size: 18),
+                color: Colors.green,
+                tooltip: 'Approve',
+                constraints: const BoxConstraints(),
+                padding: const EdgeInsets.symmetric(horizontal: 6),
+              ),
+              IconButton(
+                onPressed: () => _handleReject(req['id']),
+                icon: const Icon(Icons.cancel, size: 18),
+                color: Colors.red,
+                tooltip: 'Reject',
+                constraints: const BoxConstraints(),
+                padding: const EdgeInsets.symmetric(horizontal: 6),
+              ),
+            ],
           )),
         ],
       ),
@@ -378,8 +400,8 @@ class _UpdateRequestsContentState extends State<UpdateRequestsContent> {
                             child: Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                SizedBox(
-                                  width: 180,
+                                Expanded(
+                                  flex: 2,
                                   child: Text(
                                     formattedKey,
                                     style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.black54, fontSize: 13),
@@ -388,6 +410,7 @@ class _UpdateRequestsContentState extends State<UpdateRequestsContent> {
                                 const Text(':', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black54)),
                                 const SizedBox(width: 12),
                                 Expanded(
+                                  flex: 3,
                                   child: Text(
                                     e.value.toString(),
                                     style: const TextStyle(color: Colors.black87, fontSize: 14, fontWeight: FontWeight.w500),
@@ -493,8 +516,8 @@ class _UpdateRequestsContentState extends State<UpdateRequestsContent> {
                               child: Row(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  SizedBox(
-                                    width: 180,
+                                  Expanded(
+                                    flex: 2,
                                     child: Text(
                                       formattedKey,
                                       style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.black54, fontSize: 13),
@@ -503,6 +526,7 @@ class _UpdateRequestsContentState extends State<UpdateRequestsContent> {
                                   const Text(':', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black54)),
                                   const SizedBox(width: 12),
                                   Expanded(
+                                    flex: 3,
                                     child: Text(
                                       e.value.toString(),
                                       style: const TextStyle(
@@ -532,34 +556,6 @@ class _UpdateRequestsContentState extends State<UpdateRequestsContent> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
-                      ElevatedButton(
-                        onPressed: () {
-                          Navigator.pop(context);
-                          _handleApprove(req['request_id']);
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                        ),
-                        child: const Text('APPROVE', style: TextStyle(fontWeight: FontWeight.bold)),
-                      ),
-                      const SizedBox(width: 12),
-                      ElevatedButton(
-                        onPressed: () {
-                          Navigator.pop(context);
-                          _handleReject(req['request_id']);
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                        ),
-                        child: const Text('REJECT', style: TextStyle(fontWeight: FontWeight.bold)),
-                      ),
-                      const SizedBox(width: 12),
                       ElevatedButton(
                         onPressed: () => Navigator.pop(context),
                         style: ElevatedButton.styleFrom(

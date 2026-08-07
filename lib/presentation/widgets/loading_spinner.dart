@@ -9,40 +9,43 @@ class LoadingSpinner extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 15,
-                  offset: const Offset(0, 5),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 15,
+                offset: const Offset(0, 5),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const CircularProgressIndicator(
+                strokeWidth: 3,
+                valueColor: AlwaysStoppedAnimation<Color>(const Color(0xFF5D1712)),
+              ),
+              if (message != null) ...[
+                const SizedBox(height: 16),
+                Text(
+                  message!,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: const Color(0xFF2D1B18),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ],
-            ),
-            child: const CircularProgressIndicator(
-              strokeWidth: 3,
-              valueColor: AlwaysStoppedAnimation<Color>(const Color(0xFF5D1712)),
-            ),
+            ],
           ),
-          if (message != null) ...[
-            const SizedBox(height: 16),
-            Text(
-              message!,
-              style: const TextStyle(
-                color: const Color(0xFF2D1B18),
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ],
+        ),
       ),
-    ));
+    );
   }
 }

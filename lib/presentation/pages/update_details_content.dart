@@ -583,11 +583,8 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
       borderRadius: BorderRadius.circular(16),
       child: Container(
         color: Colors.white,
-        child: SingleChildScrollView(
-          controller: _scrollController,
-          physics: const BouncingScrollPhysics(),
-          child: Column(
-            children: [
+        child: Column(
+          children: [
               // Header
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
@@ -625,8 +622,12 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
             ),
           ),
 
-          Padding(
-            padding: const EdgeInsets.all(24),
+          Expanded(
+            child: SingleChildScrollView(
+              controller: _scrollController,
+              physics: const BouncingScrollPhysics(),
+              child: Padding(
+                padding: const EdgeInsets.all(24),
             child: Form(
               key: _formKey,
               onChanged: () {
@@ -689,8 +690,9 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
               ),
             ),
           ),
-        ],
+        ),
       ),
+      ],
       ),
       ),
     );
@@ -1160,6 +1162,11 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
           }
           if ((label.contains('Thottam') || label.contains('Valuvu')) && val.trim().isNotEmpty) {
             if (!RegExp(r'^[a-zA-Z\s\.]+$').hasMatch(val.trim())) return 'Only letters, spaces, and dots allowed';
+          }
+          if (label.contains('Street Name') && val.trim().isNotEmpty) {
+            if (val.trim().length < 4) return 'Address is too short';
+            if (!RegExp(r'[a-zA-Z]').hasMatch(val.trim())) return 'Must contain at least one letter';
+            if (RegExp(r'^[^a-zA-Z0-9]+$').hasMatch(val.trim())) return 'Please enter a valid address';
           }
           if (required && val.isEmpty) return 'Required';
           return null;

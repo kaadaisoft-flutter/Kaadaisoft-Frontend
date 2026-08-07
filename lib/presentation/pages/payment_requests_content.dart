@@ -242,6 +242,7 @@ class _PaymentRequestsContentState extends State<PaymentRequestsContent> {
                                     DataColumn(label: Text(AppLocalizations.of(context)?.eventLabel ?? 'Event', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
                                     DataColumn(label: Text(AppLocalizations.of(context)?.totalAmountHeader ?? 'Total Amount', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
                                     DataColumn(label: Text(AppLocalizations.of(context)?.paidAmountHeader ?? 'Paid Amount', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
+                                    DataColumn(label: Text('Due', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
                                     DataColumn(label: Text(AppLocalizations.of(context)?.methodHeader ?? 'Method', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
                                     DataColumn(label: Text(AppLocalizations.of(context)?.dateHeader ?? 'Date', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
                                     DataColumn(label: Text(AppLocalizations.of(context)?.actionsHeader ?? 'Actions', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
@@ -252,6 +253,7 @@ class _PaymentRequestsContentState extends State<PaymentRequestsContent> {
                                         DataCell(Text(req['EventName'] ?? req['eventname'] ?? '')),
                                         DataCell(Text('₹${req['TaxAmount'] ?? req['Taxamount'] ?? req['taxamount'] ?? 0}')),
                                         DataCell(Text('₹${req['paidamount'] ?? 0}')),
+                                        DataCell(Text(req['dues']?.toString() ?? '')),
                                         DataCell(Text(req['paymenttype'] ?? '')),
                                         DataCell(Text(req['paymentdate'] ?? '')),
                                         DataCell(

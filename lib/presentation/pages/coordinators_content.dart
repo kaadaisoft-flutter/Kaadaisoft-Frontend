@@ -27,6 +27,7 @@ class _CoordinatorsContentState extends State<CoordinatorsContent> {
   List<dynamic> _coordinators = [];
   bool _isLoading = true;
   String _errorMessage = '';
+  int? _hoveredIndex;
 
   int _currentPage = 1;
   final int _itemsPerPage = 10;
@@ -308,7 +309,7 @@ class _CoordinatorsContentState extends State<CoordinatorsContent> {
         ? _coordinators.sublist(startIndex, endIndex)
         : [];
 
-    if (_errorMessage.isNotEmpty) {
+    if (_errorMessage.isNotEmpty && !_showAssignView) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -323,7 +324,7 @@ class _CoordinatorsContentState extends State<CoordinatorsContent> {
       );
     }
 
-    if (_isLoading) {
+    if (_isLoading && !_showAssignView) {
       return const LoadingSpinner(message: 'Loading coordinators...');
     }
 
@@ -524,29 +525,27 @@ class _CoordinatorsContentState extends State<CoordinatorsContent> {
                             ],
                           ),
                         ),
-                        _errorMessage.isNotEmpty
-                            ? const SizedBox(height: 64) // Placeholder height to match left side error
-                            : _coordinators.isEmpty && !_isLoading
-                                ? const SizedBox(height: 64) // Placeholder height
-                                : ListView.separated(
-                                    padding: EdgeInsets.zero,
-                                    shrinkWrap: true,
-                                    physics: const NeverScrollableScrollPhysics(),
-                                    itemCount: currentPage.length,
-                                    separatorBuilder: (_, __) => const Divider(height: 1),
-                                    itemBuilder: (context, index) {
-                                      final c = currentPage[index];
-                                      return _buildScrollableRow(
-                                        c['Id']?.toString() ?? '0',
-                                        c['Familymembershipid'] ?? 'N/A',
-                                        c['District'] ?? '-',
-                                        c['Taluk'] ?? '-',
-                                        c['Panchayat'] ?? '-',
-                                        c['Village'] ?? '-',
-                                        c['villagenames'] ?? c['Villagenames'] ?? c['VillageNames'] ?? '-',
-                                      );
-                                    },
-                                  ),
+                        if (_coordinators.isNotEmpty && _errorMessage.isEmpty && !_isLoading)
+                          ListView.separated(
+                            padding: EdgeInsets.zero,
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: currentPage.length,
+                            separatorBuilder: (_, __) => const Divider(height: 1),
+                            itemBuilder: (context, index) {
+                              final c = currentPage[index];
+                              return _buildScrollableRow(
+                                index,
+                                c['Id']?.toString() ?? '0',
+                                c['Familymembershipid'] ?? 'N/A',
+                                c['District'] ?? '-',
+                                c['Taluk'] ?? '-',
+                                c['Panchayat'] ?? '-',
+                                c['Village'] ?? '-',
+                                c['villagenames'] ?? c['Villagenames'] ?? c['VillageNames'] ?? '-',
+                              );
+                            },
+                          ),
                       ],
                     );
                     
@@ -569,33 +568,25 @@ class _CoordinatorsContentState extends State<CoordinatorsContent> {
                                   ],
                                 ),
                               ),
-                              _errorMessage.isNotEmpty
-                                  ? Padding(
-                                      padding: const EdgeInsets.all(32.0),
-                                      child: Center(child: Text(_errorMessage, style: const TextStyle(color: Colors.red))),
-                                    )
-                                  : _coordinators.isEmpty && !_isLoading
-                                      ? const Padding(
-                                          padding: EdgeInsets.all(32.0),
-                                          child: Center(child: Text('No coordinators found.', style: TextStyle(color: Colors.black54))),
-                                        )
-                                      : ListView.separated(
-                                          padding: EdgeInsets.zero,
-                                          shrinkWrap: true,
-                                          physics: const NeverScrollableScrollPhysics(),
-                                          itemCount: currentPage.length,
-                                          separatorBuilder: (_, __) => const Divider(height: 1),
-                                          itemBuilder: (context, index) {
-                                            final c = currentPage[index];
-                                            return _buildFixedRow(
-                                              (startIndex + index + 1).toString(),
-                                              c['Id']?.toString() ?? '0',
-                                              c['Familymembershipid'] ?? 'N/A',
-                                              c['Name'] ?? '-',
-                                              c['Phonenumber']?.toString() ?? '-',
-                                            );
-                                          },
-                                        ),
+                              if (_coordinators.isNotEmpty && _errorMessage.isEmpty && !_isLoading)
+                                ListView.separated(
+                                  padding: EdgeInsets.zero,
+                                  shrinkWrap: true,
+                                  physics: const NeverScrollableScrollPhysics(),
+                                  itemCount: currentPage.length,
+                                  separatorBuilder: (_, __) => const Divider(height: 1),
+                                  itemBuilder: (context, index) {
+                                    final c = currentPage[index];
+                                    return _buildFixedRow(
+                                      index,
+                                      (startIndex + index + 1).toString(),
+                                      c['Id']?.toString() ?? '0',
+                                      c['Familymembershipid'] ?? 'N/A',
+                                      c['Name'] ?? '-',
+                                      c['Phonenumber']?.toString() ?? '-',
+                                    );
+                                  },
+                                ),
                             ],
                           ),
                         ),
@@ -620,20 +611,34 @@ class _CoordinatorsContentState extends State<CoordinatorsContent> {
                       ],
                     );
                     
-                    if (isNarrow) {
-                      return Scrollbar(
-                        controller: _horizontalScrollController,
-                        thumbVisibility: true,
-                        trackVisibility: true,
-                        child: SingleChildScrollView(
-                          controller: _horizontalScrollController,
-                          scrollDirection: Axis.horizontal,
-                          child: tableContent,
-                        ),
-                      );
-                    }
-                    
-                    return tableContent;
+                    Widget finalTable = isNarrow 
+                        ? Scrollbar(
+                            controller: _horizontalScrollController,
+                            thumbVisibility: true,
+                            trackVisibility: true,
+                            child: SingleChildScrollView(
+                              controller: _horizontalScrollController,
+                              scrollDirection: Axis.horizontal,
+                              child: tableContent,
+                            ),
+                          )
+                        : tableContent;
+
+                    return Column(
+                      children: [
+                        finalTable,
+                        if (_errorMessage.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.all(32.0),
+                            child: Center(child: Text(_errorMessage, style: const TextStyle(color: Colors.red))),
+                          )
+                        else if (_coordinators.isEmpty && !_isLoading)
+                          const Padding(
+                            padding: EdgeInsets.all(32.0),
+                            child: Center(child: Text('No coordinators found.', style: const TextStyle(color: Colors.black54))),
+                          )
+                      ],
+                    );
                   },
                 ),
                 // Pagination
@@ -702,41 +707,50 @@ class _CoordinatorsContentState extends State<CoordinatorsContent> {
   );
 }
 
-  Widget _buildFixedRow(String sno, String numericId, String id, String name, String mobile) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: widget.role != 3 ? () => _showEditCoordinatorDialog(numericId) : null,
-        hoverColor: const Color(0xFFFDECEB).withOpacity(0.5),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          decoration: BoxDecoration(
-            border: Border(bottom: BorderSide(color: Colors.grey.shade100)),
-          ),
-          child: Row(
-            children: [
-              _buildDataCell(sno, 50),
-              _buildDataCell(id, 110, isBlue: true),
-              _buildDataCell(name, 110, isBold: true),
-              _buildDataCell(mobile, 120),
-            ],
+  Widget _buildFixedRow(int index, String sno, String numericId, String id, String name, String mobile) {
+    final isHovered = _hoveredIndex == index;
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hoveredIndex = index),
+      onExit: (_) => setState(() => _hoveredIndex = null),
+      child: Material(
+        color: isHovered ? const Color(0xFFFDECEB).withOpacity(0.5) : Colors.transparent,
+        child: InkWell(
+          onTap: widget.role != 3 ? () => _showEditCoordinatorDialog(numericId) : null,
+          hoverColor: Colors.transparent, // Handled by MouseRegion + Material color
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            decoration: BoxDecoration(
+              border: Border(bottom: BorderSide(color: Colors.grey.shade100)),
+            ),
+            child: Row(
+              children: [
+                _buildDataCell(sno, 50),
+                _buildDataCell(id, 110, isBlue: true),
+                _buildDataCell(name, 110, isBold: true),
+                _buildDataCell(mobile, 120),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildScrollableRow(String numericId, String id, String district, String taluk, String panchayat, String village, String assignedVillage) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: widget.role != 3 ? () => _showEditCoordinatorDialog(numericId) : null,
-        hoverColor: const Color(0xFFFDECEB).withOpacity(0.5),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          decoration: BoxDecoration(
-            border: Border(bottom: BorderSide(color: Colors.grey.shade100)),
-          ),
+  Widget _buildScrollableRow(int index, String numericId, String id, String district, String taluk, String panchayat, String village, String assignedVillage) {
+    final isHovered = _hoveredIndex == index;
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hoveredIndex = index),
+      onExit: (_) => setState(() => _hoveredIndex = null),
+      child: Material(
+        color: isHovered ? const Color(0xFFFDECEB).withOpacity(0.5) : Colors.transparent,
+        child: InkWell(
+          onTap: widget.role != 3 ? () => _showEditCoordinatorDialog(numericId) : null,
+          hoverColor: Colors.transparent, // Handled by MouseRegion + Material color
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            decoration: BoxDecoration(
+              border: Border(bottom: BorderSide(color: Colors.grey.shade100)),
+            ),
           child: Row(
             children: [
               _buildDataCell(district, 100),
@@ -759,6 +773,7 @@ class _CoordinatorsContentState extends State<CoordinatorsContent> {
             ],
           ),
         ),
+      ),
       ),
     );
   }
@@ -789,15 +804,19 @@ class _CoordinatorsContentState extends State<CoordinatorsContent> {
         border: isLast ? null : Border(right: BorderSide(color: Colors.grey.shade200, width: 1)),
       ),
       child: Center(
-        child: child ?? Text(
-          text,
-          style: TextStyle(
-            color: isBlue ? const Color(0xFF5D1712) : Colors.black87,
-            fontWeight: isBlue || isBold ? FontWeight.bold : FontWeight.normal,
-            fontSize: 12,
+        child: child ?? Tooltip(
+          message: text,
+          waitDuration: const Duration(milliseconds: 500),
+          child: Text(
+            text,
+            style: TextStyle(
+              color: isBlue ? const Color(0xFF5D1712) : Colors.black87,
+              fontWeight: isBlue || isBold ? FontWeight.bold : FontWeight.normal,
+              fontSize: 12,
+            ),
+            textAlign: TextAlign.center,
+            overflow: TextOverflow.ellipsis,
           ),
-          textAlign: TextAlign.center,
-          overflow: TextOverflow.ellipsis,
         ),
       ),
     );

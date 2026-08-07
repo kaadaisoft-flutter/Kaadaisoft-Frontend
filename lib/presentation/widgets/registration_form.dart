@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart' show rootBundle, FilteringTextInputFormatter;
@@ -316,7 +317,13 @@ class _RegistrationFormState extends State<RegistrationForm> {
       _selectedVillage = null;
     });
     try {
-      final response = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/villages/$panchayat'));
+      String url = '${ApiConfig.baseUrl}/api/villages/${Uri.encodeComponent(panchayat)}';
+      List<String> queryParams = [];
+      if (_selectedDistrict != null && _selectedDistrict != 'Others') queryParams.add('district=${Uri.encodeComponent(_selectedDistrict!)}');
+      if (_selectedTaluk != null && _selectedTaluk != 'Others') queryParams.add('taluk=${Uri.encodeComponent(_selectedTaluk!)}');
+      if (queryParams.isNotEmpty) url += '?${queryParams.join('&')}';
+      
+      final response = await http.get(Uri.parse(url));
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         setState(() {
@@ -382,7 +389,13 @@ class _RegistrationFormState extends State<RegistrationForm> {
   Future<void> _fetchCurrVillages(String panchayat) async {
     setState(() { _currVillages = []; _selectedCurrVillage = null; });
     try {
-      final response = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/villages/$panchayat'));
+      String url = '${ApiConfig.baseUrl}/api/villages/${Uri.encodeComponent(panchayat)}';
+      List<String> queryParams = [];
+      if (_selectedCurrDistrict != null && _selectedCurrDistrict != 'Others') queryParams.add('district=${Uri.encodeComponent(_selectedCurrDistrict!)}');
+      if (_selectedCurrTaluk != null && _selectedCurrTaluk != 'Others') queryParams.add('taluk=${Uri.encodeComponent(_selectedCurrTaluk!)}');
+      if (queryParams.isNotEmpty) url += '?${queryParams.join('&')}';
+      
+      final response = await http.get(Uri.parse(url));
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         setState(() {
@@ -1344,6 +1357,8 @@ class _RegistrationFormState extends State<RegistrationForm> {
               return 'Please fill this field';
             }
             if (label.contains('Street Name') && val.trim().isNotEmpty) {
+              if (val.trim().length < 4) return 'Address is too short';
+              if (!RegExp(r'[a-zA-Z]').hasMatch(val.trim())) return 'Must contain at least one letter';
               if (RegExp(r'^[^a-zA-Z0-9]+$').hasMatch(val.trim())) return 'Please enter a valid address';
             }
             if ((label.contains('Manual') || label.contains('Enter')) && val.trim().isNotEmpty) {
@@ -1707,6 +1722,21 @@ class _RegistrationFormState extends State<RegistrationForm> {
     if (label.contains('Passport')) selectedFile = _memberImage;
     else if (label.contains('Community')) selectedFile = _communityCert;
 
+    Widget? previewWidget;
+    if (selectedFile != null) {
+      String fileName = selectedFile.name;
+      bool isPdf = fileName.toLowerCase().endsWith('.pdf');
+      if (isPdf) {
+        previewWidget = const Icon(Icons.picture_as_pdf, color: Colors.red, size: 30);
+      } else {
+        if (kIsWeb) {
+          previewWidget = ClipRRect(borderRadius: BorderRadius.circular(4), child: Image.network(selectedFile.path, width: 40, height: 40, fit: BoxFit.cover, errorBuilder: (c,e,s) => const Icon(Icons.image, size: 30, color: accentGold)));
+        } else {
+          previewWidget = ClipRRect(borderRadius: BorderRadius.circular(4), child: Image.file(File(selectedFile.path), width: 40, height: 40, fit: BoxFit.cover, errorBuilder: (c,e,s) => const Icon(Icons.image, size: 30, color: accentGold)));
+        }
+      }
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1745,10 +1775,15 @@ class _RegistrationFormState extends State<RegistrationForm> {
               ),
               child: Row(
                 children: [
-                  Icon(selectedFile != null ? Icons.check_circle : Icons.cloud_upload_outlined, 
-                    size: 20, color: selectedFile != null ? accentGold : Colors.grey),
-                  const SizedBox(width: 10),
-                  Expanded(child: Text(selectedFile != null ? selectedFile.name : 'Choose file...', 
+                  if (previewWidget != null) ...[
+                    previewWidget!,
+                    const SizedBox(width: 12),
+                  ] else ...[
+                    Icon(selectedFile != null ? Icons.check_circle : Icons.cloud_upload_outlined, 
+                      size: 20, color: selectedFile != null ? accentGold : Colors.grey),
+                    const SizedBox(width: 10),
+                  ],
+                  Expanded(child: Text(selectedFile != null ? selectedFile!.name : 'Choose file...', 
                     style: TextStyle(
                       color: selectedFile != null ? Colors.black87 : Colors.grey[600], 
                       fontSize: 13, 

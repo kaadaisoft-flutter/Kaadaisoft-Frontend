@@ -127,7 +127,10 @@ class _AssignCoordinatorViewState extends State<AssignCoordinatorView> {
   Future<void> _fetchVillages(String panchayat, bool isAssign) async {
     if (panchayat == 'Choose Panchayat') return;
     try {
-      final response = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/villages-assign/$panchayat'));
+      final district = isAssign ? _assignDistrict : _reassignDistrict;
+      final taluk = isAssign ? _assignTaluk : _reassignTaluk;
+      final uri = Uri.parse('${ApiConfig.baseUrl}/api/villages-assign/$panchayat?district=${Uri.encodeComponent(district)}&taluk=${Uri.encodeComponent(taluk)}');
+      final response = await http.get(uri);
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final List<String> selectedNames = isAssign ? _assignSelectedVillageNames : _reassignSelectedVillageNames;
@@ -167,7 +170,10 @@ class _AssignCoordinatorViewState extends State<AssignCoordinatorView> {
       return;
     }
     try {
-      final response = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/villages/$panchayat'));
+      final district = _addDistrict;
+      final taluk = _addTaluk;
+      final uri = Uri.parse('${ApiConfig.baseUrl}/api/villages/$panchayat?district=${Uri.encodeComponent(district)}&taluk=${Uri.encodeComponent(taluk)}');
+      final response = await http.get(uri);
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         setState(() {
@@ -182,7 +188,10 @@ class _AssignCoordinatorViewState extends State<AssignCoordinatorView> {
   Future<void> _fetchVillagesForRemove(String panchayat) async {
     if (panchayat == 'Choose Panchayat') return;
     try {
-      final response = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/villages/$panchayat'));
+      final district = _removeDistrict;
+      final taluk = _removeTaluk;
+      final uri = Uri.parse('${ApiConfig.baseUrl}/api/villages/$panchayat?district=${Uri.encodeComponent(district)}&taluk=${Uri.encodeComponent(taluk)}');
+      final response = await http.get(uri);
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         setState(() {
@@ -271,6 +280,8 @@ class _AssignCoordinatorViewState extends State<AssignCoordinatorView> {
           'member_id': _selectedMemberId,
           'villages': _assignSelectedVillageNames,
           'panchayat': _assignPanchayat,
+          'district': _assignDistrict,
+          'taluk': _assignTaluk,
         }),
       );
 
@@ -323,6 +334,8 @@ class _AssignCoordinatorViewState extends State<AssignCoordinatorView> {
           'new_member_id': _reassignNewMemberId,
           'villages': _reassignSelectedVillageNames,
           'panchayat': _reassignPanchayat,
+          'district': _reassignDistrict,
+          'taluk': _reassignTaluk,
         }),
       );
 
@@ -353,6 +366,29 @@ class _AssignCoordinatorViewState extends State<AssignCoordinatorView> {
       return;
     }
 
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        title: const Text('Remove Coordinator', style: TextStyle(color: Color(0xFF5D1712))),
+        content: const Text('Are you sure you want to completely remove this coordinator?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Remove', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
     setState(() => _isRemovingCoord = true);
     try {
       final response = await http.post(
@@ -382,6 +418,29 @@ class _AssignCoordinatorViewState extends State<AssignCoordinatorView> {
   }
 
   Future<void> _removeSingleAssignment(String vName, String panchayat) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        title: const Text('Remove Village', style: TextStyle(color: Color(0xFF5D1712))),
+        content: Text('Are you sure you want to remove $vName from this coordinator?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Remove', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
     setState(() => _isRemovingCoord = true);
     try {
       final response = await http.post(
@@ -434,9 +493,19 @@ class _AssignCoordinatorViewState extends State<AssignCoordinatorView> {
 
       if (response.statusCode == 200) {
         showStatusDialog(context, title: 'Success', message: 'Village added successfully', type: DialogType.success);
-        _newTalukController.clear();
-        _newPanchayatController.clear();
-        _newVillageController.clear();
+        setState(() {
+          _addDistrict = 'Choose District';
+          _addTaluk = 'Choose Taluk';
+          _addPanchayat = 'Choose Panchayat';
+          _addSelectedVillage = 'Choose Village';
+          _addTaluks = ['Choose Taluk'];
+          _addPanchayats = ['Choose Panchayat'];
+          _addVillages = ['Choose Village', '+ Add New Village'];
+          
+          _newTalukController.clear();
+          _newPanchayatController.clear();
+          _newVillageController.clear();
+        });
       } else {
         String errorMsg = 'Failed to add village';
         try {
@@ -473,7 +542,15 @@ class _AssignCoordinatorViewState extends State<AssignCoordinatorView> {
 
       if (response.statusCode == 200) {
         showStatusDialog(context, title: 'Success', message: 'Village removed successfully', type: DialogType.success);
-        _fetchVillagesForRemove(_removePanchayat);
+        setState(() {
+          _removeDistrict = 'Choose District';
+          _removeTaluk = 'Choose Taluk';
+          _removePanchayat = 'Choose Panchayat';
+          _removeVillage = 'Choose Village';
+          _removeTaluks = ['Choose Taluk'];
+          _removePanchayats = ['Choose Panchayat'];
+          _removeVillages = ['Choose Village'];
+        });
       } else {
         showStatusDialog(context, title: 'Error', message: 'Failed to remove village', type: DialogType.error);
       }
@@ -979,17 +1056,17 @@ class _AssignCoordinatorViewState extends State<AssignCoordinatorView> {
         ),
         if (_addSelectedVillage == '+ Add New Village')
           _buildField(
-            label: 'New Village Name:',
+            label: 'New Village Name(s):',
             child: TextField(
               controller: _newVillageController,
               decoration: InputDecoration(
-                hintText: 'Enter new village',
+                hintText: 'Enter new village(s) separated by commas',
                 hintStyle: const TextStyle(fontSize: 13),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: const BorderSide(color: Colors.black12)),
                 contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               ),
             ),
-            width: 250,
+            width: 350,
           ),
       ],
     );

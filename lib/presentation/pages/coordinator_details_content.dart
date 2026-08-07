@@ -731,14 +731,38 @@ class _CoordinatorDetailsContentState extends State<CoordinatorDetailsContent> {
     );
   }
 
-  String _calculateAge(dynamic dobStr) {
-    if (dobStr == null || dobStr.toString().isEmpty) return 'N/A';
+  String _calculateAge(dynamic dobStrRaw) {
+    if (dobStrRaw == null || dobStrRaw.toString().trim().isEmpty) return 'N/A';
     try {
-      DateTime dob = DateTime.parse(dobStr.toString());
-      DateTime now = DateTime.now();
-      int age = now.year - dob.year;
-      if (now.month < dob.month || (now.month == dob.month && now.day < dob.day)) age--;
-      return age.toString();
+      DateTime? dob;
+      String dobStr = dobStrRaw.toString().trim().replaceAll('/', '-');
+      // Check if it's already an ISO 8601 string (contains 'T')
+      if (dobStr.contains('T')) {
+        dob = DateTime.parse(dobStr).toLocal();
+      } else {
+        final parts = dobStr.split('-');
+        if (parts.length == 3) {
+          if (parts[0].length == 4) {
+            dob = DateTime.parse("${parts[0]}-${parts[1].padLeft(2, '0')}-${parts[2].padLeft(2, '0')}");
+          } else if (parts[2].length == 4) {
+            dob = DateTime.parse("${parts[2]}-${parts[1].padLeft(2, '0')}-${parts[0].padLeft(2, '0')}");
+          }
+        }
+      }
+      
+      if (dob == null && !dobStr.contains('T')) {
+         dob = DateTime.parse(dobStr).toLocal();
+      }
+
+      if (dob != null) {
+        DateTime now = DateTime.now();
+        int age = now.year - dob.year;
+        if (now.month < dob.month || (now.month == dob.month && now.day < dob.day)) {
+          age--;
+        }
+        return age.toString();
+      }
+      return 'N/A';
     } catch (_) {
       return 'N/A';
     }

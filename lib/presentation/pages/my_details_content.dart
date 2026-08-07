@@ -271,10 +271,11 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
           surfaceTintColor: Colors.white,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: const Text('Link Another Family', style: TextStyle(color: Color(0xFF5D1712), fontWeight: FontWeight.bold)),
-          content: Form(
-            key: _formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
+          content: SingleChildScrollView(
+            child: Form(
+              key: _formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
               children: [
                 const Text('Provide either the Target Family ID or the Mobile Number of the Target Family Head:', style: TextStyle(fontSize: 13, color: Colors.black87)),
                 const SizedBox(height: 12),
@@ -321,6 +322,7 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
                 ),
               ],
             ),
+          ),
           ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
@@ -383,6 +385,46 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
       }
     } catch (e) {
       if (mounted) showStatusDialog(context, title: 'Error', message: 'Error connecting to server.', type: DialogType.error);
+    }
+  }
+
+  Future<void> _confirmDeleteFamilyLink(int linkId, String action) async {
+    String title = '';
+    String content = '';
+    if (action == 'cancel') {
+      title = 'Cancel Request';
+      content = 'Are you sure you want to cancel this family link request?';
+    } else if (action == 'reject') {
+      title = 'Reject Request';
+      content = 'Are you sure you want to reject this family link request?';
+    } else {
+      title = 'Delete Link';
+      content = 'Are you sure you want to delete this linked family?';
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        title: Text(title, style: const TextStyle(color: Color(0xFF5D1712))),
+        content: Text(content),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: Text(action == 'cancel' ? 'Cancel Request' : (action == 'reject' ? 'Reject' : 'Delete'), style: const TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      _deleteFamilyLink(linkId);
     }
   }
 
@@ -449,25 +491,18 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.link, color: Color(0xFF5D1712), size: 28),
-                  const SizedBox(width: 12),
-                  const Flexible(
-                    child: Text(
-                      'Linked Families',
-                      style: TextStyle(
-                        color: Color(0xFF5D1712),
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
+              const Icon(Icons.link, color: Color(0xFF5D1712), size: 28),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text(
+                  'Linked Families',
+                  style: TextStyle(
+                    color: Color(0xFF5D1712),
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
                   ),
-                ],
+                ),
               ),
               ElevatedButton.icon(
                 onPressed: _showLinkFamilyDialog,
@@ -513,7 +548,7 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
                         IconButton(
                           icon: const Icon(Icons.cancel, color: Colors.red),
                           tooltip: 'Cancel Request',
-                          onPressed: () => _deleteFamilyLink(link['Id']),
+                          onPressed: () => _confirmDeleteFamilyLink(link['Id'], 'cancel'),
                         ),
                       ],
                     );
@@ -528,7 +563,7 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
                         ),
                         const SizedBox(width: 8),
                         ElevatedButton(
-                          onPressed: () => _deleteFamilyLink(link['Id']),
+                          onPressed: () => _confirmDeleteFamilyLink(link['Id'], 'reject'),
                           style: ElevatedButton.styleFrom(backgroundColor: Colors.red, padding: const EdgeInsets.symmetric(horizontal: 12), minimumSize: const Size(0, 36)),
                           child: const Text('Reject', style: TextStyle(color: Colors.white)),
                         ),
@@ -538,7 +573,7 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
                 } else {
                   trailingWidget = IconButton(
                     icon: const Icon(Icons.delete, color: Colors.red),
-                    onPressed: () => _deleteFamilyLink(link['Id']),
+                    onPressed: () => _confirmDeleteFamilyLink(link['Id'], 'delete'),
                   );
                 }
 
@@ -565,8 +600,46 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
     }
 
     if (_myCoordinator == null) {
-      return const Center(
-        child: Text('No coordinator assigned yet.', style: TextStyle(color: Colors.black54)),
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(24),
+        margin: const EdgeInsets.only(top: 24),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.black38),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.person_pin, color: Color(0xFF5D1712), size: 28),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    AppLocalizations.of(context)?.coordinatorDetails ?? 'My Coordinator Details',
+                    style: const TextStyle(
+                      color: Color(0xFF5D1712),
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            const Text('No coordinator assigned yet.', style: TextStyle(color: Colors.black54)),
+          ],
+        ),
       );
     }
 
@@ -591,16 +664,17 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Row(
-            mainAxisSize: MainAxisSize.min,
             children: [
               const Icon(Icons.person_pin, color: Color(0xFF5D1712), size: 28),
               const SizedBox(width: 12),
-              Text(
-                AppLocalizations.of(context)?.coordinatorDetails ?? 'My Coordinator Details',
-                style: TextStyle(
-                  color: Color(0xFF5D1712),
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
+              Expanded(
+                child: Text(
+                  AppLocalizations.of(context)?.coordinatorDetails ?? 'My Coordinator Details',
+                  style: const TextStyle(
+                    color: Color(0xFF5D1712),
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ],
@@ -877,12 +951,29 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
       ),
       child: Column(
         children: [
+          if (isMobile && _userData?['has_pending_update'] == true)
+            Align(
+              alignment: Alignment.centerRight,
+              child: Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(color: Colors.orange.withOpacity(0.1), borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.orange)),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.hourglass_top, color: Colors.orange, size: 14),
+                    SizedBox(width: 4),
+                    Text('Waiting for update approval', style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold, fontSize: 12)),
+                  ],
+                ),
+              ),
+            ),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(child: _buildDetailRow(AppLocalizations.of(context)?.nameLabel ?? 'Name:', (_userData?['Name'] ?? 'N/A').toString(), isBold: true, isBlue: true, isMobile: isMobile)),
-              if (_userData?['has_pending_update'] == true)
+              if (!isMobile && _userData?['has_pending_update'] == true)
                 Container(
                   margin: const EdgeInsets.only(left: 8),
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -1933,15 +2024,22 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
       try {
         DateTime? dob;
         String dobStr = member['Dob'].toString().trim().replaceAll('/', '-');
-        final parts = dobStr.split('-');
-        if (parts.length == 3) {
-          if (parts[0].length == 4) {
-            dob = DateTime.parse(dobStr);
-          } else if (parts[2].length == 4) {
-            dob = DateTime.parse("${parts[2]}-${parts[1]}-${parts[0]}");
-          }
+        // Check if it's already an ISO 8601 string (contains 'T')
+        if (dobStr.contains('T')) {
+          dob = DateTime.parse(dobStr).toLocal();
         } else {
-          dob = DateTime.parse(dobStr);
+          final parts = dobStr.split('-');
+          if (parts.length == 3) {
+            if (parts[0].length == 4) {
+              dob = DateTime.parse("${parts[0]}-${parts[1].padLeft(2, '0')}-${parts[2].padLeft(2, '0')}");
+            } else if (parts[2].length == 4) {
+              dob = DateTime.parse("${parts[2]}-${parts[1].padLeft(2, '0')}-${parts[0].padLeft(2, '0')}");
+            }
+          }
+        }
+        
+        if (dob == null && !dobStr.contains('T')) {
+           dob = DateTime.parse(dobStr).toLocal();
         }
 
         if (dob != null) {
@@ -2383,28 +2481,42 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
       context: context,
       builder: (context) => Dialog(
         backgroundColor: Colors.transparent,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+        insetPadding: const EdgeInsets.all(16),
+        child: Stack(
+          alignment: Alignment.center,
           children: [
-            AppBar(
-              title: Text(title, style: const TextStyle(color: Colors.white)),
-              backgroundColor: Colors.black45,
-              elevation: 0,
-              automaticallyImplyLeading: false,
-              actions: const [
-                CloseButton(color: Colors.white),
-              ],
-            ),
-            Flexible(
-              child: Container(
-                color: Colors.white,
-                child: Image.network(
-                  '${ApiConfig.baseUrl}/assets/uploads/$imgName',
-                  fit: BoxFit.contain,
-                  errorBuilder: (_, __, ___) => const Center(child: Padding(padding: EdgeInsets.all(40), child: Text('Image not found'))),
-                ),
+            InteractiveViewer(
+              panEnabled: true,
+              boundaryMargin: const EdgeInsets.all(20),
+              minScale: 0.5,
+              maxScale: 4,
+              child: Image.network(
+                '${ApiConfig.baseUrl}/assets/uploads/$imgName',
+                fit: BoxFit.contain,
+                errorBuilder: (_, __, ___) => const Center(child: Padding(padding: EdgeInsets.all(40), child: Text('Image not found', style: TextStyle(color: Colors.white)))),
               ),
             ),
+            Positioned(
+              top: 10,
+              right: 10,
+              child: IconButton(
+                icon: const Icon(Icons.close, color: Colors.white, size: 30),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ),
+            if (title.isNotEmpty)
+              Positioned(
+                top: 15,
+                left: 15,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.black54,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(title, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                ),
+              ),
           ],
         ),
       ),

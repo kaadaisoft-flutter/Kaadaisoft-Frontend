@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart' show FilteringTextInputFormatter, rootBundle;
@@ -438,14 +439,27 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
                               if (v == null || v.isEmpty) return 'Required';
                               final isMarried = (widget.parentData['Married']?.toString().toLowerCase() == 'yes') || 
                                                 (widget.parentData['married']?.toString().toLowerCase() == 'yes');
+                              final headGender = widget.parentData['Gender']?.toString().toLowerCase();
+
                               if ((v == 'Wife' || v == 'Husband') && !isMarried) {
                                 return 'Select a different relationship';
+                              }
+                              if ((v == 'Son' || v == 'Daughter') && !isMarried) {
+                                return 'Head must be married to add a $v';
+                              }
+                              if (v == 'Wife' && headGender == 'female') {
+                                return 'Head is Female. Cannot add a Wife.';
+                              }
+                              if (v == 'Husband' && headGender == 'male') {
+                                return 'Head is Male. Cannot add a Husband.';
                               }
                               return null;
                             },
                             onChanged: (v) {
                               final isMarried = (widget.parentData['Married']?.toString().toLowerCase() == 'yes') || 
                                                 (widget.parentData['married']?.toString().toLowerCase() == 'yes');
+                              final headGender = widget.parentData['Gender']?.toString().toLowerCase();
+
                               if ((v == 'Wife' || v == 'Husband') && !isMarried) {
                                 showStatusDialog(
                                   context,
@@ -454,6 +468,18 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
                                   type: DialogType.error,
                                   autoDismiss: false,
                                 );
+                              } else if ((v == 'Son' || v == 'Daughter') && !isMarried) {
+                                showStatusDialog(
+                                  context,
+                                  title: 'Validation Error',
+                                  message: 'Family Head must be married to add a $v.',
+                                  type: DialogType.error,
+                                  autoDismiss: false,
+                                );
+                              } else if (v == 'Wife' && headGender == 'female') {
+                                showStatusDialog(context, title: 'Validation Error', message: 'Family Head is Female. Cannot add a Wife.', type: DialogType.error, autoDismiss: false);
+                              } else if (v == 'Husband' && headGender == 'male') {
+                                showStatusDialog(context, title: 'Validation Error', message: 'Family Head is Male. Cannot add a Husband.', type: DialogType.error, autoDismiss: false);
                               }
                               setState(() {
                                 _selectedRelationship = v;
@@ -519,7 +545,7 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
                           ]),
                         ],
 
-                        const SizedBox(height: 32),
+                        const SizedBox(height: 16),
                         _buildSectionTitle(Icons.work_outline, 'Education & Career Details'),
                         const SizedBox(height: 16),
                         _buildResponsiveRow(isMobile, [
@@ -528,7 +554,7 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
                           if (!isMobile) const SizedBox(),
                         ]),
 
-                        const SizedBox(height: 32),
+                        const SizedBox(height: 16),
                         _buildSectionTitle(Icons.location_on_outlined, 'Native Address (Prefilled from Family Head)'),
                         const SizedBox(height: 16),
                         _buildResponsiveRow(isMobile, [
@@ -551,7 +577,7 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
                            _buildInputField('Pin Code *', _pinCodeController, isMobile, keyboardType: TextInputType.number, maxLength: 6),
                         ]),
 
-                        const SizedBox(height: 32),
+                        const SizedBox(height: 16),
                         _buildSectionTitle(
                           Icons.home_outlined, 
                           'Current Address',
@@ -587,7 +613,6 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
                               if (v == 'Other State') _updateStates('India');
                             }),
                         ]),
-                        const SizedBox(height: 16),
                         if (_selectedCurrentAddressType == 'Tamil Nadu') ...[
                           _buildResponsiveRow(isMobile, [
                             _buildDropdownField('District *', _currDistricts, isMobile, value: _selectedCurrDistrict, onChanged: (v) {
@@ -638,7 +663,7 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
                           _buildTextArea('Full Address *', _currFullAddressController, isMobile),
                         ],
 
-                        const SizedBox(height: 32),
+                        const SizedBox(height: 16),
                         _buildSectionTitle(Icons.description_outlined, 'Documents'),
                         const SizedBox(height: 16),
                         _buildResponsiveRow(isMobile, [
@@ -648,7 +673,7 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
                           if (!isMobile) const SizedBox(),
                         ]),
 
-                        const SizedBox(height: 32),
+                        const SizedBox(height: 16),
                         _buildAgreement(),
                         const SizedBox(height: 24),
                         _buildSubmitButton(),
@@ -739,6 +764,11 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
               if (label.contains('*') && val.trim().isEmpty) return 'Required';
               if (val.trim().isNotEmpty && val.trim().length < 3) return 'Name must be at least 3 characters';
               if (val.trim().isNotEmpty && !RegExp(r'^[a-zA-Z\s\.]+$').hasMatch(val.trim())) return 'Only letters, spaces, and dots allowed';
+            }
+            if (label.contains('Street Name') && val.trim().isNotEmpty) {
+              if (val.trim().length < 4) return 'Address is too short';
+              if (!RegExp(r'[a-zA-Z]').hasMatch(val.trim())) return 'Must contain at least one letter';
+              if (RegExp(r'^[^a-zA-Z0-9]+$').hasMatch(val.trim())) return 'Please enter a valid address';
             }
             return (label.contains('*') && val.isEmpty) ? 'Required' : null;
           }),
@@ -844,6 +874,8 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
   }
 
   Widget _buildGenderSelector(bool isMobile) {
+    bool isGenderLocked = ['Wife', 'Daughter', 'Mother', 'Grand Mother', 'Daughter-in-law', 'Sister', 'Husband', 'Son', 'Father', 'Grand Father', 'Son-in-law', 'Brother'].contains(_selectedRelationship);
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -859,7 +891,7 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
                 SizedBox(
                   width: 24,
                   height: 24,
-                  child: Radio<String>(value: 'Male', groupValue: _selectedGender, onChanged: (v) => setState(() => _selectedGender = v), activeColor: primaryBrown, materialTapTargetSize: MaterialTapTargetSize.shrinkWrap, visualDensity: const VisualDensity(horizontal: -4, vertical: -4)),
+                  child: Radio<String>(value: 'Male', groupValue: _selectedGender, onChanged: isGenderLocked ? null : (v) => setState(() => _selectedGender = v), activeColor: primaryBrown, materialTapTargetSize: MaterialTapTargetSize.shrinkWrap, visualDensity: const VisualDensity(horizontal: -4, vertical: -4)),
                 ),
                 const SizedBox(width: 6),
                 const Text('Male'),
@@ -871,7 +903,7 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
                 SizedBox(
                   width: 24,
                   height: 24,
-                  child: Radio<String>(value: 'Female', groupValue: _selectedGender, onChanged: (v) => setState(() => _selectedGender = v), activeColor: primaryBrown, materialTapTargetSize: MaterialTapTargetSize.shrinkWrap, visualDensity: const VisualDensity(horizontal: -4, vertical: -4)),
+                  child: Radio<String>(value: 'Female', groupValue: _selectedGender, onChanged: isGenderLocked ? null : (v) => setState(() => _selectedGender = v), activeColor: primaryBrown, materialTapTargetSize: MaterialTapTargetSize.shrinkWrap, visualDensity: const VisualDensity(horizontal: -4, vertical: -4)),
                 ),
                 const SizedBox(width: 6),
                 const Text('Female'),
@@ -883,7 +915,7 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
                 SizedBox(
                   width: 24,
                   height: 24,
-                  child: Radio<String>(value: 'Other', groupValue: _selectedGender, onChanged: (v) => setState(() => _selectedGender = v), activeColor: primaryBrown, materialTapTargetSize: MaterialTapTargetSize.shrinkWrap, visualDensity: const VisualDensity(horizontal: -4, vertical: -4)),
+                  child: Radio<String>(value: 'Other', groupValue: _selectedGender, onChanged: isGenderLocked ? null : (v) => setState(() => _selectedGender = v), activeColor: primaryBrown, materialTapTargetSize: MaterialTapTargetSize.shrinkWrap, visualDensity: const VisualDensity(horizontal: -4, vertical: -4)),
                 ),
                 const SizedBox(width: 6),
                 const Text('Other'),
@@ -1016,6 +1048,21 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
     if (type == 'member_image') file = _memberImage;
     if (type == 'community_cert') file = _communityCert;
 
+    Widget? previewWidget;
+    if (file != null) {
+      String fileName = file.name;
+      bool isPdf = fileName.toLowerCase().endsWith('.pdf');
+      if (isPdf) {
+        previewWidget = const Icon(Icons.picture_as_pdf, color: Colors.red, size: 30);
+      } else {
+        if (kIsWeb) {
+          previewWidget = ClipRRect(borderRadius: BorderRadius.circular(4), child: Image.network(file.path, width: 40, height: 40, fit: BoxFit.cover, errorBuilder: (c,e,s) => Icon(Icons.image, size: 30, color: mediumBrown)));
+        } else {
+          previewWidget = ClipRRect(borderRadius: BorderRadius.circular(4), child: Image.file(File(file.path), width: 40, height: 40, fit: BoxFit.cover, errorBuilder: (c,e,s) => Icon(Icons.image, size: 30, color: mediumBrown)));
+        }
+      }
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1036,7 +1083,7 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(border: Border.all(color: borderColor), borderRadius: BorderRadius.circular(10), color: Colors.white),
             child: Row(children: [
-              Icon(Icons.upload_file, size: 18, color: mediumBrown),
+              previewWidget ?? Icon(Icons.upload_file, size: 18, color: mediumBrown),
               const SizedBox(width: 8),
               Expanded(child: Text(file?.name ?? AppLocalizations.of(context)?.chooseFile ?? 'Choose file...', style: const TextStyle(fontSize: 12, color: Colors.grey), overflow: TextOverflow.ellipsis)),
             ]),
@@ -1078,7 +1125,28 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
       _scrollController.animateTo(0, duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
       return;
     }
-    
+    if ((_selectedRelationship == 'Son' || _selectedRelationship == 'Daughter') && _dobController.text.isNotEmpty) {
+      try {
+        DateTime? dob;
+        final parts = _dobController.text.split('-');
+        if (parts.length == 3) {
+          if (parts[0].length == 4) {
+            dob = DateTime.parse(_dobController.text);
+          } else if (parts[2].length == 4) {
+            dob = DateTime.parse("${parts[2]}-${parts[1]}-${parts[0]}");
+          }
+        }
+        if (dob != null) {
+          final now = DateTime.now();
+          final threeMonthsAgo = DateTime(now.year, now.month - 3, now.day);
+          if (dob.isAfter(threeMonthsAgo)) {
+            showStatusDialog(context, title: 'Validation Error', message: 'A Son or Daughter must be at least 3 months old to be added.', type: DialogType.error);
+            return;
+          }
+        }
+      } catch (e) {}
+    }
+
     if (_selectedMarried == 'Yes' && _dobController.text.isNotEmpty) {
       try {
         DateTime? dob;
