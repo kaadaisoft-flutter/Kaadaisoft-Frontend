@@ -798,7 +798,7 @@ class _MembersContentState extends State<MembersContent> {
           if (widget.role == 1)
             _buildSolidButton('Send Invites', Icons.send, const Color(0xFF25D366), isMobile: true, onPressed: _showBatchInvitationDialog),
           if (widget.role == 1)
-            _buildSolidButton('Invite Report', Icons.assessment, const Color(0xFF1E88E5), isMobile: true, onPressed: _downloadWhatsAppReport),
+            _buildSolidButton('Invite Report', Icons.assessment, const Color(0xFF1E88E5), isMobile: true, onPressed: _showDownloadReportDialog),
           _buildSolidButton(AppLocalizations.of(context)?.addBtn ?? 'Add', Icons.add, const Color(0xFF5D1712), isMobile: true, onPressed: _showAddMemberDialog),
         ],
       );
@@ -823,7 +823,7 @@ class _MembersContentState extends State<MembersContent> {
         if (widget.role == 1)
           _buildSolidButton('Send Invites', Icons.send, const Color(0xFF25D366), onPressed: _showBatchInvitationDialog),
         if (widget.role == 1)
-          _buildSolidButton('Invite Report', Icons.assessment, const Color(0xFF1E88E5), onPressed: _downloadWhatsAppReport),
+          _buildSolidButton('Invite Report', Icons.assessment, const Color(0xFF1E88E5), onPressed: _showDownloadReportDialog),
         _buildSolidButton(AppLocalizations.of(context)?.addBtn ?? 'Add', Icons.add, const Color(0xFF5D1712), onPressed: _showAddMemberDialog),
       ],
     );
@@ -1304,10 +1304,82 @@ class _MembersContentState extends State<MembersContent> {
     }
   }
 
-  Future<void> _downloadWhatsAppReport() async {
+  void _showDownloadReportDialog() {
+    final TextEditingController startController = TextEditingController(text: '1');
+    final TextEditingController endController = TextEditingController(text: '100');
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text('Download Invite Report', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            IconButton(
+              icon: const Icon(Icons.close),
+              onPressed: () => Navigator.pop(context),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Specify the record range to download from the report (Newest first).'),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: startController,
+                    decoration: const InputDecoration(labelText: 'Start Index (e.g. 1)', border: OutlineInputBorder()),
+                    keyboardType: TextInputType.number,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: TextField(
+                    controller: endController,
+                    decoration: const InputDecoration(labelText: 'End Index (e.g. 100)', border: OutlineInputBorder()),
+                    keyboardType: TextInputType.number,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel', style: TextStyle(color: Colors.black54)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E88E5)),
+            onPressed: () {
+              int start = int.tryParse(startController.text) ?? 1;
+              int end = int.tryParse(endController.text) ?? 100;
+              if (start > 0 && end >= start) {
+                Navigator.pop(context);
+                _downloadWhatsAppReport(start, end);
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Invalid range')));
+              }
+            },
+            child: const Text('Download', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _downloadWhatsAppReport(int start, int end) async {
     try {
       showStatusDialog(context, title: 'Processing', message: 'Generating report, please wait...', type: DialogType.info);
-      final response = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/whatsapp-report'));
+      final response = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/whatsapp-report?start=$start&end=$end'));
       Navigator.pop(context); // Close dialog
 
       if (response.statusCode == 200) {
