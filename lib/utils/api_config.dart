@@ -12,8 +12,8 @@ class ApiConfig {
       // Otherwise, use the live backend URL
       return 'https://kaadaisoft-backend-ld91.onrender.com';
     } else {
-      // Laptop local IP for physical/wireless mobile debugging access
-      return 'http://192.168.68.110:8000';
+      // Live backend URL for Mobile Apps
+      return 'https://kaadaisoft-backend-ld91.onrender.com';
     }
   }
 
