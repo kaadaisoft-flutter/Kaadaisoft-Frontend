@@ -10,7 +10,7 @@ class ApiConfig {
         return 'http://localhost:8000';
       }
       // Otherwise, use the live backend URL
-      return 'https://kaadaisoft-backend-ld91.onrender.com';
+      return 'https://api.kaadaikulam.org';
     } else {
       // Laptop local IP for physical/wireless mobile debugging access
       return 'http://192.168.68.110:8000';
@@ -48,4 +48,6 @@ class ApiConfig {
   static String get getPaymentRequests => '$baseUrl/api/payment-requests';
   static String approvePaymentRequest(int id) => '$baseUrl/api/payment-requests/approve/$id';
   static String rejectPaymentRequest(int id) => '$baseUrl/api/payment-requests/reject/$id';
+  
+  static String get sendWhatsappInvitations => '$baseUrl/api/send-whatsapp-invitations';
 }

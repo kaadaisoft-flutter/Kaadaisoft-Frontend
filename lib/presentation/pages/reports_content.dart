@@ -7,6 +7,7 @@ import '../widgets/loading_spinner.dart';
 import '../widgets/custom_dialog.dart';
 import '../../utils/api_config.dart';
 import '../../utils/download_helper.dart' as dl;
+import '../widgets/pagination_widget.dart';
 import 'update_details_content.dart';
 import '../widgets/custom_dropdown_search.dart';
 import '../../l10n/app_localizations.dart';
@@ -966,55 +967,13 @@ class _ReportsContentState extends State<ReportsContent> {
   }
 
   Widget _buildPaginationRow(int totalPages) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          _buildPageBtn(Icons.chevron_left, _currentPage > 1 ? () => setState(() { _currentPage--; _applyFilters(resetPage: false); }) : null),
-          const SizedBox(width: 8),
-          ...List.generate(totalPages > 5 ? 5 : totalPages, (i) {
-            int page = i + 1;
-            return _buildPageNum(page, page == _currentPage, () => setState(() { _currentPage = page; _applyFilters(resetPage: false); }));
-          }),
-          if (totalPages > 5) ...[
-            const Text('...'),
-            _buildPageNum(totalPages, totalPages == _currentPage, () => setState(() { _currentPage = totalPages; _applyFilters(resetPage: false); })),
-          ],
-          const SizedBox(width: 8),
-          _buildPageBtn(Icons.chevron_right, _currentPage < totalPages ? () => setState(() { _currentPage++; _applyFilters(resetPage: false); }) : null),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPageBtn(IconData icon, VoidCallback? onTap) {
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(border: Border.all(color: Colors.black12), borderRadius: BorderRadius.circular(8)),
-        child: Icon(icon, size: 16, color: onTap == null ? Colors.grey : const Color(0xFF5D1712)),
-      ),
-    );
-  }
-
-  Widget _buildPageNum(int num, bool active, VoidCallback onTap) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4),
-      child: InkWell(
-        onTap: onTap,
-        child: Container(
-          width: 32, height: 32,
-          decoration: BoxDecoration(
-            color: active ? const Color(0xFF2D1B18) : Colors.transparent,
-            borderRadius: BorderRadius.circular(8),
-            border: active ? null : Border.all(color: Colors.black12),
-          ),
-          alignment: Alignment.center,
-          child: Text(num.toString(), style: TextStyle(color: active ? Colors.white : Colors.black87, fontWeight: active ? FontWeight.bold : FontWeight.normal)),
-        ),
-      ),
+    return PaginationWidget(
+      currentPage: _currentPage,
+      totalPages: totalPages,
+      onPageChanged: (page) => setState(() { 
+        _currentPage = page; 
+        _applyFilters(resetPage: false); 
+      }),
     );
   }
 }

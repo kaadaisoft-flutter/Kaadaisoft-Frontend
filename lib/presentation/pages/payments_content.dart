@@ -10,6 +10,7 @@ import '../widgets/custom_dialog.dart';
 import '../../utils/api_config.dart';
 import '../utils/pdf_generator.dart';
 import 'package:screenshot/screenshot.dart';
+import '../widgets/pagination_widget.dart';
 import 'update_details_content.dart';
 import 'package:intl/intl.dart';
 import '../../l10n/app_localizations.dart';
@@ -2003,25 +2004,10 @@ class _PaymentsContentState extends State<PaymentsContent> {
                 style: const TextStyle(color: Colors.black54, fontSize: 13),
               ),
               const SizedBox(height: 12),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    _buildPageBtn(Icons.chevron_left, _currentPage > 1 ? () => _goToPage(_currentPage - 1) : null),
-                    const SizedBox(width: 8),
-                    ...List.generate(totalPages > 3 ? 3 : totalPages, (i) {
-                      int page = i + 1;
-                      return _buildPageNum(page, page == _currentPage, () => _goToPage(page));
-                    }),
-                    if (totalPages > 3) ...[
-                      const Text('...'),
-                      _buildPageNum(totalPages, totalPages == _currentPage, () => _goToPage(totalPages)),
-                    ],
-                    const SizedBox(width: 8),
-                    _buildPageBtn(Icons.chevron_right, _currentPage < totalPages ? () => _goToPage(_currentPage + 1) : null),
-                  ],
-                ),
+              PaginationWidget(
+                currentPage: _currentPage,
+                totalPages: totalPages,
+                onPageChanged: (page) => _goToPage(page),
               ),
             ],
           )
@@ -2032,54 +2018,13 @@ class _PaymentsContentState extends State<PaymentsContent> {
                 'Showing ${(_currentPage - 1) * _itemsPerPage + 1} to ${_currentPage * _itemsPerPage > _totalItems ? _totalItems : _currentPage * _itemsPerPage} of $_totalItems entries',
                 style: const TextStyle(color: Colors.black54, fontSize: 13),
               ),
-              Row(
-                children: [
-                  _buildPageBtn(Icons.chevron_left, _currentPage > 1 ? () => _goToPage(_currentPage - 1) : null),
-                  const SizedBox(width: 8),
-                  ...List.generate(totalPages > 5 ? 5 : totalPages, (i) {
-                    int page = i + 1;
-                    return _buildPageNum(page, page == _currentPage, () => _goToPage(page));
-                  }),
-                  if (totalPages > 5) ...[
-                    const Text('...'),
-                    _buildPageNum(totalPages, totalPages == _currentPage, () => _goToPage(totalPages)),
-                  ],
-                  const SizedBox(width: 8),
-                  _buildPageBtn(Icons.chevron_right, _currentPage < totalPages ? () => _goToPage(_currentPage + 1) : null),
-                ],
+              PaginationWidget(
+                currentPage: _currentPage,
+                totalPages: totalPages,
+                onPageChanged: (page) => _goToPage(page),
               ),
             ],
           ),
-    );
-  }
-
-  Widget _buildPageBtn(IconData icon, VoidCallback? onTap) {
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(border: Border.all(color: Colors.black12), borderRadius: BorderRadius.circular(8)),
-        child: Icon(icon, size: 16, color: onTap == null ? Colors.grey : const Color(0xFF5D1712)),
-      ),
-    );
-  }
-
-  Widget _buildPageNum(int num, bool active, VoidCallback onTap) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4),
-      child: InkWell(
-        onTap: onTap,
-        child: Container(
-          width: 32, height: 32,
-          decoration: BoxDecoration(
-            color: active ? const Color(0xFF2D1B18) : Colors.transparent,
-            borderRadius: BorderRadius.circular(8),
-            border: active ? null : Border.all(color: Colors.black12),
-          ),
-          alignment: Alignment.center,
-          child: Text(num.toString(), style: TextStyle(color: active ? Colors.white : Colors.black87, fontWeight: active ? FontWeight.bold : FontWeight.normal)),
-        ),
-      ),
     );
   }
 

@@ -8,6 +8,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import '../widgets/loading_spinner.dart';
 import '../widgets/custom_dialog.dart';
 import '../../utils/api_config.dart';
+import '../widgets/pagination_widget.dart';
 import 'update_details_content.dart';
 import 'member_details_content.dart';
 import '../widgets/registration_form.dart';
@@ -401,44 +402,10 @@ class _MembersContentState extends State<MembersContent> {
                       spacing: 8,
                       runSpacing: 8,
                       children: [
-                      Wrap(
-                        alignment: WrapAlignment.center,
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.chevron_left),
-                            onPressed: _currentPage > 1 ? () => setState(() => _currentPage--) : null,
-                            color: const Color(0xFF5D1712),
-                            splashRadius: 20,
-                          ),
-                          ...List.generate(totalPages, (i) {
-                            final page = i + 1;
-                            final isActive = page == _currentPage;
-                            return Padding(
-                              padding: const EdgeInsets.all(2),
-                              child: InkWell(
-                                onTap: () => setState(() => _currentPage = page),
-                                borderRadius: BorderRadius.circular(6),
-                                child: Container(
-                                  width: 32, height: 32,
-                                  decoration: BoxDecoration(
-                                    color: isActive ? const Color(0xFF2D1B18) : Colors.transparent,
-                                    borderRadius: BorderRadius.circular(6),
-                                    border: isActive ? null : Border.all(color: Colors.black12),
-                                  ),
-                                  alignment: Alignment.center,
-                                  child: Text('$page', style: TextStyle(color: isActive ? Colors.white : Colors.black54, fontWeight: isActive ? FontWeight.bold : FontWeight.normal)),
-                                ),
-                              ),
-                            );
-                          }),
-                          IconButton(
-                            icon: const Icon(Icons.chevron_right),
-                            onPressed: _currentPage < totalPages ? () => setState(() => _currentPage++) : null,
-                            color: const Color(0xFF5D1712),
-                            splashRadius: 20,
-                          ),
-                        ],
+                      PaginationWidget(
+                        currentPage: _currentPage,
+                        totalPages: totalPages,
+                        onPageChanged: (page) => setState(() => _currentPage = page),
                       ),
                         Text('Showing page $_currentPage of $totalPages', style: const TextStyle(color: Colors.black45, fontSize: 12)),
                       ],
@@ -684,6 +651,132 @@ class _MembersContentState extends State<MembersContent> {
     );
   }
 
+  void _showBatchInvitationDialog() {
+    final TextEditingController startController = TextEditingController(text: '1');
+    final TextEditingController endController = TextEditingController(text: '100');
+    bool isSending = false;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.white,
+          title: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Send WhatsApp Invitations', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              if (!isSending)
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.pop(context),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (isSending) ...[
+                const Padding(
+                  padding: EdgeInsets.all(16.0),
+                  child: CircularProgressIndicator(color: Color(0xFF25D366)),
+                ),
+                const Text('Sending messages...', style: TextStyle(color: Colors.black54)),
+                const SizedBox(height: 8),
+                const Text('Please do not close this window.', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+              ] else ...[
+                const Text('Specify the batch range of members to send invitations to (ordered by Member ID).'),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: startController,
+                        decoration: const InputDecoration(labelText: 'Start Index (e.g. 1)', border: OutlineInputBorder()),
+                        keyboardType: TextInputType.number,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: TextField(
+                        controller: endController,
+                        decoration: const InputDecoration(labelText: 'End Index (e.g. 100)', border: OutlineInputBorder()),
+                        keyboardType: TextInputType.number,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ],
+          ),
+          actions: isSending
+              ? []
+              : [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Cancel', style: TextStyle(color: Colors.black54)),
+                  ),
+                  ElevatedButton.icon(
+                    onPressed: () async {
+                      int? start = int.tryParse(startController.text);
+                      int? end = int.tryParse(endController.text);
+                      
+                      if (start == null || end == null || start < 1 || end < start) {
+                        showStatusDialog(context, title: 'Error', message: 'Please enter a valid range.', type: DialogType.error);
+                        return;
+                      }
+
+                      setDialogState(() => isSending = true);
+
+                      try {
+                        final response = await http.post(
+                          Uri.parse(ApiConfig.sendWhatsappInvitations),
+                          headers: {'Content-Type': 'application/json'},
+                          body: jsonEncode({
+                            'start_index': start,
+                            'end_index': end,
+                          }),
+                        );
+                        
+                        setDialogState(() => isSending = false);
+                        
+                        if (response.statusCode == 200) {
+                          final data = jsonDecode(response.body);
+                          if (mounted) {
+                            Navigator.pop(context);
+                            showStatusDialog(
+                              context,
+                              title: 'Invitations Sent',
+                              message: data['message'] ?? 'Successfully processed the batch.',
+                              type: DialogType.success,
+                            );
+                          }
+                        } else {
+                          final data = jsonDecode(response.body);
+                          if (mounted) {
+                            showStatusDialog(context, title: 'Error', message: data['detail'] ?? 'Failed to send invitations', type: DialogType.error);
+                          }
+                        }
+                      } catch (e) {
+                        setDialogState(() => isSending = false);
+                        if (mounted) {
+                          showStatusDialog(context, title: 'Error', message: 'Connection error', type: DialogType.error);
+                        }
+                      }
+                    },
+                    icon: const Icon(Icons.send, size: 18),
+                    label: const Text('Send'),
+                    style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF25D366), foregroundColor: Colors.white),
+                  ),
+                ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildActionButtons(bool isMobile) {
     if (isMobile) {
       return Wrap(
@@ -702,6 +795,8 @@ class _MembersContentState extends State<MembersContent> {
           _buildOutlinedButton(AppLocalizations.of(context)?.downloadBtn ?? 'Download', Icons.download_outlined, const Color(0xFF5D1712), isMobile: true, onPressed: _downloadMembersData),
           if (widget.role == 1)
             _buildSolidButton(AppLocalizations.of(context)?.assignBtn ?? 'Assign', Icons.person_add_alt_1, const Color(0xFF5D1712), isMobile: true, onPressed: widget.onAssignPressed),
+          if (widget.role == 1)
+            _buildSolidButton('Send Invites', Icons.send, const Color(0xFF25D366), isMobile: true, onPressed: _showBatchInvitationDialog),
           _buildSolidButton(AppLocalizations.of(context)?.addBtn ?? 'Add', Icons.add, const Color(0xFF5D1712), isMobile: true, onPressed: _showAddMemberDialog),
         ],
       );
@@ -723,6 +818,8 @@ class _MembersContentState extends State<MembersContent> {
         _buildOutlinedButton(AppLocalizations.of(context)?.downloadBtn ?? 'Download', Icons.download_outlined, const Color(0xFF5D1712), onPressed: _downloadMembersData),
         if (widget.role == 1)
           _buildSolidButton(AppLocalizations.of(context)?.assignBtn ?? 'Assign', Icons.person_add_alt_1, const Color(0xFF5D1712), onPressed: widget.onAssignPressed),
+        if (widget.role == 1)
+          _buildSolidButton('Send Invites', Icons.send, const Color(0xFF25D366), onPressed: _showBatchInvitationDialog),
         _buildSolidButton(AppLocalizations.of(context)?.addBtn ?? 'Add', Icons.add, const Color(0xFF5D1712), onPressed: _showAddMemberDialog),
       ],
     );

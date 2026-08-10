@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../widgets/loading_spinner.dart';
 import '../../utils/api_config.dart';
+import '../widgets/pagination_widget.dart';
 import '../../utils/notification_helper.dart';
 import '../../l10n/app_localizations.dart';
 
@@ -171,41 +172,11 @@ class _UpdateRequestsContentState extends State<UpdateRequestsContent> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text('Showing page $_currentPage of $totalPages', style: const TextStyle(color: Colors.black45, fontSize: 12)),
-                  Row(
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.chevron_left),
-                        onPressed: _currentPage > 1 ? () => setState(() => _currentPage--) : null,
-                        color: const Color(0xFF5D1712),
-                      ),
-                      ...List.generate(totalPages, (i) {
-                        final page = i + 1;
-                        final isActive = page == _currentPage;
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 2),
-                          child: InkWell(
-                            onTap: () => setState(() => _currentPage = page),
-                            borderRadius: BorderRadius.circular(6),
-                            child: Container(
-                              width: 32, height: 32,
-                              decoration: BoxDecoration(
-                                color: isActive ? const Color(0xFF2D1B18) : Colors.transparent,
-                                borderRadius: BorderRadius.circular(6),
-                                border: isActive ? null : Border.all(color: Colors.black12),
-                              ),
-                              alignment: Alignment.center,
-                              child: Text('$page', style: TextStyle(color: isActive ? Colors.white : Colors.black54, fontWeight: isActive ? FontWeight.bold : FontWeight.normal)),
-                            ),
-                          ),
-                        );
-                      }),
-                      IconButton(
-                        icon: const Icon(Icons.chevron_right),
-                        onPressed: _currentPage < totalPages ? () => setState(() => _currentPage++) : null,
-                        color: const Color(0xFF5D1712),
-                      ),
-                    ],
-                  ),
+                    PaginationWidget(
+                      currentPage: _currentPage,
+                      totalPages: totalPages,
+                      onPageChanged: (page) => setState(() => _currentPage = page),
+                    ),
                 ],
               ),
             ),

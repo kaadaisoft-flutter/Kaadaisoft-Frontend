@@ -6,6 +6,7 @@ import '../widgets/loading_spinner.dart';
 import '../widgets/assign_coordinator_view.dart';
 import '../widgets/custom_dialog.dart';
 import '../../utils/api_config.dart';
+import '../widgets/pagination_widget.dart';
 import 'update_details_content.dart';
 import 'coordinator_details_content.dart';
 import 'coordinator_responsibilities_content.dart';
@@ -655,43 +656,10 @@ class _CoordinatorsContentState extends State<CoordinatorsContent> {
                       spacing: 8,
                       runSpacing: 8,
                       children: [
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.chevron_left),
-                              onPressed: _currentPage > 1 ? () => setState(() => _currentPage--) : null,
-                              color: const Color(0xFF5D1712),
-                              splashRadius: 20,
-                            ),
-                            ...List.generate(totalPages, (i) {
-                              final page = i + 1;
-                              final isActive = page == _currentPage;
-                              return Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 2),
-                                child: InkWell(
-                                  onTap: () => setState(() => _currentPage = page),
-                                  borderRadius: BorderRadius.circular(6),
-                                  child: Container(
-                                    width: 32, height: 32,
-                                    decoration: BoxDecoration(
-                                      color: isActive ? const Color(0xFF2D1B18) : Colors.transparent,
-                                      borderRadius: BorderRadius.circular(6),
-                                      border: isActive ? null : Border.all(color: Colors.black12),
-                                    ),
-                                    alignment: Alignment.center,
-                                    child: Text('$page', style: TextStyle(color: isActive ? Colors.white : Colors.black54, fontWeight: isActive ? FontWeight.bold : FontWeight.normal)),
-                                  ),
-                                ),
-                              );
-                            }),
-                            IconButton(
-                              icon: const Icon(Icons.chevron_right),
-                              onPressed: _currentPage < totalPages ? () => setState(() => _currentPage++) : null,
-                              color: const Color(0xFF5D1712),
-                              splashRadius: 20,
-                            ),
-                          ],
+                        PaginationWidget(
+                          currentPage: _currentPage,
+                          totalPages: totalPages,
+                          onPageChanged: (page) => setState(() => _currentPage = page),
                         ),
                         Text('${AppLocalizations.of(context)?.showingPage ?? 'Showing page'} $_currentPage ${AppLocalizations.of(context)?.ofPage ?? 'of'} $totalPages', style: const TextStyle(color: Colors.black45, fontSize: 12)),
                       ],
