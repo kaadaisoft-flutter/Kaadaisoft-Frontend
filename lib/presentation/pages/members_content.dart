@@ -797,6 +797,8 @@ class _MembersContentState extends State<MembersContent> {
             _buildSolidButton(AppLocalizations.of(context)?.assignBtn ?? 'Assign', Icons.person_add_alt_1, const Color(0xFF5D1712), isMobile: true, onPressed: widget.onAssignPressed),
           if (widget.role == 1)
             _buildSolidButton('Send Invites', Icons.send, const Color(0xFF25D366), isMobile: true, onPressed: _showBatchInvitationDialog),
+          if (widget.role == 1)
+            _buildSolidButton('Invite Report', Icons.assessment, const Color(0xFF1E88E5), isMobile: true, onPressed: _downloadWhatsAppReport),
           _buildSolidButton(AppLocalizations.of(context)?.addBtn ?? 'Add', Icons.add, const Color(0xFF5D1712), isMobile: true, onPressed: _showAddMemberDialog),
         ],
       );
@@ -820,6 +822,8 @@ class _MembersContentState extends State<MembersContent> {
           _buildSolidButton(AppLocalizations.of(context)?.assignBtn ?? 'Assign', Icons.person_add_alt_1, const Color(0xFF5D1712), onPressed: widget.onAssignPressed),
         if (widget.role == 1)
           _buildSolidButton('Send Invites', Icons.send, const Color(0xFF25D366), onPressed: _showBatchInvitationDialog),
+        if (widget.role == 1)
+          _buildSolidButton('Invite Report', Icons.assessment, const Color(0xFF1E88E5), onPressed: _downloadWhatsAppReport),
         _buildSolidButton(AppLocalizations.of(context)?.addBtn ?? 'Add', Icons.add, const Color(0xFF5D1712), onPressed: _showAddMemberDialog),
       ],
     );
@@ -1297,6 +1301,33 @@ class _MembersContentState extends State<MembersContent> {
     } catch (e) {
       debugPrint('Error: $e');
       setState(() => _isLoadingVillages = false);
+    }
+  }
+
+  Future<void> _downloadWhatsAppReport() async {
+    try {
+      showStatusDialog(context, title: 'Processing', message: 'Generating report, please wait...', type: DialogType.info);
+      final response = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/whatsapp-report'));
+      Navigator.pop(context); // Close dialog
+
+      if (response.statusCode == 200) {
+        if (kIsWeb) {
+          final blob = html.Blob([response.bodyBytes]);
+          final url = html.Url.createObjectUrlFromBlob(blob);
+          html.AnchorElement(href: url)
+            ..setAttribute("download", "whatsapp_invitation_report_${DateTime.now().millisecondsSinceEpoch}.xlsx")
+            ..click();
+          html.Url.revokeObjectUrl(url);
+        } else {
+          showStatusDialog(context, title: 'Note', message: 'Report download is supported in browser.', type: DialogType.info);
+        }
+      } else {
+        showStatusDialog(context, title: 'Error', message: 'Failed to download report.', type: DialogType.error);
+      }
+    } catch (e) {
+      debugPrint('Error downloading report: $e');
+      if (mounted) Navigator.pop(context); // Close dialog if still open
+      showStatusDialog(context, title: 'Error', message: 'An error occurred while downloading the report.', type: DialogType.error);
     }
   }
 
