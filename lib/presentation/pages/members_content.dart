@@ -56,6 +56,7 @@ class _MembersContentState extends State<MembersContent> {
   String? _selectedBloodGroup;
   String? _selectedGender = 'All';
   String? _selectedOccupation = 'All';
+  String? _selectedLastLoginDate;
 
   List<String> _districts = [];
   List<String> _taluks = [];
@@ -119,6 +120,7 @@ class _MembersContentState extends State<MembersContent> {
       if (_selectedBloodGroup != null) url += '&blood_group=${Uri.encodeComponent(_selectedBloodGroup!)}';
       if (_selectedGender != null && _selectedGender != 'All') url += '&gender=${Uri.encodeComponent(_selectedGender!)}';
       if (_selectedOccupation != null && _selectedOccupation != 'All') url += '&occupation=${Uri.encodeComponent(_selectedOccupation!)}';
+      if (_selectedLastLoginDate != null) url += '&last_login_date=${Uri.encodeComponent(_selectedLastLoginDate!)}';
 
       final response = await http.get(Uri.parse(url));
 
@@ -273,6 +275,7 @@ class _MembersContentState extends State<MembersContent> {
                               _buildHeaderCell(AppLocalizations.of(context)?.talukHeader ?? 'TALUK', 110),
                               _buildHeaderCell(AppLocalizations.of(context)?.panchayatHeader ?? 'PANCHAYAT', 130),
                               _buildHeaderCell(AppLocalizations.of(context)?.villageUpperHeader ?? 'VILLAGE', 130),
+                              _buildHeaderCell('LAST LOGIN', 150),
                               _buildHeaderCell('ACTIONS', 160),
                             ],
                           ),
@@ -304,6 +307,7 @@ class _MembersContentState extends State<MembersContent> {
                                         member['Id'].toString(),
                                         member['Name'] ?? '-',
                                         member['Familymembershipid'] ?? 'N/A',
+                                        member['last_login'] != null ? member['last_login'].toString().replaceAll('T', ' ').substring(0, 16) : 'Never',
                                       );
                                     },
                                   ),
@@ -357,7 +361,7 @@ class _MembersContentState extends State<MembersContent> {
                         ),
                         // Scrollable Right Part
                         isNarrow
-                            ? SizedBox(width: 750, child: rightPart)
+                            ? SizedBox(width: 900, child: rightPart)
                             : Expanded(
                                   child: Scrollbar(
                                     controller: _horizontalScrollController,
@@ -365,7 +369,7 @@ class _MembersContentState extends State<MembersContent> {
                                     controller: _horizontalScrollController,
                                     scrollDirection: Axis.horizontal,
                                     child: SizedBox(
-                                      width: 750, // 110+110+110+130+130+160
+                                      width: 900, // 110+110+110+130+130+150+160
                                       child: rightPart,
                                     ),
                                   ),
@@ -903,7 +907,7 @@ class _MembersContentState extends State<MembersContent> {
     );
   }
 
-  Widget _buildScrollableTableRow(String role, String district, String taluk, String panchayat, String village, String memberId, String name, String familyId) {
+  Widget _buildScrollableTableRow(String role, String district, String taluk, String panchayat, String village, String memberId, String name, String familyId, String lastLogin) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -932,6 +936,7 @@ class _MembersContentState extends State<MembersContent> {
               _buildDataCell(taluk, 110),
               _buildDataCell(panchayat.isEmpty ? '-' : panchayat, 130),
               _buildDataCell(village, 130),
+              _buildDataCell(lastLogin, 150),
               _buildDataCell('', 160, child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -1653,6 +1658,7 @@ class _MembersContentState extends State<MembersContent> {
                           setState(() => _selectedOccupation = v!);
                           _fetchMembers();
                         })),
+                        SizedBox(width: itemWidth, child: _buildDateFilter('Last Login Date:', _selectedLastLoginDate)),
                       ],
                     ),
                     const SizedBox(height: 32),
@@ -1715,6 +1721,45 @@ class _MembersContentState extends State<MembersContent> {
     );
   }
 
+  Widget _buildDateFilter(String label, String? selectedDate) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black87)),
+        const SizedBox(height: 6),
+        InkWell(
+          onTap: () async {
+            final DateTime? picked = await showDatePicker(
+              context: context,
+              initialDate: DateTime.now(),
+              firstDate: DateTime(2020),
+              lastDate: DateTime.now(),
+            );
+            if (picked != null) {
+              setState(() => _selectedLastLoginDate = picked.toIso8601String().split('T').first);
+              _fetchMembers();
+            }
+          },
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border.all(color: Colors.grey.shade300),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(selectedDate ?? 'Select Date', style: TextStyle(color: selectedDate == null ? Colors.grey.shade600 : Colors.black87, fontSize: 13)),
+                Icon(Icons.calendar_today, size: 16, color: Colors.amber.shade700),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
 
 
   void _clearFilters() {
@@ -1727,6 +1772,7 @@ class _MembersContentState extends State<MembersContent> {
       _selectedBloodGroup = null;
       _selectedGender = 'All';
       _selectedOccupation = 'All';
+      _selectedLastLoginDate = null;
     });
     _fetchMembers();
   }
