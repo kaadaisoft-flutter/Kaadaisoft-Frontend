@@ -53,6 +53,27 @@ class _PaymentRequestsContentState extends State<PaymentRequestsContent> {
   }
 
   Future<void> _approveRequest(int id) async {
+    bool confirm = await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirm Approval'),
+        content: const Text('Are you sure you want to approve this payment request?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+            child: const Text('Approve', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    ) ?? false;
+
+    if (!confirm) return;
+
     try {
       final response = await http.post(Uri.parse(ApiConfig.approvePaymentRequest(id)));
       if (response.statusCode == 200) {
@@ -72,6 +93,27 @@ class _PaymentRequestsContentState extends State<PaymentRequestsContent> {
   }
 
   Future<void> _rejectRequest(int id) async {
+    bool confirm = await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirm Rejection'),
+        content: const Text('Are you sure you want to reject this payment request?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Reject', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    ) ?? false;
+
+    if (!confirm) return;
+
     try {
       final response = await http.post(Uri.parse(ApiConfig.rejectPaymentRequest(id)));
       if (response.statusCode == 200) {
@@ -242,9 +284,13 @@ class _PaymentRequestsContentState extends State<PaymentRequestsContent> {
                                     DataColumn(label: Text(AppLocalizations.of(context)?.eventLabel ?? 'Event', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
                                     DataColumn(label: Text(AppLocalizations.of(context)?.totalAmountHeader ?? 'Total Amount', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
                                     DataColumn(label: Text(AppLocalizations.of(context)?.paidAmountHeader ?? 'Paid Amount', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
-                                    DataColumn(label: Text('Due', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
+                                    DataColumn(label: Text('Balance Amount', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
                                     DataColumn(label: Text(AppLocalizations.of(context)?.methodHeader ?? 'Method', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
+                                    DataColumn(label: Text('Transaction ID / Ref', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
                                     DataColumn(label: Text(AppLocalizations.of(context)?.dateHeader ?? 'Date', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
+                                    DataColumn(label: Text('Payment Status', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
+                                    DataColumn(label: Text('Receiver Name', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
+                                    DataColumn(label: Text('Collected By', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
                                     DataColumn(label: Text(AppLocalizations.of(context)?.actionsHeader ?? 'Actions', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
                                   ],
                                   rows: _requests.map((req) {
@@ -253,9 +299,13 @@ class _PaymentRequestsContentState extends State<PaymentRequestsContent> {
                                         DataCell(Text(req['EventName'] ?? req['eventname'] ?? '')),
                                         DataCell(Text('₹${req['TaxAmount'] ?? req['Taxamount'] ?? req['taxamount'] ?? 0}')),
                                         DataCell(Text('₹${req['paidamount'] ?? 0}')),
-                                        DataCell(Text(req['dues']?.toString() ?? '')),
+                                        DataCell(Text('₹${req['balanceamount'] ?? req['dues'] ?? 0}')),
                                         DataCell(Text(req['paymenttype'] ?? '')),
-                                        DataCell(Text(req['paymentdate'] ?? '')),
+                                        DataCell(Text(req['transactionid'] ?? req['checkqueno'] ?? req['upitransactionid'] ?? '-')),
+                                        DataCell(Text(req['paymentdate'] ?? req['receiptdate'] ?? '')),
+                                        DataCell(Text(req['status'] ?? 'Pending')),
+                                        DataCell(Text(req['receivedby'] ?? '-')),
+                                        DataCell(Text(req['name'] ?? '-')),
                                         DataCell(
                                           Row(
                                             mainAxisSize: MainAxisSize.min,

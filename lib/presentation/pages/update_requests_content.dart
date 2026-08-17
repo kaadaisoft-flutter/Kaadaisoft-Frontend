@@ -228,7 +228,7 @@ class _UpdateRequestsContentState extends State<UpdateRequestsContent> {
                 padding: const EdgeInsets.symmetric(horizontal: 6),
               ),
               IconButton(
-                onPressed: () => _handleApprove(req['id']),
+                onPressed: () => _handleApprove(req['request_id'] ?? req['Id'] ?? req['id'] ?? 0),
                 icon: const Icon(Icons.check_circle, size: 18),
                 color: Colors.green,
                 tooltip: 'Approve',
@@ -236,7 +236,7 @@ class _UpdateRequestsContentState extends State<UpdateRequestsContent> {
                 padding: const EdgeInsets.symmetric(horizontal: 6),
               ),
               IconButton(
-                onPressed: () => _handleReject(req['id']),
+                onPressed: () => _handleReject(req['request_id'] ?? req['Id'] ?? req['id'] ?? 0),
                 icon: const Icon(Icons.cancel, size: 18),
                 color: Colors.red,
                 tooltip: 'Reject',

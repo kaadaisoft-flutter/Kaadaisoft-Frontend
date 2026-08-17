@@ -981,11 +981,11 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
     String? existingUrl;
     if (type == 'member_image') {
       file = _memberImage;
-      existingUrl = widget.memberData['member_image'];
+      existingUrl = widget.memberData['Memberimage'];
     }
     if (type == 'community_cert') {
       file = _communityCert;
-      existingUrl = widget.memberData['community_cert'];
+      existingUrl = widget.memberData['Communitycertificate'];
     }
 
     Widget? previewWidget;
@@ -1009,7 +1009,7 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
       if (isPdf) {
         previewWidget = const Icon(Icons.picture_as_pdf, color: Colors.red, size: 30);
       } else {
-        String url = existingUrl.startsWith('http') ? existingUrl : '/';
+        String url = existingUrl.startsWith('http') ? existingUrl : '${ApiConfig.baseUrl}/assets/uploads/$existingUrl';
         previewWidget = ClipRRect(borderRadius: BorderRadius.circular(4), child: Image.network(url, width: 40, height: 40, fit: BoxFit.cover, errorBuilder: (c,e,s) => Icon(Icons.image, size: 30, color: mediumBrown)));
       }
     }
@@ -1030,7 +1030,9 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
               }
               setState(() {
                 _markChanged();
-                final xfile = kIsWeb ? XFile.fromData(file.bytes!, name: file.name) : XFile(file.path!);
+                final xfile = kIsWeb 
+                    ? (file.path != null ? XFile(file.path!, name: file.name) : XFile.fromData(file.bytes!, name: file.name)) 
+                    : XFile(file.path!, name: file.name);
                 if (type == 'member_image') _memberImage = xfile;
                 if (type == 'community_cert') _communityCert = xfile;
               });

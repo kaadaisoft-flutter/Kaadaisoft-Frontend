@@ -14,6 +14,7 @@ import '../widgets/pagination_widget.dart';
 import 'update_details_content.dart';
 import 'package:intl/intl.dart';
 import '../../l10n/app_localizations.dart';
+import '../widgets/bulk_upload_dialog.dart';
 
 class PaymentsContent extends StatefulWidget {
   final int? userId;
@@ -1042,7 +1043,12 @@ class _PaymentsContentState extends State<PaymentsContent> {
               const SizedBox(width: 8),
               Expanded(
                 child: ElevatedButton.icon(
-                  onPressed: () {},
+                  onPressed: () {
+                    showDialog(
+                      context: context,
+                      builder: (context) => BulkUploadDialog(years: _years),
+                    );
+                  },
                   icon: const Icon(Icons.upload_file, size: 18),
                   label: Text(AppLocalizations.of(context)?.uploadCsvBtn ?? 'Upload CSV'),
                   style: ElevatedButton.styleFrom(
@@ -1110,7 +1116,12 @@ class _PaymentsContentState extends State<PaymentsContent> {
               ),
               const SizedBox(width: 8),
               ElevatedButton.icon(
-                onPressed: () {},
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (context) => BulkUploadDialog(years: _years),
+                  );
+                },
                 icon: const Icon(Icons.upload_file, size: 18),
                 label: Text(AppLocalizations.of(context)?.uploadCsvBtn ?? 'Upload CSV'),
                 style: ElevatedButton.styleFrom(

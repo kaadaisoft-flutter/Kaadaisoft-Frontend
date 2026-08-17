@@ -100,15 +100,19 @@ class CustomDialog extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           // Message
-          Text(
-            message,
-            style: const TextStyle(
-              fontSize: 14,
-              color: const Color(0xFF6B7280),
-              height: 1.4,
-              fontWeight: FontWeight.w500,
+          Flexible(
+            child: SingleChildScrollView(
+              child: Text(
+                message,
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: const Color(0xFF6B7280),
+                  height: 1.4,
+                  fontWeight: FontWeight.w500,
+                ),
+                textAlign: TextAlign.center,
+              ),
             ),
-            textAlign: TextAlign.center,
           ),
           const SizedBox(height: 24),
           // OK Button

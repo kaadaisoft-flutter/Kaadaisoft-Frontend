@@ -36,6 +36,7 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
   List<dynamic> _linkedFamilies = [];
   Map<String, List<dynamic>> _linkedFamilyMembers = {};
   bool _isLoadingLinkedFamilies = true;
+  int _imageTimestamp = DateTime.now().millisecondsSinceEpoch;
 
   @override
   void dispose() {
@@ -158,6 +159,7 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
             _userData = userData['data'];
             _familyMembers = familyData['data'];
             _isLoading = false;
+            _imageTimestamp = DateTime.now().millisecondsSinceEpoch;
           });
           _fetchMyCoordinator();
           _fetchLinkedFamilies();
@@ -869,7 +871,7 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
                   child: ClipOval(
                     child: hasProfileImage && !profileImageFailed
                         ? Image.network(
-                            '${ApiConfig.baseUrl}/assets/uploads/${_userData!['Memberimage']}',
+                            '${ApiConfig.baseUrl}/assets/uploads/${_userData!['Memberimage']}?t=$_imageTimestamp',
                             fit: BoxFit.cover,
                             width: 200,
                             height: 200,
@@ -2151,7 +2153,7 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
                 message: !hasImage || imageLoadFailed ? 'Image Not Found' : '',
                 waitDuration: const Duration(milliseconds: 300),
                 child: GestureDetector(
-                  onTap: (hasImage && !imageLoadFailed) ? () => _showFullScreenImage('${ApiConfig.baseUrl}/assets/uploads/${member['Memberimage']}') : null,
+                  onTap: (hasImage && !imageLoadFailed) ? () => _showFullScreenImage('${ApiConfig.baseUrl}/assets/uploads/${member['Memberimage']}?t=$_imageTimestamp') : null,
                   child: MouseRegion(
                     cursor: (hasImage && !imageLoadFailed) ? SystemMouseCursors.click : SystemMouseCursors.basic,
                     child: Stack(
@@ -2173,7 +2175,7 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
                                 0,      0,      0,      1, 0,
                               ]),
                               child: Image.network(
-                                '${ApiConfig.baseUrl}/assets/uploads/${member['Memberimage']}',
+                                '${ApiConfig.baseUrl}/assets/uploads/${member['Memberimage']}?t=$_imageTimestamp',
                                 fit: BoxFit.cover,
                                 errorBuilder: (context, error, stackTrace) {
                                   WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -2183,7 +2185,7 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
                                 },
                               ),
                             ) : Image.network(
-                              '${ApiConfig.baseUrl}/assets/uploads/${member['Memberimage']}',
+                              '${ApiConfig.baseUrl}/assets/uploads/${member['Memberimage']}?t=$_imageTimestamp',
                               fit: BoxFit.cover,
                               errorBuilder: (context, error, stackTrace) {
                                 WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -2447,7 +2449,7 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
             Offstage(
               offstage: true,
               child: Image.network(
-                '${ApiConfig.baseUrl}/assets/uploads/$imgPath',
+                '${ApiConfig.baseUrl}/assets/uploads/$imgPath?t=$_imageTimestamp',
                 errorBuilder: (context, error, stackTrace) {
                   WidgetsBinding.instance.addPostFrameCallback((_) {
                     setIconState();
@@ -2491,7 +2493,7 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
               minScale: 0.5,
               maxScale: 4,
               child: Image.network(
-                '${ApiConfig.baseUrl}/assets/uploads/$imgName',
+                '${ApiConfig.baseUrl}/assets/uploads/$imgName?t=$_imageTimestamp',
                 fit: BoxFit.contain,
                 errorBuilder: (_, __, ___) => const Center(child: Padding(padding: EdgeInsets.all(40), child: Text('Image not found', style: TextStyle(color: Colors.white)))),
               ),

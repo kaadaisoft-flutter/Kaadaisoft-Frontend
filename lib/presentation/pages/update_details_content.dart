@@ -122,8 +122,9 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
       _married ?? '', _aliveStatus ?? '', _kulam ?? '', _district ?? '', _taluk ?? '',
       _panchayat ?? '', _village ?? '', _education ?? '', _profession ?? '',
       _curAddressType ?? '', _curState ?? '', _curDistrict ?? '', _nriCountry ?? '',
-      _nriState ?? '', _nriCity ?? '', _memberImage != null ? 'img' : 'no_img',
-      _communityCert != null ? 'cert' : 'no_cert',
+      _nriState ?? '', _nriCity ?? '',
+      _memberImage is XFile ? 'new_${(_memberImage as XFile).name}' : (_memberImage?.toString() ?? 'no_img'),
+      _communityCert is XFile ? 'new_${(_communityCert as XFile).name}' : (_communityCert?.toString() ?? 'no_cert'),
     ].join('|');
   }
 
@@ -227,6 +228,9 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
     _nriCountry = d['Curnricountry'];
     _nriState = d['Curnristate'];
     _nriCity = d['Curnricity'];
+
+    _memberImage = d['Memberimage'];
+    _communityCert = d['Communitycertificate'];
 
     _fetchDistricts();
     if (_curAddressType == 'TamilNadu') {
@@ -1024,11 +1028,29 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
 
   Widget _fileUploadField(String label, dynamic file, ValueChanged<dynamic> onPicked) {
     String fileName = AppLocalizations.of(context)?.chooseFile ?? 'Choose file...';
+    Widget? previewWidget;
+
     if (file != null) {
        if (file is String) {
          fileName = file.split('/').last;
+         bool isPdf = fileName.toLowerCase().endsWith('.pdf');
+         if (isPdf) {
+           previewWidget = const Icon(Icons.picture_as_pdf, color: Colors.red, size: 30);
+         } else {
+           previewWidget = ClipRRect(borderRadius: BorderRadius.circular(4), child: Image.network('${ApiConfig.baseUrl}/uploads/$file', width: 40, height: 40, fit: BoxFit.cover, errorBuilder: (c,e,s) => const Icon(Icons.image, size: 30, color: _gold)));
+         }
        } else if (file is XFile) {
          fileName = file.name;
+         bool isPdf = fileName.toLowerCase().endsWith('.pdf');
+         if (isPdf) {
+           previewWidget = const Icon(Icons.picture_as_pdf, color: Colors.red, size: 30);
+         } else {
+           if (kIsWeb) {
+             previewWidget = ClipRRect(borderRadius: BorderRadius.circular(4), child: Image.network(file.path, width: 40, height: 40, fit: BoxFit.cover, errorBuilder: (c,e,s) => const Icon(Icons.image, size: 30, color: _gold)));
+           } else {
+             previewWidget = ClipRRect(borderRadius: BorderRadius.circular(4), child: Image.file(File(file.path), width: 40, height: 40, fit: BoxFit.cover, errorBuilder: (c,e,s) => const Icon(Icons.image, size: 30, color: _gold)));
+           }
+         }
        }
     }
 
@@ -1049,8 +1071,13 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
             ),
             child: Row(
               children: [
-                const Icon(Icons.upload_file, size: 18, color: _gold),
-                const SizedBox(width: 8),
+                if (previewWidget != null) ...[
+                  previewWidget!,
+                  const SizedBox(width: 12),
+                ] else ...[
+                  const Icon(Icons.upload_file, size: 18, color: _gold),
+                  const SizedBox(width: 8),
+                ],
                 Expanded(child: Text(fileName, style: const TextStyle(fontSize: 13, color: Colors.black87), overflow: TextOverflow.ellipsis)),
               ],
             ),
@@ -1071,8 +1098,8 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
       if (result != null && result.files.isNotEmpty) {
         final file = result.files.single;
         if (kIsWeb) {
-          if (file.bytes != null) {
-            onPicked(XFile.fromData(file.bytes!, name: file.name));
+          if (file.bytes != null || file.path != null) {
+            onPicked(file.path != null ? XFile(file.path!, name: file.name) : XFile.fromData(file.bytes!, name: file.name));
           }
         } else {
           if (file.path != null) {

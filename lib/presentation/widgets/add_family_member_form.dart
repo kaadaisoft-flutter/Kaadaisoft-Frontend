@@ -1073,7 +1073,10 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
             final result = await fp_pkg.FilePicker.pickFiles(type: fp_pkg.FileType.image, withData: kIsWeb);
             if (result != null) {
               setState(() {
-                final xfile = kIsWeb ? XFile.fromData(result.files.single.bytes!, name: result.files.single.name) : XFile(result.files.single.path!);
+                final file = result.files.single;
+                final xfile = kIsWeb 
+                    ? (file.path != null ? XFile(file.path!, name: file.name) : XFile.fromData(file.bytes!, name: file.name)) 
+                    : XFile(file.path!, name: file.name);
                 if (type == 'member_image') _memberImage = xfile;
                 if (type == 'community_cert') _communityCert = xfile;
               });
