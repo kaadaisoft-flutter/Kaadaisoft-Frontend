@@ -5,6 +5,7 @@ import '../widgets/loading_spinner.dart';
 import '../widgets/custom_dialog.dart';
 import '../../utils/api_config.dart';
 import '../widgets/custom_dropdown_search.dart';
+import '../widgets/pagination_widget.dart';
 import '../../l10n/app_localizations.dart';
 
 class ReceivedApplicationsContent extends StatefulWidget {
@@ -30,6 +31,9 @@ class _ReceivedApplicationsContentState extends State<ReceivedApplicationsConten
   bool _isLoading = true;
   final ScrollController _scrollController = ScrollController();
   List<String> _assignedVillages = [];
+  int _currentPage = 1;
+  int _totalPages = 1;
+  int _itemsPerPage = 10;
 
   @override
   void initState() {
@@ -43,48 +47,32 @@ class _ReceivedApplicationsContentState extends State<ReceivedApplicationsConten
     super.dispose();
   }
 
-  Future<void> _fetchApplications() async {
+  Future<void> _fetchApplications({bool resetPage = true}) async {
+    if (resetPage) {
+      setState(() {
+        _currentPage = 1;
+      });
+    }
+    setState(() {
+      _isLoading = true;
+    });
     try {
-      // 1. Fetch assigned villages if coordinator
-      if (widget.role == 2 && widget.userId != null) {
-        final profileRes = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/member-coordinator/${widget.userId}'));
-        if (profileRes.statusCode == 200) {
-          final profileData = jsonDecode(profileRes.body);
-          final familyId = profileData['member']?['Familymembershipid'];
-          
-          if (familyId != null) {
-            final villagesRes = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/coordinator-villages/$familyId'));
-            if (villagesRes.statusCode == 200) {
-              final villagesData = jsonDecode(villagesRes.body)['data'] as List;
-              _assignedVillages = villagesData.map((v) => v['village_name'].toString().trim().toLowerCase()).toList();
-            }
-          }
-        }
-      }
-
-      // 2. Fetch applications
-      String url = '${ApiConfig.baseUrl}/api/received-applications';
+      String url = '${ApiConfig.baseUrl}/api/received-applications?page=$_currentPage&limit=$_itemsPerPage';
       if (widget.userId != null) {
-        url += '?user_id=${widget.userId}&role=${widget.role ?? 3}';
+        url += '&user_id=${widget.userId}&role=${widget.role ?? 3}';
       }
       final response = await http.get(Uri.parse(url));
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        List<dynamic> allApps = data['data'] ?? [];
-        
-        // 3. Apply local filtering for coordinator
-        if (widget.role == 2 && _assignedVillages.isNotEmpty) {
-          allApps = allApps.where((app) {
-            final appVillage = (app['Village']?.toString() ?? '').trim().toLowerCase();
-            // Change to exact match as requested
-            return _assignedVillages.contains(appVillage);
-          }).toList();
-        }
-
         if (mounted) {
           setState(() {
-            _applications = allApps;
+            _applications = data['data'] ?? [];
             _isLoading = false;
+            if (data['pagination'] != null) {
+              int totalItems = data['pagination']['total_items'] ?? 0;
+              _totalPages = (totalItems / _itemsPerPage).ceil();
+              if (_totalPages == 0) _totalPages = 1;
+            }
           });
         }
       } else {
@@ -97,19 +85,27 @@ class _ReceivedApplicationsContentState extends State<ReceivedApplicationsConten
 
   @override
   Widget build(BuildContext context) {
+    int totalPages = _totalPages;
+    
+    int startIndex = (_currentPage - 1) * _itemsPerPage;
+    List<dynamic> currentApplications = _applications;
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final isMobile = constraints.maxWidth < 900;
+        final isSmallScreen = constraints.maxWidth < 600;
         
         if (_isLoading) {
           return const LoadingSpinner(message: 'Loading applications...');
         }
 
         return SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header
+          child: Padding(
+            padding: const EdgeInsets.only(right: 16.0, bottom: 16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header
               Padding(
                 padding: const EdgeInsets.only(bottom: 24),
                 child: Wrap(
@@ -158,125 +154,78 @@ class _ReceivedApplicationsContentState extends State<ReceivedApplicationsConten
                 child: Column(
                   children: [
                     // Scrollable table area
-                    Scrollbar(
-                      controller: _scrollController,
-                      thumbVisibility: true,
-                      child: SingleChildScrollView(
-                        controller: _scrollController,
-                        scrollDirection: Axis.horizontal,
-                        child: SizedBox(
-                          width: 1162,
-                          child: Column(
+                    isSmallScreen
+                        ? Scrollbar(
+                            controller: _scrollController,
+                            thumbVisibility: true,
+                            child: SingleChildScrollView(
+                              controller: _scrollController,
+                              scrollDirection: Axis.horizontal,
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _buildFixedColumns(currentApplications),
+                                  _buildScrollableColumns(currentApplications),
+                                ],
+                              ),
+                            ),
+                          )
+                        : Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // Table Header
-                              Container(
-                                decoration: const BoxDecoration(
-                                  color: const Color(0xFF2D1B18),
-                                  borderRadius: BorderRadius.only(
-                                    topLeft: Radius.circular(12),
-                                    topRight: Radius.circular(12),
+                              _buildFixedColumns(currentApplications),
+                              Expanded(
+                                child: Scrollbar(
+                                  controller: _scrollController,
+                                  thumbVisibility: true,
+                                  child: SingleChildScrollView(
+                                    controller: _scrollController,
+                                    scrollDirection: Axis.horizontal,
+                                    child: _buildScrollableColumns(currentApplications),
                                   ),
                                 ),
-                                padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
-                                child: Row(
-                                  children: [
-                                    SizedBox(width: 60, child: Text(AppLocalizations.of(context)?.sNo?.toUpperCase() ?? 'S.NO', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13))),
-                                    SizedBox(width: 160, child: Text(AppLocalizations.of(context)?.memberNameHeader ?? 'MEMBER NAME', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13))),
-                                    SizedBox(width: 140, child: Text(AppLocalizations.of(context)?.memberIdHeader ?? 'MEMBER ID', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13))),
-                                    SizedBox(width: 150, child: Text(AppLocalizations.of(context)?.districtHeader ?? 'DISTRICT', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13))),
-                                    SizedBox(width: 150, child: Text(AppLocalizations.of(context)?.talukHeader ?? 'TALUK', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13))),
-                                    SizedBox(width: 160, child: Text(AppLocalizations.of(context)?.panchayatHeader ?? 'PANCHAYAT', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13))),
-                                    SizedBox(width: 150, child: Text(AppLocalizations.of(context)?.villageUpperHeader ?? 'VILLAGE', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13))),
-                                    SizedBox(width: 160, child: Text(AppLocalizations.of(context)?.actionHeader?.toUpperCase() ?? 'ACTIONS', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13))),
-                                  ],
-                                ),
                               ),
-                              // Table Body Rows
-                              _applications.isEmpty
-                                  ? Padding(
-                                      padding: const EdgeInsets.all(48),
-                                      child: Center(
-                                        child: Text(
-                                          AppLocalizations.of(context)?.noPendingApplications ?? 'No pending applications found.',
-                                          style: TextStyle(color: Colors.black45, fontSize: 15),
-                                        ),
-                                      ),
-                                    )
-                                  : ListView.builder(
-                                      shrinkWrap: true,
-                                      physics: const NeverScrollableScrollPhysics(),
-                                      padding: EdgeInsets.zero,
-                                      itemCount: _applications.length,
-                                      itemBuilder: (context, index) {
-                                        return _buildTableRow(index + 1, _applications[index]);
-                                      },
-                                    ),
                             ],
                           ),
-                        ),
-                      ),
-                    ),
 
                     // Pagination Footer
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: const BoxDecoration(border: Border(top: BorderSide(color: Colors.black12))),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          _buildPageButton(Icons.chevron_left, false),
-                          const SizedBox(width: 8),
-                          _buildPageNumber('1', true),
-                          const SizedBox(width: 8),
-                          _buildPageButton(Icons.chevron_right, false),
-                        ],
+                    if (!_isLoading && _applications.isNotEmpty)
+                      Container(
+                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          border: Border(top: BorderSide(color: Colors.black12)),
+                        ),
+                        child: Wrap(
+                          alignment: WrapAlignment.center,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            PaginationWidget(
+                              currentPage: _currentPage,
+                              totalPages: totalPages,
+                              onPageChanged: (page) {
+                                setState(() => _currentPage = page);
+                                _fetchApplications(resetPage: false);
+                              },
+                            ),
+                            Text('Showing page $_currentPage of $totalPages', style: const TextStyle(color: Colors.black45, fontSize: 12)),
+                          ],
+                        ),
                       ),
-                    ),
                   ],
                 ),
               ),
             ],
+          ),
           ),
         );
       }
     );
   }
 
-  Widget _buildTableRow(int sno, dynamic app) {
-    return InkWell(
-      onTap: () => _showApplicationDetails(app),
-      child: Container(
-        decoration: const BoxDecoration(
-          border: Border(bottom: BorderSide(color: Colors.black12)),
-        ),
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-        child: Row(
-          children: [
-            SizedBox(width: 60, child: Text(sno.toString(), style: const TextStyle(color: Colors.black87))),
-            SizedBox(width: 160, child: Text(app['Name']?.toString() ?? '', maxLines: 1, style: const TextStyle(color: const Color(0xFF5D1712), fontWeight: FontWeight.w500, overflow: TextOverflow.ellipsis))),
-            SizedBox(width: 140, child: Text(app['Phonenumber']?.toString() ?? '', style: const TextStyle(color: Colors.black54))),
-            SizedBox(width: 150, child: Align(alignment: Alignment.centerLeft, child: _buildBadge(app['District']?.toString() ?? '', Colors.grey.shade200, textColor: Colors.black87))),
-            SizedBox(width: 150, child: Text(app['Taluk']?.toString() ?? '', maxLines: 1, style: const TextStyle(color: Colors.black54, overflow: TextOverflow.ellipsis))),
-            SizedBox(width: 160, child: Text(app['Panchayat']?.toString() ?? '', maxLines: 1, style: const TextStyle(color: Colors.black54, overflow: TextOverflow.ellipsis))),
-            SizedBox(width: 150, child: Text(app['Village']?.toString() ?? '', maxLines: 1, style: const TextStyle(color: Colors.black54, overflow: TextOverflow.ellipsis))),
-            SizedBox(width: 160, child: Row(
-              children: [
-                GestureDetector(
-                  onTap: () => _confirmStatusUpdate(app['Id'], 'Verified'),
-                  child: _buildBadge('Approve', Colors.green)
-                ),
-                const SizedBox(width: 8),
-                GestureDetector(
-                  onTap: () => _confirmStatusUpdate(app['Id'], 'Rejected'),
-                  child: _buildBadge('Reject', Colors.red)
-                ),
-              ],
-            )),
-          ],
-        ),
-      ),
-    );
-  }
+
   Future<void> _confirmStatusUpdate(dynamic memberId, String status) async {
     final bool isApprove = status == 'Verified';
     
@@ -708,6 +657,137 @@ class _ReceivedApplicationsContentState extends State<ReceivedApplicationsConten
     );
   }
 
+  Widget _buildFixedColumns(List<dynamic> currentApplications) {
+    return SizedBox(
+      width: 376, // 60 + 160 + 140 + 16(padding)
+      child: Column(
+        children: [
+          // Fixed Header
+          Container(
+            height: 50,
+            decoration: const BoxDecoration(
+              color: const Color(0xFF2D1B18),
+              borderRadius: BorderRadius.only(topLeft: Radius.circular(12)),
+            ),
+            padding: const EdgeInsets.only(left: 16),
+            child: Row(
+              children: [
+                SizedBox(width: 60, child: Align(alignment: Alignment.centerLeft, child: Text(AppLocalizations.of(context)?.sNo?.toUpperCase() ?? 'S.NO', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)))),
+                SizedBox(width: 160, child: Align(alignment: Alignment.centerLeft, child: Text(AppLocalizations.of(context)?.memberNameHeader ?? 'MEMBER NAME', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)))),
+                SizedBox(width: 140, child: Align(alignment: Alignment.centerLeft, child: Text(AppLocalizations.of(context)?.mobileNumber?.toUpperCase() ?? 'MOBILE NUMBER', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)))),
+              ],
+            ),
+          ),
+          // Fixed Rows
+          if (_applications.isEmpty)
+            Container(height: 120)
+          else
+            ...currentApplications.asMap().entries.map((entry) {
+              int index = entry.key;
+              dynamic app = entry.value;
+              int sno = ((_currentPage - 1) * _itemsPerPage) + index + 1;
+              return InkWell(
+                onTap: () => _showApplicationDetails(app),
+                child: Container(
+                  height: 60,
+                  decoration: const BoxDecoration(
+                    border: Border(
+                      bottom: BorderSide(color: Colors.black12),
+                    ),
+                  ),
+                  padding: const EdgeInsets.only(left: 16),
+                  child: Row(
+                    children: [
+                      SizedBox(width: 60, child: Align(alignment: Alignment.centerLeft, child: Text(sno.toString(), style: const TextStyle(color: Colors.black87)))),
+                      SizedBox(width: 160, child: Align(alignment: Alignment.centerLeft, child: Text(app['Name']?.toString() ?? '', maxLines: 1, style: const TextStyle(color: const Color(0xFF5D1712), fontWeight: FontWeight.w500, overflow: TextOverflow.ellipsis)))),
+                      SizedBox(width: 140, child: Align(alignment: Alignment.centerLeft, child: Text(app['Phonenumber']?.toString() ?? '', style: const TextStyle(color: Colors.black54)))),
+                    ],
+                  ),
+                ),
+              );
+            }).toList(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildScrollableColumns(List<dynamic> currentApplications) {
+    return SizedBox(
+      width: 786, // 150 + 150 + 160 + 150 + 160 + 16(padding)
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Scrollable Header
+          Container(
+            height: 50,
+            decoration: const BoxDecoration(
+              color: const Color(0xFF2D1B18),
+              borderRadius: BorderRadius.only(topRight: Radius.circular(12)),
+            ),
+            padding: const EdgeInsets.only(right: 16),
+            child: Row(
+              children: [
+                SizedBox(width: 150, child: Align(alignment: Alignment.centerLeft, child: Text(AppLocalizations.of(context)?.districtHeader ?? 'DISTRICT', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)))),
+                SizedBox(width: 150, child: Align(alignment: Alignment.centerLeft, child: Text(AppLocalizations.of(context)?.talukHeader ?? 'TALUK', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)))),
+                SizedBox(width: 160, child: Align(alignment: Alignment.centerLeft, child: Text(AppLocalizations.of(context)?.panchayatHeader ?? 'PANCHAYAT', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)))),
+                SizedBox(width: 150, child: Align(alignment: Alignment.centerLeft, child: Text(AppLocalizations.of(context)?.villageUpperHeader ?? 'VILLAGE', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)))),
+                SizedBox(width: 160, child: Align(alignment: Alignment.centerLeft, child: Text(AppLocalizations.of(context)?.actionHeader?.toUpperCase() ?? 'ACTIONS', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)))),
+              ],
+            ),
+          ),
+          // Scrollable Rows
+          if (_applications.isEmpty)
+            Container(
+              height: 120,
+              width: 786,
+              child: Center(
+                child: Text(
+                  AppLocalizations.of(context)?.noPendingApplications ?? 'No pending applications found.',
+                  style: const TextStyle(color: Colors.black45, fontSize: 15),
+                ),
+              ),
+            )
+          else
+            ...currentApplications.map((app) {
+              return InkWell(
+                onTap: () => _showApplicationDetails(app),
+                child: Container(
+                  height: 60,
+                  decoration: const BoxDecoration(
+                    border: Border(bottom: BorderSide(color: Colors.black12)),
+                  ),
+                  padding: const EdgeInsets.only(right: 16),
+                  child: Row(
+                    children: [
+                      SizedBox(width: 150, child: Align(alignment: Alignment.centerLeft, child: _buildBadge(app['District']?.toString() ?? '', Colors.grey.shade200, textColor: Colors.black87))),
+                      SizedBox(width: 150, child: Align(alignment: Alignment.centerLeft, child: Text(app['Taluk']?.toString() ?? '', maxLines: 1, style: const TextStyle(color: Colors.black54, overflow: TextOverflow.ellipsis)))),
+                      SizedBox(width: 160, child: Align(alignment: Alignment.centerLeft, child: Text(app['Panchayat']?.toString() ?? '', maxLines: 1, style: const TextStyle(color: Colors.black54, overflow: TextOverflow.ellipsis)))),
+                      SizedBox(width: 150, child: Align(alignment: Alignment.centerLeft, child: Text(app['Village']?.toString() ?? '', maxLines: 1, style: const TextStyle(color: Colors.black54, overflow: TextOverflow.ellipsis)))),
+                      SizedBox(width: 160, child: Row(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          GestureDetector(
+                            onTap: () => _confirmStatusUpdate(app['Id'], 'Verified'),
+                            child: _buildBadge('Approve', Colors.green)
+                          ),
+                          const SizedBox(width: 8),
+                          GestureDetector(
+                            onTap: () => _confirmStatusUpdate(app['Id'], 'Rejected'),
+                            child: _buildBadge('Reject', Colors.red)
+                          ),
+                        ],
+                      )),
+                    ],
+                  ),
+                ),
+              );
+            }).toList(),
+        ],
+      ),
+    );
+  }
+
   Widget _buildBadge(String text, Color bgColor, {Color textColor = Colors.white}) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -725,24 +805,5 @@ class _ReceivedApplicationsContentState extends State<ReceivedApplicationsConten
     );
   }
 
-  Widget _buildPageNumber(String num, bool isActive) {
-    return Container(
-      width: 32,
-      height: 32,
-      decoration: BoxDecoration(
-        color: isActive ? const Color(0xFF5D1712) : Colors.transparent,
-        shape: BoxShape.circle,
-      ),
-      child: Center(
-        child: Text(
-          num,
-          style: TextStyle(color: isActive ? Colors.white : Colors.black54, fontWeight: FontWeight.bold),
-        ),
-      ),
-    );
-  }
 
-  Widget _buildPageButton(IconData icon, bool isEnabled) {
-    return Icon(icon, color: isEnabled ? Colors.black87 : Colors.black26);
-  }
 }

@@ -43,6 +43,7 @@ class _MembersContentState extends State<MembersContent> {
   
   // Pagination variables
   int _currentPage = 1;
+  int _totalPages = 1;
   final int _itemsPerPage = 10;
   final ScrollController _horizontalScrollController = ScrollController();
 
@@ -106,10 +107,14 @@ class _MembersContentState extends State<MembersContent> {
     ).then((_) => _fetchMembers());
   }
 
-  Future<void> _fetchMembers() async {
-
+  Future<void> _fetchMembers({bool resetPage = true}) async {
+    if (resetPage) {
+      setState(() {
+        _currentPage = 1;
+      });
+    }
     try {
-      String url = '${ApiConfig.members}?user_id=${widget.userId}&role=${widget.role}';
+      String url = '${ApiConfig.members}?user_id=${widget.userId}&role=${widget.role}&page=$_currentPage&limit=$_itemsPerPage';
       
       // Append filters to URL
       if (_searchController.text.isNotEmpty) url += '&search=${Uri.encodeComponent(_searchController.text)}';
@@ -129,7 +134,11 @@ class _MembersContentState extends State<MembersContent> {
         setState(() {
           _members = data['data'];
           _isLoading = false;
-          _currentPage = 1; // Reset to first page
+          if (data['pagination'] != null) {
+            int totalItems = data['pagination']['total_items'] ?? 0;
+            _totalPages = (totalItems / _itemsPerPage).ceil();
+            if (_totalPages == 0) _totalPages = 1;
+          }
         });
       } else {
         setState(() {
@@ -154,16 +163,11 @@ class _MembersContentState extends State<MembersContent> {
   @override
   Widget build(BuildContext context) {
     // Pagination logic
-    int totalPages = (_members.length / _itemsPerPage).ceil();
-    if (totalPages == 0) totalPages = 1;
+    int totalPages = _totalPages;
 
     int startIndex = (_currentPage - 1) * _itemsPerPage;
-    int endIndex = startIndex + _itemsPerPage;
-    if (endIndex > _members.length) endIndex = _members.length;
 
-    List<dynamic> currentPageMembers = _members.isNotEmpty 
-        ? _members.sublist(startIndex, endIndex) 
-        : [];
+    List<dynamic> currentPageMembers = _members;
 
     if (_isLoading) {
       return const LoadingSpinner(message: 'Fetching members...');
@@ -409,7 +413,10 @@ class _MembersContentState extends State<MembersContent> {
                       PaginationWidget(
                         currentPage: _currentPage,
                         totalPages: totalPages,
-                        onPageChanged: (page) => setState(() => _currentPage = page),
+                        onPageChanged: (page) {
+                          setState(() => _currentPage = page);
+                          _fetchMembers(resetPage: false);
+                        },
                       ),
                         Text('Showing page $_currentPage of $totalPages', style: const TextStyle(color: Colors.black45, fontSize: 12)),
                       ],
