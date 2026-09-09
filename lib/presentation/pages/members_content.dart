@@ -44,6 +44,7 @@ class _MembersContentState extends State<MembersContent> {
   // Pagination variables
   int _currentPage = 1;
   int _totalPages = 1;
+  int _totalMembersCount = 0;
   final int _itemsPerPage = 10;
   final ScrollController _horizontalScrollController = ScrollController();
 
@@ -136,8 +137,11 @@ class _MembersContentState extends State<MembersContent> {
           _isLoading = false;
           if (data['pagination'] != null) {
             int totalItems = data['pagination']['total_items'] ?? 0;
+            _totalMembersCount = totalItems;
             _totalPages = (totalItems / _itemsPerPage).ceil();
             if (_totalPages == 0) _totalPages = 1;
+          } else {
+            _totalMembersCount = _members.length;
           }
         });
       } else {
@@ -207,7 +211,7 @@ class _MembersContentState extends State<MembersContent> {
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
-                              _isLoading ? '' : _members.length.toString(),
+                              _isLoading ? '' : _totalMembersCount.toString(),
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.bold,
@@ -462,7 +466,7 @@ class _MembersContentState extends State<MembersContent> {
                 title: 'Update Member Details: ',
                 onBack: () {
                   Navigator.pop(context);
-                  _fetchMembers();
+                  _fetchMembers(resetPage: false);
                 },
               ),
             ),

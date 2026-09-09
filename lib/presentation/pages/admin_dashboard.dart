@@ -190,8 +190,8 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
     _loadActiveItem();
     _loadSeenCounts();
     
-    // Set up polling for stats
-    _statsTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
+    // Set up polling for stats (every 60 seconds to keep notification badges updated without spamming network)
+    _statsTimer = Timer.periodic(const Duration(seconds: 60), (timer) {
       if (mounted) {
         _fetchStats();
       }

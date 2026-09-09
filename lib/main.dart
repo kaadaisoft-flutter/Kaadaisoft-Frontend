@@ -9,7 +9,22 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'l10n/app_localizations.dart';
 import 'providers/locale_provider.dart';
-void main() {
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:firebase_core/firebase_core.dart';
+import 'services/fcm_service.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  if (!kIsWeb) {
+    try {
+      await Firebase.initializeApp();
+      await FcmService.initialize();
+    } catch (e) {
+      debugPrint("Firebase initialization failed: $e");
+    }
+  }
+
   runApp(
     MultiProvider(
       providers: [

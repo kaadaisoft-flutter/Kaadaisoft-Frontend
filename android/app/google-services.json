@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "152385751200",
+    "project_id": "kaadaikulam-web",
+    "storage_bucket": "kaadaikulam-web.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:152385751200:android:e107dbbc8ef9488386a1c5",
+        "android_client_info": {
+          "package_name": "com.example.kaadaisoft"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD62QKELcgbY46peEpE2vSmAsscWTfl3oE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
