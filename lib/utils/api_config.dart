@@ -10,10 +10,10 @@ class ApiConfig {
         return 'http://localhost:8000';
       }
       // Otherwise, use the live backend URL
-      return 'https://kaadaisoft-backend-6i97.onrender.com/';
+      return 'https://kaadaisoft-backend-6i97.onrender.com';
     } else {
       // Live backend URL for Mobile Apps
-      return 'https://kaadaisoft-backend-6i97.onrender.com/';
+      return 'https://kaadaisoft-backend-6i97.onrender.com';
     }
   }
 
