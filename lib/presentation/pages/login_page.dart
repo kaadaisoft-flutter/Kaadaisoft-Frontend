@@ -17,6 +17,7 @@ import '../widgets/registration_form.dart';
 import '../widgets/forgot_password_dialog.dart';
 import 'terms_and_conditions_page.dart';
 import 'privacy_policy_page.dart';
+import '../../services/fcm_service.dart';
 
 class LoginPage extends StatefulWidget {
   final String? redirectMemberId;
@@ -103,6 +104,9 @@ class _LoginPageState extends State<LoginPage> {
           await prefs.setString('userName', data['user']['name'] ?? 'User');
           await prefs.setInt('userRole', data['user']['role'] ?? 3);
           await prefs.setBool('isLoggedIn', true);
+
+          // Register device FCM token for push notifications
+          FcmService.updateTokenForUser(data['user']['id']);
 
           Navigator.pushReplacement(
             context, 

@@ -16,8 +16,17 @@ class FcmService {
       sound: true,
     );
 
-    if (settings.authorizationStatus == AuthorizationStatus.authorized) {
+    if (settings.authorizationStatus == AuthorizationStatus.authorized ||
+        settings.authorizationStatus == AuthorizationStatus.provisional) {
       debugPrint('User granted permission for notifications');
+      
+      // Set presentation options for foreground notifications
+      await _firebaseMessaging.setForegroundNotificationPresentationOptions(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+
       await _setupToken();
 
       // Listen for token refreshes
@@ -54,11 +63,25 @@ class FcmService {
     }
   }
 
-  static Future<void> _sendTokenToServer(String token) async {
+  static Future<void> updateTokenForUser([dynamic explicitUserId]) async {
+    try {
+      String? token = await _firebaseMessaging.getToken();
+      if (token != null) {
+        await _sendTokenToServer(token, explicitUserId: explicitUserId);
+      }
+    } catch (e) {
+      debugPrint("Error in updateTokenForUser: $e");
+    }
+  }
+
+  static Future<void> _sendTokenToServer(String token, {dynamic explicitUserId}) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final userId = prefs.getInt('userId');
-      if (userId == null) return; // User not logged in yet
+      final userId = explicitUserId ?? prefs.getInt('userId') ?? prefs.get('userId');
+      if (userId == null) {
+        debugPrint("FCM token update skipped: user_id is null");
+        return;
+      }
 
       final response = await http.post(
         Uri.parse('${ApiConfig.baseUrl}/api/update-fcm-token'),
@@ -70,7 +93,7 @@ class FcmService {
       );
 
       if (response.statusCode == 200) {
-        debugPrint("Successfully updated FCM token on server.");
+        debugPrint("Successfully updated FCM token on server for user $userId.");
       } else {
         debugPrint("Failed to update FCM token on server: ${response.body}");
       }

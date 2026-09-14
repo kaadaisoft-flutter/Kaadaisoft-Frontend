@@ -25,6 +25,7 @@ import '../widgets/payment_form.dart';
 import '../widgets/receipt_dialog.dart';
 import '../../utils/api_config.dart';
 import 'payment_requests_content.dart';
+import '../../services/fcm_service.dart';
 
 class AdminDashboard extends StatefulWidget {
   final bool showLoginSuccess;
@@ -189,6 +190,9 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
     _fetchMyCoordinator();
     _loadActiveItem();
     _loadSeenCounts();
+    
+    // Register or sync FCM token for current logged-in user
+    FcmService.updateTokenForUser(widget.userId);
     
     // Set up polling for stats (every 60 seconds to keep notification badges updated without spamming network)
     _statsTimer = Timer.periodic(const Duration(seconds: 60), (timer) {
