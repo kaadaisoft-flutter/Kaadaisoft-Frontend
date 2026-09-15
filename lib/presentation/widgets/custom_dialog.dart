@@ -7,6 +7,7 @@ class CustomDialog extends StatelessWidget {
   final String message;
   final DialogType type;
   final VoidCallback onOk;
+  final String buttonText;
 
   const CustomDialog({
     super.key,
@@ -14,6 +15,7 @@ class CustomDialog extends StatelessWidget {
     required this.message,
     this.type = DialogType.success,
     required this.onOk,
+    this.buttonText = 'OK',
   });
 
   @override
@@ -93,7 +95,7 @@ class CustomDialog extends StatelessWidget {
             style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w800,
-              color: const Color(0xFF1F2937),
+              color: Color(0xFF1F2937),
               letterSpacing: -0.4,
             ),
             textAlign: TextAlign.center,
@@ -106,7 +108,7 @@ class CustomDialog extends StatelessWidget {
                 message,
                 style: const TextStyle(
                   fontSize: 14,
-                  color: const Color(0xFF6B7280),
+                  color: Color(0xFF6B7280),
                   height: 1.4,
                   fontWeight: FontWeight.w500,
                 ),
@@ -130,9 +132,9 @@ class CustomDialog extends StatelessWidget {
                 elevation: 0,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
-              child: const Text(
-                'OK',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+              child: Text(
+                buttonText,
+                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, letterSpacing: 0.5),
               ),
             ),
           ),
@@ -147,6 +149,7 @@ Future<void> showStatusDialog(BuildContext context, {
   required String message,
   DialogType type = DialogType.success,
   VoidCallback? onOk,
+  String buttonText = 'OK',
   bool? autoDismiss,
   Duration duration = const Duration(seconds: 2),
 }) {
@@ -160,6 +163,7 @@ Future<void> showStatusDialog(BuildContext context, {
         message: message,
         type: type,
         onOk: onOk ?? () {},
+        buttonText: buttonText,
       );
     },
   );

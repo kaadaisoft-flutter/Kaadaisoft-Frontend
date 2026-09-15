@@ -94,7 +94,16 @@ class _LoginPageState extends State<LoginPage> {
         final data = jsonDecode(response.body);
         if (mounted) {
           if (data['user']['is_first_login'] == true) {
-            _handleFirstLoginOTP(data['user'], mobile);
+            showStatusDialog(
+              context,
+              title: 'First Time Login',
+              message: 'Welcome! Since this is your first time logging in, please change your password first.',
+              type: DialogType.info,
+              buttonText: 'Change Password',
+              onOk: () {
+                _handleFirstLoginOTP(data['user'], mobile);
+              },
+            );
             return;
           }
 

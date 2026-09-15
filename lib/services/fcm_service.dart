@@ -64,6 +64,7 @@ class FcmService {
   }
 
   static Future<void> updateTokenForUser([dynamic explicitUserId]) async {
+    if (kIsWeb) return; // FCM push notifications token update is for Android/iOS mobile apps
     try {
       String? token = await _firebaseMessaging.getToken();
       if (token != null) {
