@@ -210,7 +210,20 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
     );
     
     _selectedRelationship = found ?? (_relationships.contains(normalizedRole) ? normalizedRole : null);
-    _selectedGender = d['Gender'];
+    
+    String? rawGender = d['Gender']?.toString().trim();
+    if (rawGender != null && rawGender.isNotEmpty) {
+      if (rawGender.toLowerCase() == 'female') _selectedGender = 'Female';
+      else if (rawGender.toLowerCase() == 'male') _selectedGender = 'Male';
+      else if (rawGender.toLowerCase() == 'other') _selectedGender = 'Other';
+      else _selectedGender = rawGender;
+    }
+
+    if (['Wife', 'Daughter', 'Mother', 'Grand Mother', 'Daughter-in-law', 'Sister'].contains(_selectedRelationship)) {
+      _selectedGender = 'Female';
+    } else if (['Husband', 'Son', 'Father', 'Grand Father', 'Son-in-law', 'Brother'].contains(_selectedRelationship)) {
+      _selectedGender = 'Male';
+    }
     _selectedBloodGroup = d['Bloodgroup'];
     final rawMarried = d['Married']?.toString().trim().toLowerCase();
     if (rawMarried == 'yes') {
@@ -219,6 +232,10 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
       _selectedMarried = 'No';
     } else {
       _selectedMarried = null;
+    }
+
+    if (['Wife', 'Husband', 'Father', 'Mother', 'Grand Father', 'Grand Mother', 'Daughter-in-law', 'Son-in-law'].contains(_selectedRelationship)) {
+      _selectedMarried = 'Yes';
     }
     
     _selectedEducation = d['Education'];
@@ -299,6 +316,19 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
   }
 
   void _checkMarriedAgeValidation(String? marriedVal) async {
+    bool isMarriedLocked = ['Wife', 'Husband', 'Father', 'Mother', 'Grand Father', 'Grand Mother', 'Daughter-in-law', 'Son-in-law'].contains(_selectedRelationship);
+
+    if (marriedVal == 'No' && isMarriedLocked) {
+      showStatusDialog(
+        context,
+        title: 'Married Status Locked',
+        message: 'Married status is automatically set to Yes for relationship "$_selectedRelationship".',
+        type: DialogType.info,
+      );
+      setState(() => _selectedMarried = 'Yes');
+      return;
+    }
+
     bool wasNotMarried = _selectedMarried != 'Yes';
     
     if (marriedVal == 'Yes' && _dobController.text.isNotEmpty) {
@@ -482,7 +512,19 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
                       _buildSectionTitle(Icons.person_outline, 'Update Family Member'),
                       const SizedBox(height: 16),
                       _buildResponsiveRow(isMobile, [
-                        _buildDropdownField('Relationship *', _relationships, _selectedRelationship, (v) => setState(() => _selectedRelationship = v)),
+                        _buildDropdownField('Relationship *', _relationships, _selectedRelationship, (v) {
+                          setState(() {
+                            _selectedRelationship = v;
+                            if (['Wife', 'Daughter', 'Mother', 'Grand Mother', 'Daughter-in-law', 'Sister'].contains(v)) {
+                              _selectedGender = 'Female';
+                            } else if (['Husband', 'Son', 'Father', 'Grand Father', 'Son-in-law', 'Brother'].contains(v)) {
+                              _selectedGender = 'Male';
+                            }
+                            if (v == 'Wife' || v == 'Husband' || v == 'Father' || v == 'Mother' || v == 'Grand Father' || v == 'Grand Mother' || v == 'Daughter-in-law' || v == 'Son-in-law') {
+                              _selectedMarried = 'Yes';
+                            }
+                          });
+                        }),
                         _buildInputField('Name *', _nameController, maxLength: 100),
                         _buildIntlPhoneField('Phone Number *', _phoneController, 
                           fieldKey: _phoneFieldKey,
@@ -924,7 +966,19 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
   }
 
   Widget _buildGenderSelector() {
-    return _buildRadioField('Gender *', ['Male', 'Female', 'Other'], _selectedGender, (v) => setState(() => _selectedGender = v));
+    bool isGenderLocked = ['Wife', 'Daughter', 'Mother', 'Grand Mother', 'Daughter-in-law', 'Sister', 'Husband', 'Son', 'Father', 'Grand Father', 'Son-in-law', 'Brother'].contains(_selectedRelationship);
+    return _buildRadioField('Gender *', ['Male', 'Female', 'Other'], _selectedGender, (v) {
+      if (isGenderLocked && v != _selectedGender) {
+        showStatusDialog(
+          context,
+          title: 'Gender Auto-set',
+          message: 'Gender is automatically set to $_selectedGender for relationship "$_selectedRelationship".',
+          type: DialogType.info,
+        );
+      } else {
+        setState(() => _selectedGender = v);
+      }
+    });
   }
 
   Widget _buildRadioField(String label, List<String> options, String? value, ValueChanged<String?> onChanged) {
@@ -1021,11 +1075,35 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
         const SizedBox(height: 8),
         InkWell(
           onTap: () async {
-            final result = await fp_pkg.FilePicker.pickFiles(type: fp_pkg.FileType.image, withData: kIsWeb);
-            if (result != null) {
+            final result = await fp_pkg.FilePicker.pickFiles(
+              type: fp_pkg.FileType.custom,
+              allowedExtensions: ['jpg', 'jpeg', 'png', 'pdf'],
+              withData: kIsWeb,
+            );
+            if (result != null && result.files.isNotEmpty) {
               final file = result.files.single;
-              if (file.size > 2 * 1024 * 1024) {
-                if (mounted) showStatusDialog(context, title: 'Validation Error', message: 'Maximum allowed file size is 2 MB.', type: DialogType.error);
+              final ext = (file.extension ?? file.name.split('.').last).toLowerCase();
+              final allowedExtensions = ['jpg', 'jpeg', 'png', 'pdf'];
+              if (!allowedExtensions.contains(ext)) {
+                if (mounted) {
+                  showStatusDialog(
+                    context,
+                    title: 'Validation Error',
+                    message: 'Only JPG, JPEG, PNG, and PDF document formats are supported.',
+                    type: DialogType.error,
+                  );
+                }
+                return;
+              }
+              if (file.size > 5 * 1024 * 1024) {
+                if (mounted) {
+                  showStatusDialog(
+                    context,
+                    title: 'Validation Error',
+                    message: 'File size exceeds the allowed limit of 5 MB.',
+                    type: DialogType.error,
+                  );
+                }
                 return;
               }
               setState(() {

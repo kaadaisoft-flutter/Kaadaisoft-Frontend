@@ -203,7 +203,19 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
     } else {
       _otherRelationshipCtrl = TextEditingController();
     }
-    _gender = d['Gender'];
+    String? rawGender = d['Gender']?.toString().trim();
+    if (rawGender != null && rawGender.isNotEmpty) {
+      if (rawGender.toLowerCase() == 'female') _gender = 'Female';
+      else if (rawGender.toLowerCase() == 'male') _gender = 'Male';
+      else if (rawGender.toLowerCase() == 'other') _gender = 'Other';
+      else _gender = rawGender;
+    }
+
+    if (['Wife', 'Daughter', 'Mother', 'Grand Mother', 'Daughter-in-law', 'Sister'].contains(_relationship)) {
+      _gender = 'Female';
+    } else if (['Husband', 'Son', 'Father', 'Grand Father', 'Son-in-law', 'Brother'].contains(_relationship)) {
+      _gender = 'Male';
+    }
     _bloodGroup = d['Bloodgroup'];
     final rawMarried = d['Married']?.toString().trim().toLowerCase();
     if (rawMarried == 'yes') {
@@ -212,6 +224,10 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
       _married = 'No';
     } else {
       _married = null;
+    }
+
+    if (['Wife', 'Husband', 'Father', 'Mother', 'Grand Father', 'Grand Mother', 'Daughter-in-law', 'Son-in-law'].contains(_relationship)) {
+      _married = 'Yes';
     }
     _aliveStatus = (d['is_dead'] == 0 || d['is_dead'] == '0' || d['is_dead'] == null || d['is_dead'].toString().toLowerCase() == 'alive') ? 'Alive' : 'Dead';
     _kulam = d['Kulam'] ?? 'Poondurai Kaadai';
@@ -735,7 +751,19 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _dropField('Relationship *', _relationships, _relationship, (v) => setState(() => _relationship = v)),
+              _dropField('Relationship *', _relationships, _relationship, (v) {
+                setState(() {
+                  _relationship = v;
+                  if (['Wife', 'Daughter', 'Mother', 'Grand Mother', 'Daughter-in-law', 'Sister'].contains(v)) {
+                    _gender = 'Female';
+                  } else if (['Husband', 'Son', 'Father', 'Grand Father', 'Son-in-law', 'Brother'].contains(v)) {
+                    _gender = 'Male';
+                  }
+                  if (['Wife', 'Husband', 'Father', 'Mother', 'Grand Father', 'Grand Mother', 'Daughter-in-law', 'Son-in-law'].contains(v)) {
+                    _married = 'Yes';
+                  }
+                });
+              }),
               if (_relationship == 'Other') ...[
                 const SizedBox(height: 16),
                 _textField('Specify Relationship *', _otherRelationshipCtrl, required: true),
@@ -807,7 +835,20 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
               ),
             ],
           ),
-          _radioField('Married *', ['Yes', 'No'], _married, (v) => setState(() => _married = v)),
+          _radioField('Married *', ['Yes', 'No'], _married, (v) {
+            bool isMarriedLocked = ['Wife', 'Husband', 'Father', 'Mother', 'Grand Father', 'Grand Mother', 'Daughter-in-law', 'Son-in-law'].contains(_relationship);
+            if (v == 'No' && isMarriedLocked) {
+              showStatusDialog(
+                context,
+                title: 'Married Status Locked',
+                message: 'Married status is automatically set to Yes for relationship "$_relationship".',
+                type: DialogType.info,
+              );
+              setState(() => _married = 'Yes');
+            } else {
+              setState(() => _married = v);
+            }
+          }),
         ]),
         const SizedBox(height: 24),
         // Row 4: Married, Alive, Valuvu
@@ -1097,6 +1138,33 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
       
       if (result != null && result.files.isNotEmpty) {
         final file = result.files.single;
+
+        final ext = (file.extension ?? file.name.split('.').last).toLowerCase();
+        final allowedExtensions = ['jpg', 'jpeg', 'png', 'pdf'];
+        if (!allowedExtensions.contains(ext)) {
+          if (mounted) {
+            showStatusDialog(
+              context,
+              title: 'Validation Error',
+              message: 'Only JPG, JPEG, PNG, and PDF document formats are supported.',
+              type: DialogType.error,
+            );
+          }
+          return;
+        }
+
+        if (file.size > 5 * 1024 * 1024) {
+          if (mounted) {
+            showStatusDialog(
+              context,
+              title: 'Validation Error',
+              message: 'File size exceeds the allowed limit of 5 MB.',
+              type: DialogType.error,
+            );
+          }
+          return;
+        }
+
         if (kIsWeb) {
           if (file.bytes != null || file.path != null) {
             onPicked(file.path != null ? XFile(file.path!, name: file.name) : XFile.fromData(file.bytes!, name: file.name));

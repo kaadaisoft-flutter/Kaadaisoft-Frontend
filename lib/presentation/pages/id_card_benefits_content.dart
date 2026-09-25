@@ -376,8 +376,34 @@ class _IdCardBenefitsContentState extends State<IdCardBenefitsContent> {
                     ],
                   );
 
+                  final bool isUserDisabled = _userData != null && (_userData!['is_disabled'] == true || _userData!['is_disabled'] == 1 || _userData!['is_disabled']?.toString().toLowerCase() == 'true');
+
                   Widget cardSection = Column(
                     children: [
+                      if (isUserDisabled)
+                        Container(
+                          margin: const EdgeInsets.only(bottom: 20),
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.red.shade50,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.red.shade300, width: 1.5),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.block, color: Colors.red, size: 28),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Text(
+                                  _isTamil
+                                    ? 'உங்கள் அடையாள அட்டை நிர்வாகியினால் முடக்கப்பட்டிருக்கிறது. அடையாள அட்டை விவரங்கள் காண்பிக்கப்படாது.'
+                                    : 'Your ID Card has been disabled by the manager. ID Card details will not be populated.',
+                                  style: TextStyle(color: Colors.red.shade900, fontWeight: FontWeight.bold, fontSize: 14),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       _FlipCard(userData: _userData),
                     ],
                   );
@@ -552,7 +578,7 @@ class _FlipCardState extends State<_FlipCard> {
               fit: BoxFit.cover,
             ),
           ),
-          child: widget.userData != null 
+          child: (widget.userData != null && widget.userData!['is_disabled'] != true && widget.userData!['is_disabled'] != 1 && widget.userData!['is_disabled']?.toString().toLowerCase() != 'true')
               ? (isFront ? _buildFrontContent() : _buildBackContent()) 
               : null,
         ),

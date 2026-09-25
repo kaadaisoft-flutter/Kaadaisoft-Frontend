@@ -46,6 +46,7 @@ class _AssignCoordinatorViewState extends State<AssignCoordinatorView> {
   List<String> _assignPanchayats = ['Choose Panchayat'];
   List<Map<String, dynamic>> _assignVillagesList = [];
   List<String> _assignSelectedVillageNames = [];
+  List<Map<String, dynamic>> _assignMemberExistingVillages = [];
 
   // --- Reassign Form State ---
   String _reassignDistrict = 'Choose District';
@@ -55,6 +56,7 @@ class _AssignCoordinatorViewState extends State<AssignCoordinatorView> {
   List<String> _reassignPanchayats = ['Choose Panchayat'];
   List<Map<String, dynamic>> _reassignVillagesList = [];
   List<String> _reassignSelectedVillageNames = [];
+  List<Map<String, dynamic>> _reassignMemberExistingVillages = [];
 
   // --- Add/Remove Village State ---
   String _addDistrict = 'Choose District';
@@ -202,6 +204,43 @@ class _AssignCoordinatorViewState extends State<AssignCoordinatorView> {
     } catch (e) {}
   }
 
+  Future<void> _fetchMemberExistingVillages(String memberId, bool isAssign) async {
+    try {
+      final response = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/coordinator-villages/$memberId'));
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final list = data['data'] as List;
+        setState(() {
+          if (isAssign) {
+            _assignMemberExistingVillages = list.map((v) => v as Map<String, dynamic>).toList();
+          } else {
+            _reassignMemberExistingVillages = list.map((v) => v as Map<String, dynamic>).toList();
+          }
+        });
+      }
+    } catch (e) {
+      setState(() {
+        if (isAssign) {
+          _assignMemberExistingVillages = [];
+        } else {
+          _reassignMemberExistingVillages = [];
+        }
+      });
+    }
+  }
+
+  int _getExistingCount(bool isAssign) {
+    final list = isAssign ? _assignMemberExistingVillages : _reassignMemberExistingVillages;
+    final currentDistrict = isAssign ? _assignDistrict : _reassignDistrict;
+    final currentPanchayat = isAssign ? _assignPanchayat : _reassignPanchayat;
+
+    return list.where((v) {
+      final d = v['district_name']?.toString() ?? '';
+      final p = v['panchayat_name']?.toString() ?? '';
+      return !(d.toLowerCase() == currentDistrict.toLowerCase() && p.toLowerCase() == currentPanchayat.toLowerCase());
+    }).length;
+  }
+
   Future<void> _fetchCoordinatorVillages(String coordId, {bool isReassign = true}) async {
     if (!isReassign) {
       setState(() => _isFetchingStatus = true);
@@ -266,8 +305,9 @@ class _AssignCoordinatorViewState extends State<AssignCoordinatorView> {
       showStatusDialog(context, title: 'Error', message: 'Please select at least 1 village', type: DialogType.error);
       return;
     }
-    if (_assignSelectedVillageNames.length > 4) {
-      showStatusDialog(context, title: 'Error', message: 'Maximum 4 villages can be assigned to a coordinator', type: DialogType.error);
+    final existingCount = _getExistingCount(true);
+    if (existingCount + _assignSelectedVillageNames.length > 4) {
+      showStatusDialog(context, title: 'Error', message: 'Coordinator already has $existingCount village(s) assigned. Maximum 4 villages in total can be assigned to a coordinator.', type: DialogType.error);
       return;
     }
 
@@ -319,8 +359,9 @@ class _AssignCoordinatorViewState extends State<AssignCoordinatorView> {
       showStatusDialog(context, title: 'Error', message: 'Please select at least 1 village', type: DialogType.error);
       return;
     }
-    if (_reassignSelectedVillageNames.length > 4) {
-      showStatusDialog(context, title: 'Error', message: 'Maximum 4 villages can be assigned to a coordinator', type: DialogType.error);
+    final existingCount = _getExistingCount(false);
+    if (existingCount + _reassignSelectedVillageNames.length > 4) {
+      showStatusDialog(context, title: 'Error', message: 'Coordinator already has $existingCount village(s) assigned. Maximum 4 villages in total can be assigned to a coordinator.', type: DialogType.error);
       return;
     }
 
@@ -743,6 +784,7 @@ class _AssignCoordinatorViewState extends State<AssignCoordinatorView> {
                     _assignPanchayats = ['Choose Panchayat'];
                     _assignPanchayat = 'Choose Panchayat';
                     _assignVillagesList = [];
+                    _assignSelectedVillageNames = [];
                   });
                 },
               ),
@@ -760,6 +802,7 @@ class _AssignCoordinatorViewState extends State<AssignCoordinatorView> {
                     _assignPanchayats = panchayats;
                     _assignPanchayat = 'Choose Panchayat';
                     _assignVillagesList = [];
+                    _assignSelectedVillageNames = [];
                   });
                 },
               ),
@@ -774,6 +817,7 @@ class _AssignCoordinatorViewState extends State<AssignCoordinatorView> {
                   setState(() {
                     _assignPanchayat = val!;
                     _assignVillagesList = [];
+                    _assignSelectedVillageNames = [];
                   });
                   _fetchVillages(val!, true);
                 },
@@ -824,6 +868,7 @@ class _AssignCoordinatorViewState extends State<AssignCoordinatorView> {
                     _reassignPanchayats = ['Choose Panchayat'];
                     _reassignPanchayat = 'Choose Panchayat';
                     _reassignVillagesList = [];
+                    _reassignSelectedVillageNames = [];
                   });
                 },
               ),
@@ -841,6 +886,7 @@ class _AssignCoordinatorViewState extends State<AssignCoordinatorView> {
                     _reassignPanchayats = panchayats;
                     _reassignPanchayat = 'Choose Panchayat';
                     _reassignVillagesList = [];
+                    _reassignSelectedVillageNames = [];
                   });
                 },
               ),
@@ -855,6 +901,7 @@ class _AssignCoordinatorViewState extends State<AssignCoordinatorView> {
                   setState(() {
                     _reassignPanchayat = val!;
                     _reassignVillagesList = [];
+                    _reassignSelectedVillageNames = [];
                   });
                   _fetchVillages(val!, false);
                 },
@@ -1228,6 +1275,7 @@ class _AssignCoordinatorViewState extends State<AssignCoordinatorView> {
             if (type == 'member') {
               _selectedMemberId = id;
               _searchMemberController.text = name;
+              _fetchMemberExistingVillages(id, true);
             } else if (type == 'coordinator') {
               _reassignCoordId = id;
               _searchCoordinatorController.text = name;
@@ -1235,6 +1283,7 @@ class _AssignCoordinatorViewState extends State<AssignCoordinatorView> {
             } else if (type == 'reassign_member') {
               _reassignNewMemberId = id;
               _reassignNewMemberController.text = name;
+              _fetchMemberExistingVillages(id, false);
             } else {
               _selectedRemoveCoordId = id;
               _removeCoordinatorController.text = name;
@@ -1249,6 +1298,7 @@ class _AssignCoordinatorViewState extends State<AssignCoordinatorView> {
   Widget _buildVillageSelection({required bool isAssign}) {
     final villages = isAssign ? _assignVillagesList : _reassignVillagesList;
     final selectedNames = isAssign ? _assignSelectedVillageNames : _reassignSelectedVillageNames;
+    final existingCount = _getExistingCount(isAssign);
     final screenWidth = MediaQuery.of(context).size.width;
     final isMobile = screenWidth < 700;
 
@@ -1274,7 +1324,8 @@ class _AssignCoordinatorViewState extends State<AssignCoordinatorView> {
                 final village = villages[index];
                 final isSelected = village['selected'] ?? false;
                 final isFull = village['is_full'] ?? false;
-                final canSelect = (selectedNames.length < 4 || isSelected) && !isFull;
+                final totalAssigned = existingCount + selectedNames.length;
+                final canSelect = (totalAssigned < 4 || isSelected) && !isFull;
 
                 return Row(
                   children: [

@@ -119,7 +119,7 @@ class _UpdateRequestsContentState extends State<UpdateRequestsContent> {
                               height: 48,
                               child: Row(
                                 children: [
-                                  _buildHeaderCell(AppLocalizations.of(context)?.sNo?.toUpperCase() ?? 'S.NO', 60),
+                                  _buildHeaderCell(AppLocalizations.of(context)?.sNo.toUpperCase() ?? 'S.NO', 60),
                                   _buildHeaderCell(AppLocalizations.of(context)?.memberNameHeader ?? 'MEMBER NAME', 180),
                                   _buildHeaderCell(AppLocalizations.of(context)?.familyHeadHeader ?? 'FAMILY HEAD', 180),
                                   _buildHeaderCell(AppLocalizations.of(context)?.memberIdHeader ?? 'MEMBER ID', 140),
@@ -127,7 +127,7 @@ class _UpdateRequestsContentState extends State<UpdateRequestsContent> {
                                   _buildHeaderCell(AppLocalizations.of(context)?.talukHeader ?? 'TALUK', 130),
                                   _buildHeaderCell(AppLocalizations.of(context)?.panchayatHeader ?? 'PANCHAYAT', 130),
                                   _buildHeaderCell(AppLocalizations.of(context)?.villageUpperHeader ?? 'VILLAGE', 130),
-                                  _buildHeaderCell(AppLocalizations.of(context)?.actionHeader?.toUpperCase() ?? 'ACTION', 180, hasDivider: false),
+                                  _buildHeaderCell(AppLocalizations.of(context)?.actionHeader.toUpperCase() ?? 'ACTION', 180, hasDivider: false),
                                 ],
                               ),
                             ),
@@ -228,7 +228,10 @@ class _UpdateRequestsContentState extends State<UpdateRequestsContent> {
                 padding: const EdgeInsets.symmetric(horizontal: 6),
               ),
               IconButton(
-                onPressed: () => _handleApprove(req['request_id'] ?? req['Id'] ?? req['id'] ?? 0),
+                onPressed: () => _handleApprove(
+                  req['request_id'] ?? req['Id'] ?? req['id'] ?? 0,
+                  req['Name'] ?? req['head_name'],
+                ),
                 icon: const Icon(Icons.check_circle, size: 18),
                 color: Colors.green,
                 tooltip: 'Approve',
@@ -236,7 +239,10 @@ class _UpdateRequestsContentState extends State<UpdateRequestsContent> {
                 padding: const EdgeInsets.symmetric(horizontal: 6),
               ),
               IconButton(
-                onPressed: () => _handleReject(req['request_id'] ?? req['Id'] ?? req['id'] ?? 0),
+                onPressed: () => _handleReject(
+                  req['request_id'] ?? req['Id'] ?? req['id'] ?? 0,
+                  req['Name'] ?? req['head_name'],
+                ),
                 icon: const Icon(Icons.cancel, size: 18),
                 color: Colors.red,
                 tooltip: 'Reject',
@@ -250,7 +256,46 @@ class _UpdateRequestsContentState extends State<UpdateRequestsContent> {
     );
   }
 
-  Future<void> _handleApprove(int requestId) async {
+  Future<void> _handleApprove(int requestId, [String? memberName]) async {
+    final bool? confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        title: const Text(
+          'Approve Update Request',
+          style: TextStyle(color: Color(0xFF5D1712), fontWeight: FontWeight.bold, fontSize: 18),
+        ),
+        content: Text(
+          memberName != null && memberName.isNotEmpty
+              ? 'Are you sure you want to approve the update request for $memberName?'
+              : 'Are you sure you want to approve this member update request?',
+          style: const TextStyle(fontSize: 14, color: Colors.black87),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(
+              AppLocalizations.of(context)?.cancelDialogBtn ?? 'Cancel',
+              style: const TextStyle(color: Colors.black54),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: const Text('Approve', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
     try {
       final response = await http.post(
         Uri.parse(ApiConfig.approveUpdateRequest(requestId)),
@@ -270,10 +315,117 @@ class _UpdateRequestsContentState extends State<UpdateRequestsContent> {
     }
   }
 
-  Future<void> _handleReject(int requestId) async {
+  Future<void> _handleReject(int requestId, [String? memberName]) async {
+    final TextEditingController reasonController = TextEditingController();
+    String selectedReason = 'Incomplete / Incorrect Member Details';
+    final List<String> rejectReasons = [
+      'Incomplete / Incorrect Member Details',
+      'Invalid Document or Proof Attached',
+      'Duplicate Request',
+      'Unverified Contact Information',
+      'Address Mismatch',
+      'Other (Specify Reason)',
+    ];
+
+    final bool? confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.transparent,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          title: const Text(
+            'Reject Update Request',
+            style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 18),
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  memberName != null && memberName.isNotEmpty
+                      ? 'Are you sure you want to not approve the update request for $memberName?'
+                      : 'Are you sure you want to not approve this member update request?',
+                  style: const TextStyle(fontSize: 14, color: Colors.black87),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Reason for Rejection:',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.black87),
+                ),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<String>(
+                  initialValue: selectedReason,
+                  isExpanded: true,
+                  decoration: InputDecoration(
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  ),
+                  items: rejectReasons.map((reason) {
+                    return DropdownMenuItem<String>(
+                      value: reason,
+                      child: Text(reason, style: const TextStyle(fontSize: 13, color: Colors.black87)),
+                    );
+                  }).toList(),
+                  onChanged: (val) {
+                    if (val != null) {
+                      setDialogState(() {
+                        selectedReason = val;
+                      });
+                    }
+                  },
+                ),
+                if (selectedReason == 'Other (Specify Reason)') ...[
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: reasonController,
+                    maxLines: 3,
+                    style: const TextStyle(fontSize: 13, color: Colors.black87),
+                    decoration: InputDecoration(
+                      hintText: 'Enter specific reason for rejection...',
+                      hintStyle: const TextStyle(fontSize: 13, color: Colors.black38),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      contentPadding: const EdgeInsets.all(12),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text(
+                AppLocalizations.of(context)?.cancelDialogBtn ?? 'Cancel',
+                style: const TextStyle(color: Colors.black54),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              child: const Text('Reject', style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    final String finalReason = selectedReason == 'Other (Specify Reason)'
+        ? (reasonController.text.trim().isNotEmpty ? reasonController.text.trim() : 'Other')
+        : selectedReason;
+
     try {
       final response = await http.post(
         Uri.parse(ApiConfig.rejectUpdateRequest(requestId)),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'reject_reason': finalReason}),
       );
       if (response.statusCode == 200) {
         if (mounted) {
@@ -289,6 +441,7 @@ class _UpdateRequestsContentState extends State<UpdateRequestsContent> {
       debugPrint('Error rejecting request: $e');
     }
   }
+
 
   void _showRequestDetails(dynamic req) {
     showDialog(

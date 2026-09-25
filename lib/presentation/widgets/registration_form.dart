@@ -439,6 +439,35 @@ class _RegistrationFormState extends State<RegistrationForm> {
     }
   }
 
+  int? _calculateAge(String dobStr) {
+    if (dobStr.trim().isEmpty) return null;
+    try {
+      DateTime? dob;
+      final parts = dobStr.split('-');
+      if (parts.length == 3) {
+        if (parts[0].length == 4) {
+          dob = DateTime.parse(dobStr);
+        } else if (parts[2].length == 4) {
+          dob = DateTime(int.parse(parts[2]), int.parse(parts[1]), int.parse(parts[0]));
+        }
+      }
+      if (dob != null) {
+        final now = DateTime.now();
+        int age = now.year - dob.year;
+        if (now.month < dob.month || (now.month == dob.month && now.day < dob.day)) {
+          age--;
+        }
+        return age;
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  bool _isUnderage(String dobStr) {
+    final age = _calculateAge(dobStr);
+    return age != null && age < 18;
+  }
+
   void _handleRegister() {
     setState(() => _showMandatoryErrors = true);
     
@@ -455,7 +484,7 @@ class _RegistrationFormState extends State<RegistrationForm> {
       String? firstErrorField;
       if (_nameController.text.isEmpty) firstErrorField = 'Name';
       else if (_phoneController.text.length != 10) firstErrorField = 'Phone Number';
-      else if (_dobController.text.isEmpty) firstErrorField = 'Date Of Birth';
+      else if (_dobController.text.isEmpty || _isUnderage(_dobController.text)) firstErrorField = 'Date Of Birth';
       else if (_selectedGender == null) firstErrorField = 'Gender';
       else if (_selectedBloodGroup == null) firstErrorField = 'Blood Group';
       else if (_emailController.text.isNotEmpty && !RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(_emailController.text)) firstErrorField = 'Email';
@@ -501,9 +530,11 @@ class _RegistrationFormState extends State<RegistrationForm> {
 
       showStatusDialog(
         context,
-        title: 'Mandatory Fields',
-        message: 'Please fill all the mandatory fields marked with * correctly.',
-        type: DialogType.warning,
+        title: _isUnderage(_dobController.text) ? 'Validation Error' : 'Mandatory Fields',
+        message: _isUnderage(_dobController.text)
+            ? 'Member must be at least 18 years old to register.'
+            : 'Please fill all the mandatory fields marked with * correctly.',
+        type: _isUnderage(_dobController.text) ? DialogType.error : DialogType.warning,
         onOk: () {
           if (firstErrorField != null) {
             final focusNode = _focusNodes[firstErrorField];
@@ -518,6 +549,31 @@ class _RegistrationFormState extends State<RegistrationForm> {
                 focusNode.requestFocus();
               });
             }
+          }
+        },
+      );
+      return;
+    }
+
+    int? memberAge = _calculateAge(_dobController.text);
+    if (memberAge != null && memberAge < 18) {
+      showStatusDialog(
+        context,
+        title: 'Validation Error',
+        message: 'Member must be at least 18 years old to register.',
+        type: DialogType.error,
+        onOk: () {
+          final focusNode = _focusNodes['Date Of Birth'];
+          if (focusNode != null && focusNode.context != null) {
+            Future.delayed(const Duration(milliseconds: 100), () {
+              Scrollable.ensureVisible(
+                focusNode.context!,
+                duration: const Duration(milliseconds: 500),
+                curve: Curves.easeInOut,
+                alignment: 0.5,
+              );
+              focusNode.requestFocus();
+            });
           }
         },
       );
@@ -1437,11 +1493,20 @@ class _RegistrationFormState extends State<RegistrationForm> {
               try {
                 final parts = value.split('-');
                 if (parts.length == 3) {
-                  final date = DateTime(int.parse(parts[2]), int.parse(parts[1]), int.parse(parts[0]));
+                  final date = parts[0].length == 4
+                      ? DateTime.parse(value)
+                      : DateTime(int.parse(parts[2]), int.parse(parts[1]), int.parse(parts[0]));
                   final now = DateTime.now();
                   final today = DateTime(now.year, now.month, now.day);
-                  if (!date.isBefore(today)) {
-                    return 'Date of Birth must be a past date';
+                  if (date.isAfter(today)) {
+                    return 'Date of Birth cannot be a future date';
+                  }
+                  int age = now.year - date.year;
+                  if (now.month < date.month || (now.month == date.month && now.day < date.day)) {
+                    age--;
+                  }
+                  if (age < 18) {
+                    return 'Member must be at least 18 years old';
                   }
                 }
               } catch (e) {
@@ -1461,11 +1526,24 @@ class _RegistrationFormState extends State<RegistrationForm> {
             focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: mediumBrown, width: 1.5)),
           ),
           onTap: () async {
+            final now = DateTime.now();
+            DateTime initial = now;
+            if (controller.text.isNotEmpty) {
+              try {
+                final parts = controller.text.split('-');
+                if (parts.length == 3) {
+                  final parsed = parts[0].length == 4
+                      ? DateTime.parse(controller.text)
+                      : DateTime(int.parse(parts[2]), int.parse(parts[1]), int.parse(parts[0]));
+                  initial = parsed;
+                }
+              } catch (_) {}
+            }
             DateTime? pickedDate = await showDatePicker(
               context: context,
-              initialDate: DateTime.now(),
+              initialDate: initial.isAfter(now) ? now : initial,
               firstDate: DateTime(1900),
-              lastDate: DateTime.now(),
+              lastDate: now,
             );
             if (pickedDate != null) {
               setState(() {
@@ -1748,12 +1826,33 @@ class _RegistrationFormState extends State<RegistrationForm> {
             onTap: () async {
               final result = await fp_pkg.FilePicker.pickFiles(
                 type: fp_pkg.FileType.custom,
-                allowedExtensions: ['jpg', 'jpeg', 'png'],
+                allowedExtensions: ['jpg', 'jpeg', 'png', 'pdf'],
+                withData: kIsWeb,
               );
-              if (result != null && (result.files.single.path != null || result.files.single.bytes != null)) {
+              if (result != null && result.files.isNotEmpty && (result.files.single.path != null || result.files.single.bytes != null)) {
                 final file = result.files.single;
-                if (file.size > 2 * 1024 * 1024) {
-                  if (mounted) showStatusDialog(context, title: 'Validation Error', message: 'Maximum allowed file size is 2 MB.', type: DialogType.error);
+                final ext = (file.extension ?? file.name.split('.').last).toLowerCase();
+                final allowedExtensions = ['jpg', 'jpeg', 'png', 'pdf'];
+                if (!allowedExtensions.contains(ext)) {
+                  if (mounted) {
+                    showStatusDialog(
+                      context,
+                      title: 'Validation Error',
+                      message: 'Only JPG, JPEG, PNG, and PDF document formats are supported.',
+                      type: DialogType.error,
+                    );
+                  }
+                  return;
+                }
+                if (file.size > 5 * 1024 * 1024) {
+                  if (mounted) {
+                    showStatusDialog(
+                      context,
+                      title: 'Validation Error',
+                      message: 'File size exceeds the allowed limit of 5 MB.',
+                      type: DialogType.error,
+                    );
+                  }
                   return;
                 }
                 setState(() {

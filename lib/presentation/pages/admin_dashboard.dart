@@ -5,6 +5,7 @@ import '../../l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import '../../providers/locale_provider.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -26,6 +27,8 @@ import '../widgets/receipt_dialog.dart';
 import '../../utils/api_config.dart';
 import 'payment_requests_content.dart';
 import '../../services/fcm_service.dart';
+import '../../utils/notification_helper.dart';
+import '../widgets/qr_scanner_dialog.dart';
 
 class AdminDashboard extends StatefulWidget {
   final bool showLoginSuccess;
@@ -58,6 +61,8 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
   int _notificationsCount = 0;
   int _seenApprovalsCount = 0;
   int _seenUpdateRequestsCount = 0;
+  List<dynamic> _memberNotifications = [];
+  int _memberUnreadCount = 0;
   bool _isLoadingStats = true;
   bool _isLoadingPayments = true;
   bool _shouldShowAssignCoordinator = false;
@@ -69,8 +74,18 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
   
   Map<String, dynamic>? _myCoordinator;
   bool _isLoadingCoordinator = true;
+  bool _isMemberDisabled = false;
 
   void _navigateTo(String item) {
+    if (widget.userRole == 3 && _isMemberDisabled && item != 'Dashboard' && item != 'Logout') {
+      showStatusDialog(
+        context,
+        title: 'Account Disabled',
+        message: 'Your account has been disabled by the administrator. Access to menu sections is restricted.',
+        type: DialogType.warning,
+      );
+      return;
+    }
     setState(() {
       if (_activeItem != '') {
         _navigationHistory.add(_activeItem);
@@ -81,32 +96,125 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
   }
 
   void _handleSearchSubmit(String query) {
-    if (query.trim().isEmpty) return;
-    final lowerQuery = query.trim().toLowerCase();
-    
-    // Exact match
+    final cleanQuery = query.trim().toLowerCase();
+    if (cleanQuery.isEmpty) return;
+
+    // List of allowed menu titles for current user role
+    final allowedTitles = _menuItems.map((item) => item['title'].toString()).toList();
+
+    // Map of keywords / aliases / Tamil terms to primary module titles
+    final Map<String, List<String>> moduleAliases = {
+      'Dashboard': [
+        'dashboard', 'home', 'stats', 'overview', 'summary',
+        'டாஷ்போர்டு', 'முகப்பு', 'டாஷ்போர்ட்'
+      ],
+      'ID Card Benefits': [
+        'id card benefits', 'id card', 'benefits', 'card', 'membership card', 'id',
+        'அடையாள அட்டை நன்மைகள்', 'அடையாள அட்டை', 'நன்மைகள்'
+      ],
+      'My Details': [
+        'my details', 'details', 'profile', 'account', 'personal', 'my info',
+        'update details', 'add family member', 'family member', 'event participation',
+        'எனது விவரங்கள்', 'விவரங்கள்', 'சுயவிவரம்', 'குடும்ப உறுப்பினர்'
+      ],
+      'Coordinators': [
+        'coordinators', 'coordinator', 'village committee', 'committee',
+        'village committee coordinators', 'village', 'coordinators list', 'assign coordinator',
+        'ஒருங்கிணைப்பாளர்கள்', 'கிராமக் குழு', 'ஒருங்கிணைப்பாளர்'
+      ],
+      'Members': [
+        'members', 'member', 'members list', 'add member', 'bulk upload',
+        'family head', 'family membership id', 'view member', 'user', 'users',
+        'உறுப்பினர்கள்', 'உறுப்பினர்', 'குடும்ப தலைவர்'
+      ],
+      'Events': [
+        'events', 'event', 'events list', 'add event', 'event year', 'event participation', 'festival',
+        'நிகழ்வுகள்', 'நிகழ்வு', 'விழாக்கள்'
+      ],
+      'Payments': [
+        'payments', 'payment', 'paid', 'unpaid', 'receipt', 'bulk payment',
+        'transaction', 'payment summary', 'tax', 'balance', 'pay', 'receipts',
+        'பணம் செலுத்துதல்', 'கட்டணம்', 'ரசீது', 'செலுத்தப்பட்ட', 'செலுத்தப்படாத'
+      ],
+      'Reports': [
+        'reports', 'report', 'export', 'excel', 'pdf', 'payment reports', 'member reports', 'analytics',
+        'அறிக்கைகள்', 'அறிக்கை'
+      ],
+      'Update Requests': [
+        'update requests', 'profile update requests', 'member update requests',
+        'update request', 'pending updates', 'edit request', 'request',
+        'புதுப்பிப்பு கோரிக்கைகள்', 'புதுப்பிப்பு கோரிக்கை'
+      ],
+      'Payment Requests': [
+        'payment requests', 'pending payment requests', 'bulk payment upload', 'payment request',
+        'கட்டண கோரிக்கைகள்', 'கட்டண கோரிக்கை'
+      ],
+      'Received Applications': [
+        'received applications', 'applications', 'new applications', 'pending applications',
+        'பெறப்பட்ட விண்ணப்பங்கள்', 'விண்ணப்பங்கள்'
+      ],
+      'Logout': [
+        'logout', 'log out', 'sign out', 'signout', 'exit',
+        'வெளியேறு', 'லாக்அவுட்'
+      ],
+    };
+
+    String? matchedTitle;
+
+    // 1. Check exact match against English titles & localized titles
     for (var item in _menuItems) {
-      if (item['title'].toString().toLowerCase() == lowerQuery) {
-        _globalSearchController.clear();
-        _navigateTo(item['title']);
-        return;
+      final englishTitle = item['title'].toString().toLowerCase();
+      final localizedTitle = _getTranslatedSidebarLabel(context, item['title'].toString()).toLowerCase();
+      if (englishTitle == cleanQuery || localizedTitle == cleanQuery) {
+        matchedTitle = item['title'].toString();
+        break;
       }
     }
-    // Starts-with match
-    for (var item in _menuItems) {
-      if (item['title'].toString().toLowerCase().startsWith(lowerQuery)) {
-        _globalSearchController.clear();
-        _navigateTo(item['title']);
-        return;
+
+    // 2. Check alias list for exact or substring match
+    if (matchedTitle == null) {
+      for (var entry in moduleAliases.entries) {
+        final targetTitle = entry.key;
+        if (!allowedTitles.contains(targetTitle)) continue;
+
+        for (var alias in entry.value) {
+          if (alias == cleanQuery || alias.startsWith(cleanQuery) || cleanQuery.startsWith(alias) || alias.contains(cleanQuery)) {
+            matchedTitle = targetTitle;
+            break;
+          }
+        }
+        if (matchedTitle != null) break;
       }
     }
-    // Contains match
-    for (var item in _menuItems) {
-      if (item['title'].toString().toLowerCase().contains(lowerQuery)) {
-        _globalSearchController.clear();
-        _navigateTo(item['title']);
-        return;
+
+    // 3. Check starts-with / contains match against English & localized menu titles
+    if (matchedTitle == null) {
+      for (var item in _menuItems) {
+        final englishTitle = item['title'].toString().toLowerCase();
+        final localizedTitle = _getTranslatedSidebarLabel(context, item['title'].toString()).toLowerCase();
+        if (englishTitle.startsWith(cleanQuery) || localizedTitle.startsWith(cleanQuery) ||
+            englishTitle.contains(cleanQuery) || localizedTitle.contains(cleanQuery)) {
+          matchedTitle = item['title'].toString();
+          break;
+        }
       }
+    }
+
+    // Execute Navigation or Action
+    if (matchedTitle != null) {
+      if (matchedTitle == 'Logout') {
+        _handleLogout();
+      } else {
+        _navigateTo(matchedTitle);
+      }
+    } else {
+      if (cleanQuery.contains('notif') || cleanQuery.contains('alert') || cleanQuery.contains('அறிவிப்பு')) {
+        if (widget.userRole == 3) {
+          _showMemberNotificationsDialog();
+          return;
+        }
+      }
+      NotificationHelper.showError(context, 'No matching module found for "$query"');
     }
   }
 
@@ -206,9 +314,55 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
         _showViewMemberDialog(widget.initialViewMemberId!);
       });
     }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      FcmService.listenNotificationClicks((data) {
+        if (!mounted) return;
+        final target = data['target'] ?? data['page'] ?? '';
+        
+        if (widget.userRole == 3) {
+          _showMemberNotificationsDialog();
+        } else {
+          if (target == 'Update Requests' || target == 'update_request') {
+            _navigateTo('Update Requests');
+          } else if (target == 'Received Applications' || target == 'application') {
+            _navigateTo('Received Applications');
+          } else if (target == 'Payments' || target == 'payment') {
+            _navigateTo('Payments');
+          } else if (target == 'Events' || target == 'event') {
+            _navigateTo('Events');
+          } else {
+            _navigateTo('Update Requests');
+          }
+        }
+      });
+    });
+  }
+
+  Future<void> _fetchMemberNotifications() async {
+    if (widget.userId == null) return;
+    try {
+      final response = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/notifications/${widget.userId}'));
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (mounted && data['status'] == 'success') {
+          setState(() {
+            _memberNotifications = data['data'] ?? [];
+            _memberUnreadCount = data['unread_count'] ?? 0;
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Error fetching member notifications: $e');
+    }
   }
 
   Future<void> _fetchStats() async {
+    if (widget.userRole == 3) {
+      await _fetchMemberNotifications();
+      if (mounted) setState(() => _isLoadingStats = false);
+      return;
+    }
     try {
       final response = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/dashboard-stats?user_id=${widget.userId}&role=${widget.userRole}'));
       if (response.statusCode == 200) {
@@ -258,7 +412,21 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
       final userResponse = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/user-details/${widget.userId}'));
       if (userResponse.statusCode == 200) {
         final userData = jsonDecode(userResponse.body)['data'];
-        final fid = userData['Familymembershipid'];
+        if (userData != null && mounted) {
+          final bool disabled = userData['is_disabled'] == true ||
+              userData['is_disabled'] == 1 ||
+              userData['is_disabled']?.toString().toLowerCase() == 'true';
+          setState(() {
+            _isMemberDisabled = disabled;
+            if (disabled && _activeItem != 'Dashboard' && _activeItem != 'Logout') {
+              _activeItem = 'Dashboard';
+            }
+          });
+          if (disabled) {
+            _saveActiveItem('Dashboard');
+          }
+        }
+        final fid = userData != null ? userData['Familymembershipid'] : null;
 
         if (fid != null && fid.toString().isNotEmpty) {
           final response = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/member-coordinator-by-fid/$fid'));
@@ -378,10 +546,17 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
         final data = jsonDecode(response.body);
         final receipts = data['receipts'] as List;
         
-        final eventReceipt = receipts.firstWhere(
-          (r) => (r['Eventid'] ?? r['eventid']).toString() == eventId.toString(),
-          orElse: () => null,
-        );
+        final eventReceipts = receipts.where(
+          (r) => (r['Eventid'] ?? r['eventid']).toString() == eventId.toString()
+        ).toList();
+
+        eventReceipts.sort((a, b) {
+          final idA = int.tryParse((a['id'] ?? a['Id'] ?? 0).toString()) ?? 0;
+          final idB = int.tryParse((b['id'] ?? b['Id'] ?? 0).toString()) ?? 0;
+          return idB.compareTo(idA);
+        });
+
+        final eventReceipt = eventReceipts.isNotEmpty ? eventReceipts.first : null;
 
         if (eventReceipt != null && mounted) {
           showDialog(
@@ -439,6 +614,13 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
     );
   }
 
+  Future<void> _openQrScanner() async {
+    final scannedMemberId = await QrScannerDialog.show(context);
+    if (scannedMemberId != null && scannedMemberId.isNotEmpty && mounted) {
+      _showViewMemberDialog(scannedMemberId);
+    }
+  }
+
   List<Map<String, dynamic>> get _menuItems {
     final allItems = [
       {'title': 'Dashboard', 'icon': Icons.bar_chart, 'color': const Color(0xFF0EA5E9)},
@@ -470,7 +652,8 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
     if (widget.userRole == 2) {
       return allItems.where((item) => 
         item['title'] != 'Coordinators' && 
-        item['title'] != 'Reports'
+        item['title'] != 'Reports' &&
+        item['title'] != 'Payment Requests'
       ).toList();
     }
 
@@ -768,6 +951,14 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
     }
     
     if (_activeItem == 'Payment Requests') {
+      if (widget.userRole == 2) {
+        return const Center(
+          child: Text(
+            'Access Denied: Only Managers can approve payment requests.',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.red),
+          ),
+        );
+      }
       return Padding(
         padding: contentPadding,
         child: PaymentRequestsContent(
@@ -934,110 +1125,135 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
   Widget _buildMenuItem(Map<String, dynamic> item) {
     final isActive = _activeItem == item['title'];
     final isLogout = item['title'] == 'Logout';
+    final isMemberDisabledMenu = widget.userRole == 3 && 
+        _isMemberDisabled && 
+        item['title'] != 'Dashboard' && 
+        item['title'] != 'Logout';
     bool isHovered = false;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       child: StatefulBuilder(
         builder: (context, setMenuItemState) {
-          final isHighlighted = isActive || isHovered;
-          final iconColor = isLogout 
-              ? Colors.red 
-              : (isHighlighted ? const Color(0xFF0EA5E9) : Colors.white70);
-          final textColor = isHighlighted ? Colors.white : Colors.white70;
+          final isHighlighted = (isActive || isHovered) && !isMemberDisabledMenu;
+          final iconColor = isMemberDisabledMenu 
+              ? Colors.white30 
+              : (isLogout 
+                  ? Colors.red 
+                  : (isHighlighted ? const Color(0xFF0EA5E9) : Colors.white70));
+          final textColor = isMemberDisabledMenu 
+              ? Colors.white30 
+              : (isHighlighted ? Colors.white : Colors.white70);
 
-          return InkWell(
-            onHover: (hovering) {
-              setMenuItemState(() {
-                isHovered = hovering;
-              });
-            },
-            onTap: () async {
-              if (item['title'] == 'Logout') {
-                _handleLogout();
-                return;
-              }
-              if (item['title'] == 'Dashboard') {
-                _fetchStats();
-                _fetchPaymentDetails();
-              }
-              if (item['title'] == _activeItem) {
-                // Force a refresh
-                _fetchStats();
-                _fetchPaymentDetails();
-                final currentItem = _activeItem;
-                setState(() => _activeItem = '');
-                Future.delayed(Duration.zero, () {
-                  if (mounted) setState(() => _activeItem = currentItem);
-                });
-              } else {
-                _navigateTo(item['title']);
-              }
-              
-              // Close the hamburger menu (drawer) if we're on mobile/tablet
-              final isDesktop = MediaQuery.of(context).size.width >= 900;
-              if (!isDesktop && mounted) {
-                Navigator.pop(context);
-              }
-            },
-            borderRadius: BorderRadius.circular(8),
-            child: Builder(
-              builder: (context) {
-                Widget content = AnimatedContainer(
-                  duration: const Duration(milliseconds: 150),
-                  decoration: BoxDecoration(
-                    color: isHighlighted ? Colors.white.withOpacity(0.08) : Colors.transparent,
-                    borderRadius: BorderRadius.circular(8),
-                    border: isHighlighted 
-                        ? Border.all(color: (isLogout ? Colors.red : const Color(0xFF0EA5E9)).withOpacity(0.4)) 
-                        : null,
-                  ),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  child: Row(
-                    children: [
-                      Icon(item['icon'], color: iconColor, size: 22),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          _getTranslatedSidebarLabel(context, item['title']),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: textColor,
-                            fontSize: Localizations.localeOf(context).languageCode == 'ta' ? 13 : 15,
-                            fontWeight: isHighlighted ? FontWeight.bold : FontWeight.w500,
-                            height: 1.2,
-                          ),
-                        ),
-                      ),
-                      if (isHighlighted)
-                        Icon(Icons.chevron_right, color: isLogout ? Colors.red : const Color(0xFF0EA5E9), size: 18),
-                    ],
-                  ),
-                );
-
-                if (item['title'] == 'ID Card Benefits' && _blinkController != null && !isActive) {
-                  return AnimatedBuilder(
-                    animation: _blinkController!,
-                    builder: (context, child) {
-                      return Container(
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFC49A3C).withOpacity(0.25 * _blinkController!.value),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: const Color(0xFFC49A3C).withOpacity(0.6 * _blinkController!.value),
-                            width: 1.5,
-                          ),
-                        ),
-                        child: child,
-                      );
-                    },
-                    child: content,
-                  );
+          return MouseRegion(
+            cursor: isMemberDisabledMenu ? SystemMouseCursors.forbidden : SystemMouseCursors.click,
+            child: InkWell(
+              onHover: (hovering) {
+                if (!isMemberDisabledMenu) {
+                  setMenuItemState(() {
+                    isHovered = hovering;
+                  });
                 }
-
-                return content;
               },
+              onTap: () async {
+                if (isMemberDisabledMenu) {
+                  showStatusDialog(
+                    context,
+                    title: 'Account Disabled',
+                    message: 'Your account has been disabled by the administrator. Access to menu sections is restricted.',
+                    type: DialogType.warning,
+                  );
+                  return;
+                }
+                if (item['title'] == 'Logout') {
+                  _handleLogout();
+                  return;
+                }
+                if (item['title'] == 'Dashboard') {
+                  _fetchStats();
+                  _fetchPaymentDetails();
+                }
+                if (item['title'] == _activeItem) {
+                  // Force a refresh
+                  _fetchStats();
+                  _fetchPaymentDetails();
+                  final currentItem = _activeItem;
+                  setState(() => _activeItem = '');
+                  Future.delayed(Duration.zero, () {
+                    if (mounted) setState(() => _activeItem = currentItem);
+                  });
+                } else {
+                  _navigateTo(item['title']);
+                }
+                
+                // Close the hamburger menu (drawer) if we're on mobile/tablet
+                final isDesktop = MediaQuery.of(context).size.width >= 900;
+                if (!isDesktop && mounted) {
+                  Navigator.pop(context);
+                }
+              },
+              borderRadius: BorderRadius.circular(8),
+              child: Opacity(
+                opacity: isMemberDisabledMenu ? 0.45 : 1.0,
+                child: Builder(
+                  builder: (context) {
+                    Widget content = AnimatedContainer(
+                      duration: const Duration(milliseconds: 150),
+                      decoration: BoxDecoration(
+                        color: isHighlighted ? Colors.white.withOpacity(0.08) : Colors.transparent,
+                        borderRadius: BorderRadius.circular(8),
+                        border: isHighlighted 
+                            ? Border.all(color: (isLogout ? Colors.red : const Color(0xFF0EA5E9)).withOpacity(0.4)) 
+                            : null,
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      child: Row(
+                        children: [
+                          Icon(item['icon'], color: iconColor, size: 22),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              _getTranslatedSidebarLabel(context, item['title']),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: textColor,
+                                fontSize: Localizations.localeOf(context).languageCode == 'ta' ? 13 : 15,
+                                fontWeight: isHighlighted ? FontWeight.bold : FontWeight.w500,
+                                height: 1.2,
+                              ),
+                            ),
+                          ),
+                          if (isHighlighted)
+                            Icon(Icons.chevron_right, color: isLogout ? Colors.red : const Color(0xFF0EA5E9), size: 18),
+                        ],
+                      ),
+                    );
+
+                    if (item['title'] == 'ID Card Benefits' && _blinkController != null && !isActive && !isMemberDisabledMenu) {
+                      return AnimatedBuilder(
+                        animation: _blinkController!,
+                        builder: (context, child) {
+                          return Container(
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFC49A3C).withOpacity(0.25 * _blinkController!.value),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: const Color(0xFFC49A3C).withOpacity(0.6 * _blinkController!.value),
+                                width: 1.5,
+                              ),
+                            ),
+                            child: child,
+                          );
+                        },
+                        child: content,
+                      );
+                    }
+
+                    return content;
+                  },
+                ),
+              ),
             ),
           );
         },
@@ -1085,6 +1301,9 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
                       const SizedBox(width: 12),
                       _buildNotificationIcon(Icons.notifications_none, Colors.red, _approvalsCount, _seenApprovalsCount, 'Received Applications'),
                       const SizedBox(width: 12),
+                    ] else ...[
+                      _buildMemberNotificationIcon(),
+                      const SizedBox(width: 12),
                     ],
                     IconButton(
                       icon: Icon(
@@ -1121,6 +1340,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
                                   child: TextField(
                                     controller: _globalSearchController,
                                     onSubmitted: _handleSearchSubmit,
+                                    onChanged: (val) => setState(() {}),
                                     style: const TextStyle(color: Colors.white),
                                     decoration: InputDecoration(
                                       hintText: AppLocalizations.of(context)?.searchPlaceholder ?? 'Search ...',
@@ -1130,7 +1350,12 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
                                     ),
                                   ),
                                 ),
-                                Icon(Icons.search, color: Colors.white54, size: 20),
+                                IconButton(
+                                  icon: const Icon(Icons.search, color: Colors.white70, size: 20),
+                                  onPressed: () => _handleSearchSubmit(_globalSearchController.text),
+                                  constraints: const BoxConstraints(),
+                                  padding: EdgeInsets.zero,
+                                ),
                               ],
                             ),
                           ),
@@ -1178,6 +1403,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
                         child: TextField(
                           controller: _globalSearchController,
                           onSubmitted: _handleSearchSubmit,
+                          onChanged: (val) => setState(() {}),
                           style: const TextStyle(color: Colors.white),
                           decoration: InputDecoration(
                             hintText: AppLocalizations.of(context)?.searchPlaceholder ?? 'Search ...',
@@ -1187,7 +1413,22 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
                           ),
                         ),
                       ),
-                      const Icon(Icons.search, color: Colors.white54, size: 20),
+                      IconButton(
+                        icon: const Icon(Icons.search, color: Colors.white70, size: 20),
+                        onPressed: () => _handleSearchSubmit(_globalSearchController.text),
+                        constraints: const BoxConstraints(),
+                        padding: EdgeInsets.zero,
+                      ),
+                      if (!kIsWeb && widget.userRole != 3) ...[
+                        const SizedBox(width: 8),
+                        IconButton(
+                          icon: const Icon(Icons.qr_code_scanner, color: Color(0xFFC49A3C), size: 22),
+                          onPressed: _openQrScanner,
+                          constraints: const BoxConstraints(),
+                          padding: EdgeInsets.zero,
+                          tooltip: 'Scan Member ID Card QR',
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -1202,9 +1443,20 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
                   _buildLanguageSwitcher(context),
                   const SizedBox(width: 12),
                   if (widget.userRole != 3) ...[
+                    if (!kIsWeb) ...[
+                      IconButton(
+                        icon: const Icon(Icons.qr_code_scanner, color: Color(0xFFC49A3C), size: 26),
+                        onPressed: _openQrScanner,
+                        tooltip: 'Scan Member QR Code',
+                      ),
+                      const SizedBox(width: 8),
+                    ],
                     _buildNotificationIcon(Icons.person_add_alt_1, Colors.orange, _notificationsCount, _seenUpdateRequestsCount, 'Update Requests'),
                     const SizedBox(width: 8),
                     _buildNotificationIcon(Icons.notifications_none, Colors.red, _approvalsCount, _seenApprovalsCount, 'Received Applications'),
+                    const SizedBox(width: 12),
+                  ] else ...[
+                    _buildMemberNotificationIcon(),
                     const SizedBox(width: 12),
                   ],
                   Container(width: 1, height: 30, color: Colors.white24),
@@ -1239,6 +1491,220 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
         },
         tooltip: targetPage,
       ),
+    );
+  }
+
+  Widget _buildMemberNotificationIcon() {
+    return Badge(
+      label: Text(_memberUnreadCount.toString()),
+      isLabelVisible: _memberUnreadCount > 0,
+      backgroundColor: Colors.red,
+      child: IconButton(
+        icon: const Icon(Icons.notifications_none, color: Colors.red, size: 28),
+        onPressed: _showMemberNotificationsDialog,
+        tooltip: 'Notifications',
+      ),
+    );
+  }
+
+  Future<void> _showMemberNotificationsDialog() async {
+    if (_memberUnreadCount > 0) {
+      http.post(Uri.parse('${ApiConfig.baseUrl}/api/notifications/mark-read/${widget.userId}'));
+      if (mounted) {
+        setState(() {
+          _memberUnreadCount = 0;
+        });
+      }
+    }
+
+    await _fetchMemberNotifications();
+    if (!mounted) return;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              backgroundColor: Colors.white,
+              surfaceTintColor: Colors.transparent,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
+              contentPadding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+              title: Row(
+                children: [
+                  const Icon(Icons.notifications, color: Color(0xFF5D1712)),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'Notifications',
+                    style: TextStyle(color: Color(0xFF5D1712), fontWeight: FontWeight.bold, fontSize: 18),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    icon: const Icon(Icons.close, size: 20),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+              content: SizedBox(
+                width: 450,
+                child: _memberNotifications.isEmpty
+                    ? const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 32),
+                        child: Center(
+                          child: Text(
+                            'No notifications found.',
+                            style: TextStyle(color: Colors.black54, fontSize: 14),
+                          ),
+                        ),
+                      )
+                    : ConstrainedBox(
+                        constraints: BoxConstraints(
+                          maxHeight: MediaQuery.of(context).size.height * 0.6,
+                        ),
+                        child: ListView.separated(
+                          shrinkWrap: true,
+                          itemCount: _memberNotifications.length,
+                          separatorBuilder: (_, __) => const Divider(height: 12),
+                          itemBuilder: (context, index) {
+                            final item = _memberNotifications[index];
+                            final title = item['title'] ?? 'Notification';
+                            final message = item['message'] ?? '';
+                            final rejectReason = item['reject_reason'] ?? '';
+                            final createdAtRaw = item['created_at'];
+                            String createdAt = '';
+                            if (createdAtRaw != null) {
+                              try {
+                                createdAt = DateFormat('dd MMM yyyy, hh:mm a').format(DateTime.parse(createdAtRaw.toString()).toLocal());
+                              } catch (_) {}
+                            }
+                            final bool isRejected = title.toString().toLowerCase().contains('reject');
+
+                            return Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: isRejected ? Colors.red.shade50 : const Color(0xFFF8FAFC),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: isRejected ? Colors.red.shade200 : Colors.black12,
+                                ),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        isRejected ? Icons.cancel : Icons.check_circle,
+                                        color: isRejected ? Colors.red : Colors.green,
+                                        size: 18,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          title,
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 14,
+                                            color: isRejected ? Colors.red.shade900 : const Color(0xFF2D1B18),
+                                          ),
+                                        ),
+                                      ),
+                                      if (createdAt.isNotEmpty) ...[
+                                        Text(
+                                          createdAt,
+                                          style: const TextStyle(fontSize: 10, color: Colors.black45),
+                                        ),
+                                        const SizedBox(width: 4),
+                                      ],
+                                      IconButton(
+                                        icon: const Icon(Icons.delete_outline, size: 18, color: Colors.black45),
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(),
+                                        tooltip: 'Delete Notification',
+                                        onPressed: () async {
+                                          final notifId = item['id'] ?? item['Id'] ?? item['ID'];
+                                          if (notifId != null) {
+                                            try {
+                                              final res = await http.delete(Uri.parse('${ApiConfig.baseUrl}/api/notifications/$notifId'));
+                                              debugPrint('Delete notification status: ${res.statusCode} ${res.body}');
+                                            } catch (e) {
+                                              debugPrint('Error deleting notification: $e');
+                                            }
+                                          }
+                                          setDialogState(() {
+                                            _memberNotifications.removeAt(index);
+                                          });
+                                          setState(() {});
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                  if (message.isNotEmpty) ...[
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      message,
+                                      style: const TextStyle(fontSize: 13, color: Colors.black87),
+                                    ),
+                                  ],
+                                  if (rejectReason.toString().trim().isNotEmpty) ...[
+                                    const SizedBox(height: 8),
+                                    Container(
+                                      width: double.infinity,
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(6),
+                                        border: Border.all(color: Colors.red.shade300),
+                                      ),
+                                      child: RichText(
+                                        text: TextSpan(
+                                          children: [
+                                            const TextSpan(
+                                              text: 'Reason: ',
+                                              style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red, fontSize: 12),
+                                            ),
+                                            TextSpan(
+                                              text: rejectReason.toString(),
+                                              style: const TextStyle(color: Colors.black87, fontSize: 12),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+              ),
+              actions: [
+                if (_memberNotifications.isNotEmpty)
+                  TextButton(
+                    onPressed: () async {
+                      try {
+                        await http.delete(Uri.parse('${ApiConfig.baseUrl}/api/notifications/clear/${widget.userId}'));
+                      } catch (e) {
+                        debugPrint('Error clearing notifications: $e');
+                      }
+                      setDialogState(() {
+                        _memberNotifications.clear();
+                      });
+                      setState(() {});
+                    },
+                    child: const Text('Clear All', style: TextStyle(color: Colors.red)),
+                  ),
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Close', style: TextStyle(color: Color(0xFF5D1712))),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 
@@ -1372,7 +1838,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        widget.userRole == 2 ? 'COORDINATOR' : (widget.userRole == 3 ? (AppLocalizations.of(context)?.memberRole?.toUpperCase() ?? 'MEMBER') : 'MANAGER'), 
+                        widget.userRole == 2 ? 'COORDINATOR' : (widget.userRole == 3 ? (AppLocalizations.of(context)?.memberRole.toUpperCase() ?? 'MEMBER') : 'MANAGER'), 
                         style: TextStyle(color: Colors.cyan, fontSize: 11, fontWeight: FontWeight.bold)
                       ),
                     ],
@@ -1414,10 +1880,10 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
     return LayoutBuilder(
       builder: (context, constraints) {
         final isMobile = constraints.maxWidth < 600;
-        final visibleCards = widget.userRole == 2 ? 2 : 3;
+        final visibleCards = !kIsWeb ? (widget.userRole == 2 ? 3 : 4) : (widget.userRole == 2 ? 2 : 3);
         final cardWidth = isMobile
             ? (constraints.maxWidth - (12 * (visibleCards - 1))) / visibleCards
-            : ((constraints.maxWidth - (24 * (visibleCards - 1))) / visibleCards).clamp(0.0, 300.0);
+            : ((constraints.maxWidth - (24 * (visibleCards - 1))) / visibleCards).clamp(0.0, 260.0);
 
         return Center(
           child: Wrap(
@@ -1452,6 +1918,15 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
                 _navigateTo('Received Applications');
               },
             ),
+            if (!kIsWeb)
+              _StatCard(
+                title: 'SCAN MEMBER QR',
+                value: 'SCAN',
+                color: const Color(0xFFC49A3C),
+                width: cardWidth,
+                icon: Icons.qr_code_scanner,
+                onTap: _openQrScanner,
+              ),
           ],
         ));
       },
@@ -1867,7 +2342,9 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
   Widget _buildPaymentCard(Map<String, dynamic> payment, int index, double width) {
     final balance = double.tryParse(payment['balanceamount']?.toString() ?? '0.0') ?? 0.0;
     final tax = double.tryParse(payment['TaxAmount']?.toString() ?? '0.0') ?? 0.0;
-    final paidAmount = tax - balance;
+    final paidAmount = payment['paidamount'] != null
+        ? (double.tryParse(payment['paidamount'].toString()) ?? 0.0)
+        : (tax - balance);
     final isPaid = balance <= 0;
     final isPartial = balance > 0 && balance < tax;
     final eventId = payment['Id'];
@@ -1911,6 +2388,13 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
             onTap: () {
               if (isPaid) {
                 _showReceiptDialog(eventId);
+              } else if (hasPending) {
+                showStatusDialog(
+                  context,
+                  title: 'Payment Pending Approval',
+                  message: 'Your previous payment request for this event is currently under review. Please wait for it to be processed before making another payment.',
+                  type: DialogType.warning,
+                );
               } else {
                 _showPaymentDialog(eventId, year: year);
               }

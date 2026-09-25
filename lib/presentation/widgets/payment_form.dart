@@ -71,6 +71,7 @@ class _PaymentFormState extends State<PaymentForm> {
   int _alreadyPaid = 0;
   int _balance = 0; // The fixed balance from backend
   int _displayedBalance = 0; // Dynamic balance shown in UI
+  bool _hasPendingPayment = false;
 
   // Receipt image
   PlatformFile? _receiptImage;
@@ -191,10 +192,11 @@ class _PaymentFormState extends State<PaymentForm> {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         setState(() {
-          _totalAmount = data['total_amount'];
-          _alreadyPaid = data['already_paid'];
-          _balance = data['balance'];
+          _totalAmount = data['total_amount'] ?? 0;
+          _alreadyPaid = data['already_paid'] ?? 0;
+          _balance = data['balance'] ?? 0;
           _displayedBalance = _balance;
+          _hasPendingPayment = data['has_pending'] == true;
           _amountController.text = "0";
         });
       }
@@ -245,6 +247,17 @@ class _PaymentFormState extends State<PaymentForm> {
       return;
     }
 
+    if (_hasPendingPayment) {
+      showStatusDialog(
+        context,
+        title: 'Payment Pending Approval',
+        message: 'A payment request for this event is currently under review. You cannot submit another payment until it is processed.',
+        type: DialogType.warning,
+      );
+      setState(() => _isLoading = false);
+      return;
+    }
+
     if ((_paymentMethod == 'UPI' || _paymentMethod == 'Cheque') && _receiptImage == null) {
       final type = _paymentMethod == 'UPI' ? 'UPI' : 'Cheque';
       showStatusDialog(context, title: 'Receipt Required', message: 'Please upload the payment receipt for $type transactions.', type: DialogType.warning);
@@ -264,7 +277,7 @@ class _PaymentFormState extends State<PaymentForm> {
       request.fields['event_id'] = _selectedEventId.toString();
       request.fields['paid_amount'] = _amountController.text;
       request.fields['payment_method'] = _paymentMethod;
-      request.fields['received_by'] = _receiverController.text;
+      request.fields['received_by'] = _receiverController.text.trim();
       request.fields['payment_date'] = DateFormat('yyyy-MM-dd').format(DateTime.now());
       
       final prefs = await SharedPreferences.getInstance();
@@ -664,6 +677,29 @@ class _PaymentFormState extends State<PaymentForm> {
               },
             ),
           ),
+          if (_hasPendingPayment) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF3E0),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFFFB74D)),
+              ),
+              child: Row(
+                children: const [
+                  Icon(Icons.warning_amber_rounded, color: Color(0xFFE65100), size: 20),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'A payment request for this event is currently pending approval. You cannot submit another payment until it is reviewed.',
+                      style: TextStyle(fontSize: 12, color: Color(0xFFE65100), fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 16),
           const Text('Pay Amount *', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF64748B))),
           const SizedBox(height: 6),
@@ -1124,8 +1160,8 @@ class _PaymentFormState extends State<PaymentForm> {
                 validator: (v) {
                   if (v == null || v.trim().isEmpty) return 'Required';
                   if (v.trim().length < 3) return 'Minimum 3 characters required';
-                  if (v.length > 50) return 'Maximum 50 characters allowed';
-                  if (!RegExp(r'\p{L}', unicode: true).hasMatch(v)) return 'Enter a valid name';
+                  if (v.trim().length > 50) return 'Maximum 50 characters allowed';
+                  if (!RegExp(r'\p{L}', unicode: true).hasMatch(v.trim())) return 'Enter a valid name';
                   return null;
                 },
               ),
@@ -1162,6 +1198,7 @@ class _PaymentFormState extends State<PaymentForm> {
                     const SizedBox(height: 6),
                     TextFormField(
                       controller: _receiverController,
+                      focusNode: _receiverFocus,
                       maxLength: 50,
                       decoration: InputDecoration(
                         counterText: '',
@@ -1172,8 +1209,8 @@ class _PaymentFormState extends State<PaymentForm> {
                       validator: (v) {
                         if (v == null || v.trim().isEmpty) return 'Required';
                         if (v.trim().length < 3) return 'Minimum 3 characters required';
-                        if (v.length > 50) return 'Maximum 50 characters allowed';
-                        if (!RegExp(r'\p{L}', unicode: true).hasMatch(v)) return 'Enter a valid name';
+                        if (v.trim().length > 50) return 'Maximum 50 characters allowed';
+                        if (!RegExp(r'\p{L}', unicode: true).hasMatch(v.trim())) return 'Enter a valid name';
                         return null;
                       },
                     ),

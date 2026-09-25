@@ -221,7 +221,7 @@ class _LoginPageState extends State<LoginPage> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       const Text(
-                        'Welcome! Since this is your first time logging in, please set a new password for your account. An OTP has been sent to your registered email.',
+                        'Welcome! Since this is your first time logging in, please set a new password for your account. An OTP has been sent to your registered WhatsApp number and email address.',
                         style: TextStyle(color: Colors.black87),
                       ),
                       const SizedBox(height: 20),

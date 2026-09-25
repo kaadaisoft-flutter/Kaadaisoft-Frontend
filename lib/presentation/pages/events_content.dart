@@ -887,10 +887,14 @@ class _EventsContentState extends State<EventsContent> {
 
   Widget _buildFilterTabs() {
     bool isMobile = MediaQuery.of(context).size.width < 600;
+    final tabOptions = widget.role == 3 ? ['Upcoming', 'Current'] : ['Upcoming', 'Current', 'Completed'];
+    if (widget.role == 3 && _selectedTab == 'Completed') {
+      _selectedTab = 'Upcoming';
+    }
     
     Widget tabsRow = Row(
       mainAxisSize: MainAxisSize.min,
-      children: ['Upcoming', 'Current', 'Completed'].map((tab) {
+      children: tabOptions.map((tab) {
         final isSelected = _selectedTab == tab;
         Widget tabWidget = GestureDetector(
           onTap: () => setState(() => _selectedTab = tab),

@@ -231,7 +231,20 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
     });
   }
 
-  void _checkMarriedAgeValidation(String? marriedVal) {
+  void _checkMarriedAgeValidation(String? marriedVal) async {
+    bool isMarriedLocked = ['Wife', 'Husband', 'Father', 'Mother', 'Grand Father', 'Grand Mother', 'Daughter-in-law', 'Son-in-law'].contains(_selectedRelationship);
+
+    if (marriedVal == 'No' && isMarriedLocked) {
+      showStatusDialog(
+        context,
+        title: 'Married Status Locked',
+        message: 'Married status is automatically set to Yes for relationship "$_selectedRelationship".',
+        type: DialogType.info,
+      );
+      setState(() => _selectedMarried = 'Yes');
+      return;
+    }
+
     if (marriedVal == 'Yes' && _dobController.text.isNotEmpty) {
       try {
         DateTime? dob;
@@ -876,6 +889,19 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
   Widget _buildGenderSelector(bool isMobile) {
     bool isGenderLocked = ['Wife', 'Daughter', 'Mother', 'Grand Mother', 'Daughter-in-law', 'Sister', 'Husband', 'Son', 'Father', 'Grand Father', 'Son-in-law', 'Brother'].contains(_selectedRelationship);
     
+    void handleGenderChange(String? v) {
+      if (isGenderLocked && v != _selectedGender) {
+        showStatusDialog(
+          context,
+          title: 'Gender Auto-set',
+          message: 'Gender is automatically set to $_selectedGender for relationship "$_selectedRelationship".',
+          type: DialogType.info,
+        );
+      } else {
+        setState(() => _selectedGender = v);
+      }
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -891,7 +917,7 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
                 SizedBox(
                   width: 24,
                   height: 24,
-                  child: Radio<String>(value: 'Male', groupValue: _selectedGender, onChanged: isGenderLocked ? null : (v) => setState(() => _selectedGender = v), activeColor: primaryBrown, materialTapTargetSize: MaterialTapTargetSize.shrinkWrap, visualDensity: const VisualDensity(horizontal: -4, vertical: -4)),
+                  child: Radio<String>(value: 'Male', groupValue: _selectedGender, onChanged: handleGenderChange, activeColor: primaryBrown, materialTapTargetSize: MaterialTapTargetSize.shrinkWrap, visualDensity: const VisualDensity(horizontal: -4, vertical: -4)),
                 ),
                 const SizedBox(width: 6),
                 const Text('Male'),
@@ -903,7 +929,7 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
                 SizedBox(
                   width: 24,
                   height: 24,
-                  child: Radio<String>(value: 'Female', groupValue: _selectedGender, onChanged: isGenderLocked ? null : (v) => setState(() => _selectedGender = v), activeColor: primaryBrown, materialTapTargetSize: MaterialTapTargetSize.shrinkWrap, visualDensity: const VisualDensity(horizontal: -4, vertical: -4)),
+                  child: Radio<String>(value: 'Female', groupValue: _selectedGender, onChanged: handleGenderChange, activeColor: primaryBrown, materialTapTargetSize: MaterialTapTargetSize.shrinkWrap, visualDensity: const VisualDensity(horizontal: -4, vertical: -4)),
                 ),
                 const SizedBox(width: 6),
                 const Text('Female'),
@@ -915,7 +941,7 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
                 SizedBox(
                   width: 24,
                   height: 24,
-                  child: Radio<String>(value: 'Other', groupValue: _selectedGender, onChanged: isGenderLocked ? null : (v) => setState(() => _selectedGender = v), activeColor: primaryBrown, materialTapTargetSize: MaterialTapTargetSize.shrinkWrap, visualDensity: const VisualDensity(horizontal: -4, vertical: -4)),
+                  child: Radio<String>(value: 'Other', groupValue: _selectedGender, onChanged: handleGenderChange, activeColor: primaryBrown, materialTapTargetSize: MaterialTapTargetSize.shrinkWrap, visualDensity: const VisualDensity(horizontal: -4, vertical: -4)),
                 ),
                 const SizedBox(width: 6),
                 const Text('Other'),
@@ -1070,10 +1096,38 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
         const SizedBox(height: 8),
         InkWell(
           onTap: () async {
-            final result = await fp_pkg.FilePicker.pickFiles(type: fp_pkg.FileType.image, withData: kIsWeb);
-            if (result != null) {
+            final result = await fp_pkg.FilePicker.pickFiles(
+              type: fp_pkg.FileType.custom,
+              allowedExtensions: ['jpg', 'jpeg', 'png', 'pdf'],
+              withData: kIsWeb,
+            );
+            if (result != null && result.files.isNotEmpty) {
+              final file = result.files.single;
+              final ext = (file.extension ?? file.name.split('.').last).toLowerCase();
+              final allowedExtensions = ['jpg', 'jpeg', 'png', 'pdf'];
+              if (!allowedExtensions.contains(ext)) {
+                if (mounted) {
+                  showStatusDialog(
+                    context,
+                    title: 'Validation Error',
+                    message: 'Only JPG, JPEG, PNG, and PDF document formats are supported.',
+                    type: DialogType.error,
+                  );
+                }
+                return;
+              }
+              if (file.size > 5 * 1024 * 1024) {
+                if (mounted) {
+                  showStatusDialog(
+                    context,
+                    title: 'Validation Error',
+                    message: 'File size exceeds the allowed limit of 5 MB.',
+                    type: DialogType.error,
+                  );
+                }
+                return;
+              }
               setState(() {
-                final file = result.files.single;
                 final xfile = kIsWeb 
                     ? (file.path != null ? XFile(file.path!, name: file.name) : XFile.fromData(file.bytes!, name: file.name)) 
                     : XFile(file.path!, name: file.name);

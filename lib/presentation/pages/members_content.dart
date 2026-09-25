@@ -16,6 +16,7 @@ import '../widgets/custom_dropdown_search.dart';
 import '../../l10n/app_localizations.dart';
 // Conditional import for web download
 import '../../utils/web_helper_stub.dart' if (dart.library.html) 'dart:html' as html;
+import '../widgets/qr_scanner_dialog.dart';
 
 
 class MembersContent extends StatefulWidget {
@@ -284,7 +285,7 @@ class _MembersContentState extends State<MembersContent> {
                               _buildHeaderCell(AppLocalizations.of(context)?.panchayatHeader ?? 'PANCHAYAT', 130),
                               _buildHeaderCell(AppLocalizations.of(context)?.villageUpperHeader ?? 'VILLAGE', 130),
                               _buildHeaderCell('LAST LOGIN', 150),
-                              _buildHeaderCell('ACTIONS', 160),
+                              _buildHeaderCell('ACTIONS', 190),
                             ],
                           ),
                         ),
@@ -306,6 +307,7 @@ class _MembersContentState extends State<MembersContent> {
                                     separatorBuilder: (_, __) => const Divider(height: 1),
                                     itemBuilder: (context, index) {
                                       final member = currentPageMembers[index];
+                                      final bool isDisabled = member['is_disabled'] == true || member['is_disabled'] == 1 || member['is_disabled']?.toString().toLowerCase() == 'true';
                                       return _buildScrollableTableRow(
                                         member['Role']?.toString() ?? '3',
                                         member['District'] ?? '-',
@@ -316,6 +318,8 @@ class _MembersContentState extends State<MembersContent> {
                                         member['Name'] ?? '-',
                                         member['Familymembershipid'] ?? 'N/A',
                                         member['last_login'] != null ? member['last_login'].toString().replaceAll('T', ' ').substring(0, 16) : 'Never',
+                                        isDisabled,
+                                        member['Phonenumber']?.toString() ?? '-',
                                       );
                                     },
                                   ),
@@ -369,7 +373,7 @@ class _MembersContentState extends State<MembersContent> {
                         ),
                         // Scrollable Right Part
                         isNarrow
-                            ? SizedBox(width: 900, child: rightPart)
+                            ? SizedBox(width: 930, child: rightPart)
                             : Expanded(
                                   child: Scrollbar(
                                     controller: _horizontalScrollController,
@@ -377,7 +381,7 @@ class _MembersContentState extends State<MembersContent> {
                                     controller: _horizontalScrollController,
                                     scrollDirection: Axis.horizontal,
                                     child: SizedBox(
-                                      width: 900, // 110+110+110+130+130+150+160
+                                      width: 930, // 110+110+110+130+130+150+190
                                       child: rightPart,
                                     ),
                                   ),
@@ -615,6 +619,84 @@ class _MembersContentState extends State<MembersContent> {
     }
   }
 
+  Future<void> _toggleMemberDisabledStatus(String memberId, String name, bool currentDisabledState) async {
+    final bool newDisabledState = !currentDisabledState;
+    final String actionTitle = newDisabledState ? 'Disable ID Card' : 'Enable ID Card';
+    final String messageText = newDisabledState
+        ? 'Are you sure you want to disable the ID card and account for "$name"?\n\nThe member will NOT be able to log in or populate their details.'
+        : 'Are you sure you want to re-enable the ID card and account for "$name"?';
+
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
+        title: Text(actionTitle, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+        content: Text(messageText, style: const TextStyle(fontSize: 14)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel', style: TextStyle(color: Colors.black54)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: newDisabledState ? Colors.red : Colors.green,
+              foregroundColor: Colors.white,
+            ),
+            child: Text(newDisabledState ? 'Disable' : 'Enable'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      setState(() => _isLoading = true);
+      try {
+        final response = await http.post(
+          Uri.parse(ApiConfig.toggleMemberDisabledStatus),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'member_id': memberId,
+            'is_disabled': newDisabledState,
+          }),
+        );
+
+        if (response.statusCode == 200) {
+          if (mounted) {
+            showStatusDialog(
+              context,
+              title: 'Success',
+              message: 'Member ID card has been ${newDisabledState ? "disabled" : "enabled"} successfully.',
+              type: DialogType.success,
+            );
+            _fetchMembers(resetPage: false);
+          }
+        } else {
+          if (mounted) {
+            showStatusDialog(
+              context,
+              title: 'Error',
+              message: 'Failed to update member status.',
+              type: DialogType.error,
+            );
+            setState(() => _isLoading = false);
+          }
+        }
+      } catch (e) {
+        if (mounted) {
+          showStatusDialog(
+            context,
+            title: 'Error',
+            message: 'Connection error while updating member status.',
+            type: DialogType.error,
+          );
+          setState(() => _isLoading = false);
+        }
+      }
+    }
+  }
+
   void _showViewMemberDialog(String memberId, String familyId) {
     showDialog(
       context: context,
@@ -799,6 +881,8 @@ class _MembersContentState extends State<MembersContent> {
         runSpacing: 8,
         alignment: WrapAlignment.start,
         children: [
+          if (!kIsWeb)
+            _buildOutlinedButton('Scan QR', Icons.qr_code_scanner, const Color(0xFFC49A3C), isMobile: true, onPressed: _openQrScannerInMembers),
           _buildOutlinedButton(AppLocalizations.of(context)?.uploadBulkDataBtn ?? 'Upload Bulk Data', Icons.file_upload_outlined, const Color(0xFF5D1712), isMobile: true, onPressed: () => setState(() {
             _showBulkUpload = !_showBulkUpload;
             if (_showBulkUpload) _showFilters = false;
@@ -824,6 +908,8 @@ class _MembersContentState extends State<MembersContent> {
       runSpacing: 12,
       alignment: WrapAlignment.start,
       children: [
+        if (!kIsWeb)
+          _buildOutlinedButton('Scan QR', Icons.qr_code_scanner, const Color(0xFFC49A3C), onPressed: _openQrScannerInMembers),
         _buildOutlinedButton(AppLocalizations.of(context)?.uploadBulkDataBtn ?? 'Upload Bulk Data', Icons.file_upload_outlined, const Color(0xFF5D1712), onPressed: () => setState(() {
           _showBulkUpload = !_showBulkUpload;
           if (_showBulkUpload) _showFilters = false;
@@ -842,6 +928,47 @@ class _MembersContentState extends State<MembersContent> {
         _buildSolidButton(AppLocalizations.of(context)?.addBtn ?? 'Add', Icons.add, const Color(0xFF5D1712), onPressed: _showAddMemberDialog),
       ],
     );
+  }
+
+  Future<void> _openQrScannerInMembers() async {
+    final scannedMemberId = await QrScannerDialog.show(context);
+    if (scannedMemberId != null && scannedMemberId.isNotEmpty && mounted) {
+      showDialog(
+        context: context,
+        barrierDismissible: true,
+        builder: (context) => Dialog(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+          child: Container(
+            width: 1100,
+            constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.9),
+            child: Column(
+              children: [
+                Align(
+                  alignment: Alignment.topRight,
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: MemberDetailsContent(
+                    numericId: scannedMemberId,
+                    familyId: '',
+                    onBack: () => Navigator.pop(context),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
   }
 
   Widget _buildOutlinedButton(String label, IconData icon, Color color, {VoidCallback? onPressed, bool isMobile = false}) {
@@ -918,7 +1045,86 @@ class _MembersContentState extends State<MembersContent> {
     );
   }
 
-  Widget _buildScrollableTableRow(String role, String district, String taluk, String panchayat, String village, String memberId, String name, String familyId, String lastLogin) {
+  Future<void> _sendIndividualInvite(String memberId, String name, String mobile) async {
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
+        title: Row(
+          children: const [
+            Icon(Icons.send_rounded, color: Color(0xFF25D366)),
+            SizedBox(width: 8),
+            Text('Send WhatsApp Invite', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          ],
+        ),
+        content: Text(
+          'Are you sure you want to send a WhatsApp invitation message to "$name" ($mobile)?',
+          style: const TextStyle(fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel', style: TextStyle(color: Colors.black54)),
+          ),
+          ElevatedButton.icon(
+            onPressed: () => Navigator.pop(context, true),
+            icon: const Icon(Icons.send, size: 16),
+            label: const Text('Send Invite'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF25D366),
+              foregroundColor: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      setState(() => _isLoading = true);
+      try {
+        final response = await http.post(
+          Uri.parse(ApiConfig.sendIndividualInvite(memberId)),
+          headers: {'Content-Type': 'application/json'},
+        );
+
+        final data = jsonDecode(response.body);
+
+        if (response.statusCode == 200) {
+          if (mounted) {
+            showStatusDialog(
+              context,
+              title: 'Success',
+              message: data['message'] ?? 'Invitation sent successfully.',
+              type: DialogType.success,
+            );
+          }
+        } else {
+          if (mounted) {
+            showStatusDialog(
+              context,
+              title: 'Error',
+              message: data['detail'] ?? data['message'] ?? 'Failed to send invitation.',
+              type: DialogType.error,
+            );
+          }
+        }
+      } catch (e) {
+        if (mounted) {
+          showStatusDialog(
+            context,
+            title: 'Error',
+            message: 'Connection error while sending invitation.',
+            type: DialogType.error,
+          );
+        }
+      } finally {
+        if (mounted) setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Widget _buildScrollableTableRow(String role, String district, String taluk, String panchayat, String village, String memberId, String name, String familyId, String lastLogin, bool isDisabled, String mobile) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -928,19 +1134,20 @@ class _MembersContentState extends State<MembersContent> {
           padding: const EdgeInsets.symmetric(vertical: 4),
           decoration: BoxDecoration(
             border: Border(bottom: BorderSide(color: Colors.grey.shade100)),
+            color: isDisabled ? Colors.red.shade50.withOpacity(0.3) : null,
           ),
           child: Row(
             children: [
               _buildDataCell('', 110, child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
-                  color: role == '2' ? Colors.orange.shade50 : const Color(0xFFFDECEB),
+                  color: isDisabled ? Colors.red.shade50 : (role == '2' ? Colors.orange.shade50 : const Color(0xFFFDECEB)),
                   borderRadius: BorderRadius.circular(4),
-                  border: Border.all(color: role == '2' ? Colors.orange.shade200 : const Color(0xFFE5A09D)),
+                  border: Border.all(color: isDisabled ? Colors.red.shade300 : (role == '2' ? Colors.orange.shade200 : const Color(0xFFE5A09D))),
                 ),
                 child: Text(
-                  role == '2' ? (AppLocalizations.of(context)?.coordinatorRole?.toUpperCase() ?? 'COORDINATOR') : (AppLocalizations.of(context)?.memberRole?.toUpperCase() ?? 'MEMBER'),
-                  style: TextStyle(color: role == '2' ? Colors.orange.shade700 : const Color(0xFF5D1712), fontSize: 10, fontWeight: FontWeight.bold),
+                  isDisabled ? 'DISABLED' : (role == '2' ? (AppLocalizations.of(context)?.coordinatorRole.toUpperCase() ?? 'COORDINATOR') : (AppLocalizations.of(context)?.memberRole.toUpperCase() ?? 'MEMBER')),
+                  style: TextStyle(color: isDisabled ? Colors.red.shade700 : (role == '2' ? Colors.orange.shade700 : const Color(0xFF5D1712)), fontSize: 10, fontWeight: FontWeight.bold),
                 ),
               )),
               _buildDataCell(district, 110),
@@ -948,13 +1155,27 @@ class _MembersContentState extends State<MembersContent> {
               _buildDataCell(panchayat.isEmpty ? '-' : panchayat, 130),
               _buildDataCell(village, 130),
               _buildDataCell(lastLogin, 150),
-              _buildDataCell('', 160, child: Row(
+              _buildDataCell('', 190, child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   _actionIcon(Icons.edit_outlined, const Color(0xFF5D1712), onTap: () => _showEditMemberDialog(memberId), tooltip: 'Edit'),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 4),
+                  _actionIcon(
+                    isDisabled ? Icons.check_circle_outline : Icons.block,
+                    isDisabled ? Colors.green : Colors.orange.shade800,
+                    onTap: () => _toggleMemberDisabledStatus(memberId, name, isDisabled),
+                    tooltip: isDisabled ? 'Enable ID Card' : 'Disable ID Card',
+                  ),
+                  const SizedBox(width: 4),
+                  _actionIcon(
+                    Icons.send_rounded,
+                    const Color(0xFF25D366),
+                    onTap: () => _sendIndividualInvite(memberId, name, mobile),
+                    tooltip: 'Send Invite',
+                  ),
+                  const SizedBox(width: 4),
                   _actionIcon(Icons.person_remove_outlined, Colors.red, onTap: () => _rejectMember(memberId, name), tooltip: 'Reject'),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 4),
                   _actionIcon(Icons.visibility_outlined, Colors.grey, onTap: () => _showViewMemberDialog(memberId, familyId), tooltip: 'View'),
                 ],
               )),

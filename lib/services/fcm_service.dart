@@ -51,6 +51,26 @@ class FcmService {
     }
   }
 
+  static Function(Map<String, dynamic> data)? _onNotificationClickedHandler;
+
+  static void listenNotificationClicks(Function(Map<String, dynamic> data) handler) {
+    _onNotificationClickedHandler = handler;
+
+    // Background to Foreground tap
+    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+      debugPrint("FCM Notification tapped from background: ${message.data}");
+      _onNotificationClickedHandler?.call(message.data);
+    });
+
+    // App launched from terminated state via Notification tap
+    _firebaseMessaging.getInitialMessage().then((RemoteMessage? message) {
+      if (message != null) {
+        debugPrint("FCM Notification tapped from terminated state: ${message.data}");
+        _onNotificationClickedHandler?.call(message.data);
+      }
+    });
+  }
+
   static Future<void> _setupToken() async {
     try {
       String? token = await _firebaseMessaging.getToken();

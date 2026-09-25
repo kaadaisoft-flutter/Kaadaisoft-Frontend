@@ -174,7 +174,11 @@ class _PaymentsContentState extends State<PaymentsContent> {
 
   Future<void> _fetchDistricts() async {
     try {
-      final response = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/districts'));
+      String url = '${ApiConfig.baseUrl}/api/districts';
+      if (widget.role == 2 && widget.userId != null) {
+        url += '?user_id=${widget.userId}&role=${widget.role}';
+      }
+      final response = await http.get(Uri.parse(url));
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         setState(() => _districts = data['data']);
@@ -186,7 +190,11 @@ class _PaymentsContentState extends State<PaymentsContent> {
 
   Future<void> _fetchTaluks(String district) async {
     try {
-      final response = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/taluks/$district'));
+      String url = '${ApiConfig.baseUrl}/api/taluks/${Uri.encodeComponent(district)}';
+      if (widget.role == 2 && widget.userId != null) {
+        url += '?user_id=${widget.userId}&role=${widget.role}';
+      }
+      final response = await http.get(Uri.parse(url));
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         setState(() {
@@ -205,7 +213,15 @@ class _PaymentsContentState extends State<PaymentsContent> {
 
   Future<void> _fetchPanchayats(String taluk) async {
     try {
-      final response = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/panchayats/$taluk'));
+      String url = '${ApiConfig.baseUrl}/api/panchayats/${Uri.encodeComponent(taluk)}';
+      List<String> queryParams = [];
+      if (_selectedDistrict != null) queryParams.add('district=${Uri.encodeComponent(_selectedDistrict!)}');
+      if (widget.role == 2 && widget.userId != null) {
+        queryParams.add('user_id=${widget.userId}');
+        queryParams.add('role=${widget.role}');
+      }
+      if (queryParams.isNotEmpty) url += '?${queryParams.join('&')}';
+      final response = await http.get(Uri.parse(url));
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         setState(() {
@@ -222,12 +238,21 @@ class _PaymentsContentState extends State<PaymentsContent> {
 
   Future<void> _fetchVillages(String panchayat) async {
     try {
-      final response = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/villages/$panchayat'));
+      String url = '${ApiConfig.baseUrl}/api/villages/${Uri.encodeComponent(panchayat)}';
+      List<String> queryParams = [];
+      if (_selectedDistrict != null) queryParams.add('district=${Uri.encodeComponent(_selectedDistrict!)}');
+      if (_selectedTaluk != null) queryParams.add('taluk=${Uri.encodeComponent(_selectedTaluk!)}');
+      if (widget.role == 2 && widget.userId != null) {
+        queryParams.add('user_id=${widget.userId}');
+        queryParams.add('role=${widget.role}');
+      }
+      if (queryParams.isNotEmpty) url += '?${queryParams.join('&')}';
+
+      final response = await http.get(Uri.parse(url));
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         setState(() {
-          _villages = data['data'];
-          _selectedVillage = null;
+          _villages = List<String>.from(data['data']);
         });
       }
     } catch (e) {
@@ -238,13 +263,23 @@ class _PaymentsContentState extends State<PaymentsContent> {
   Future<void> _fetchMembers() async {
     setState(() => _isLoading = true);
     try {
-      String url = '${ApiConfig.paymentMembers}?page=$_currentPage&limit=$_itemsPerPage';
+      List<String> queryParams = [
+        'page=$_currentPage',
+        'limit=$_itemsPerPage',
+      ];
       if (_searchController.text.isNotEmpty) {
-        url += '&search=${_searchController.text}';
+        queryParams.add('search=${Uri.encodeComponent(_searchController.text)}');
       }
       if (widget.userId != null) {
-        url += '&user_id=${widget.userId}&role=${widget.role}';
+        queryParams.add('user_id=${widget.userId}');
+        queryParams.add('role=${widget.role}');
       }
+      if (_selectedDistrict != null) queryParams.add('district=${Uri.encodeComponent(_selectedDistrict!)}');
+      if (_selectedTaluk != null) queryParams.add('taluk=${Uri.encodeComponent(_selectedTaluk!)}');
+      if (_selectedPanchayat != null) queryParams.add('panchayat=${Uri.encodeComponent(_selectedPanchayat!)}');
+      if (_selectedVillage != null) queryParams.add('village=${Uri.encodeComponent(_selectedVillage!)}');
+
+      String url = '${ApiConfig.paymentMembers}?${queryParams.join('&')}';
 
       final response = await http.get(Uri.parse(url));
       if (response.statusCode == 200) {
@@ -283,53 +318,46 @@ class _PaymentsContentState extends State<PaymentsContent> {
 
   void _clearFilters() {
     setState(() {
-      if (widget.role != 2) {
-        _selectedDistrict = null;
-        _selectedTaluk = null;
-        _selectedPanchayat = null;
-        _selectedVillage = null;
-      }
+      _selectedDistrict = null;
+      _selectedTaluk = null;
+      _taluks = [];
+      _selectedPanchayat = null;
+      _panchayats = [];
+      _selectedVillage = null;
+      _villages = [];
       _selectedYear = null;
       _selectedEventId = null;
+      _events = [];
       _selectedStatus = 'Paid';
     });
     _searchController.clear();
     _currentPage = 1;
-    _fetchMembers();
+    _fetchInitialData();
   }
 
   Future<void> _applyFilters({bool resetPage = true}) async {
-    if (_selectedEventId == null) {
-      showStatusDialog(
-        context,
-        title: 'Selection Required',
-        message: 'Please select an event to filter by payment status',
-        type: DialogType.warning,
-      );
-      return;
-    }
-
     if (resetPage) {
       _currentPage = 1;
     }
 
-    setState(() => _isLoading = true);
-    try {
-      Map<String, String> params = {
-        'event_id': _selectedEventId.toString(),
-        'status': _selectedStatus,
-        'page': '1', // Fetch everything for local filtering/pagination
-        'limit': '5000',
-      };
+    if (_selectedEventId != null) {
+      setState(() => _isLoading = true);
+      try {
+        Map<String, String> params = {
+          'event_id': _selectedEventId.toString(),
+          'status': _selectedStatus,
+          'page': '1', // Fetch everything for local filtering/pagination
+          'limit': '5000',
+        };
 
-      if (_selectedDistrict != null) params['district'] = _selectedDistrict!;
-      if (_selectedTaluk != null) params['taluk'] = _selectedTaluk!;
-      if (_selectedPanchayat != null) params['panchayat'] = _selectedPanchayat!;
-      if (_selectedVillage != null) params['village'] = _selectedVillage!;
-      if (widget.userId != null) {
-        params['user_id'] = widget.userId.toString();
-        params['role'] = widget.role.toString();
-      }
+        if (_selectedDistrict != null) params['district'] = _selectedDistrict!;
+        if (_selectedTaluk != null) params['taluk'] = _selectedTaluk!;
+        if (_selectedPanchayat != null) params['panchayat'] = _selectedPanchayat!;
+        if (_selectedVillage != null) params['village'] = _selectedVillage!;
+        if (widget.userId != null) {
+          params['user_id'] = widget.userId.toString();
+          params['role'] = widget.role.toString();
+        }
 
       final uri = Uri.parse(ApiConfig.filterPayments).replace(queryParameters: params);
       final response = await http.get(uri);
@@ -380,7 +408,10 @@ class _PaymentsContentState extends State<PaymentsContent> {
         _isLoading = false;
       });
     }
+  } else {
+    await _fetchMembers();
   }
+}
 
   @override
   void dispose() {
@@ -702,186 +733,162 @@ class _PaymentsContentState extends State<PaymentsContent> {
       return true;
     }).toList();
 
-    // Group receipts by event name to mimic the UI behavior (hiding pending if a paid receipt exists)
-    final Map<String, List<dynamic>> grouped = {};
-    for (var r in approved) {
-      final name = r['eventname']?.toString() ?? r['EventName']?.toString() ?? AppLocalizations.of(context)?.otherUpper ?? 'OTHER';
-      grouped.putIfAbsent(name, () => []).add(r);
-    }
-
-    final List<dynamic> finalDisplayItems = [];
-    grouped.forEach((eventName, items) {
-      final hasFullyPaid = items.any((r) => (r['status']?.toString() ?? '').toLowerCase() == 'paid');
-      if (hasFullyPaid) {
-        finalDisplayItems.addAll(items.where((r) => (r['status']?.toString() ?? '').toLowerCase() == 'paid'));
-      } else {
-        finalDisplayItems.addAll(items);
-      }
-    });
-
-    return finalDisplayItems;
+    return approved;
   }
 
   List<Widget> _buildGroupedReceiptTables(List<dynamic> approvedReceipts, bool isMobile) {
+    return [
+      Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: approvedReceipts.map((r) => _buildReceiptCardItem(r, _memberData!, isMobile)).toList(),
+        ),
+      ),
+    ];
+  }
 
-    // Group receipts by event name
-    final Map<String, List<dynamic>> grouped = {};
-    for (var r in approvedReceipts) {
-      final name = r['eventname']?.toString() ?? r['EventName']?.toString() ?? AppLocalizations.of(context)?.otherUpper ?? 'OTHER';
-      grouped.putIfAbsent(name, () => []).add(r);
-    }
+  Widget _buildReceiptCardItem(Map<String, dynamic> r, Map<String, dynamic> memberData, bool isMobile) {
+    final eventName = r['eventname']?.toString() ?? r['EventName']?.toString() ?? AppLocalizations.of(context)?.otherUpper ?? 'OTHER';
+    final status = r['status']?.toString() ?? 'Pending';
+    final balance = (r['balanceamount'] ?? 0.0);
+    final balanceVal = balance is double ? balance : double.tryParse(balance.toString()) ?? 0.0;
+    final taxamt = r['TaxAmount'] ?? r['taxamount'] ?? 0.0;
+    final taxVal = taxamt is double ? taxamt : double.tryParse(taxamt.toString()) ?? 0.0;
+    final paid = r['paidamount'] ?? r['Paidamount'] ?? r['Collectedamount'] ?? 0.0;
+    final paidVal = paid is double ? paid : double.tryParse(paid.toString()) ?? 0.0;
+    final dues = r['dues']?.toString() ?? '-';
+    final isPaid = status.toLowerCase() == 'paid';
+    final date = r['paymentdate']?.toString() ?? '-';
+    final year = r['year']?.toString() ?? '-';
+    final paymentDetails = _getPaymentDetailsStr(r);
 
-    List<Widget> sections = [];
-    grouped.forEach((eventName, items) {
-      final hasFullyPaid = items.any((r) => (r['status']?.toString() ?? '').toLowerCase() == 'paid');
-      final displayItems = hasFullyPaid 
-          ? items.where((r) => (r['status']?.toString() ?? '').toLowerCase() == 'paid').toList()
-          : items;
-
-      sections.add(
+    Widget financialSummary = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
         Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
-          decoration: const BoxDecoration(
-            color: Color(0xFFF1F5F9),
-            border: Border(left: BorderSide(color: Color(0xFF5D1712), width: 4)),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          margin: const EdgeInsets.only(bottom: 8),
+          decoration: BoxDecoration(
+            color: const Color(0xFF5D1712).withOpacity(0.08),
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(color: const Color(0xFF5D1712).withOpacity(0.2)),
           ),
-          child: Text(
-            eventName.toUpperCase(),
-            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: Color(0xFF5D1712), letterSpacing: 1),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.event_note, size: 14, color: Color(0xFF5D1712)),
+              const SizedBox(width: 4),
+              Text(
+                eventName.toUpperCase(),
+                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Color(0xFF5D1712), letterSpacing: 0.5),
+              ),
+            ],
           ),
         ),
-      );
-      sections.add(
-        Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            children: displayItems.map((r) {
-              final status = r['status']?.toString() ?? 'Pending';
-              final balance = (r['balanceamount'] ?? 0.0);
-              final balanceVal = balance is double ? balance : double.tryParse(balance.toString()) ?? 0.0;
-              final taxamt = r['TaxAmount'] ?? r['taxamount'] ?? 0.0;
-              final taxVal = taxamt is double ? taxamt : double.tryParse(taxamt.toString()) ?? 0.0;
-              final paid = r['Collectedamount'] ?? r['paidamount'] ?? 0.0;
-              final paidVal = paid is double ? paid : double.tryParse(paid.toString()) ?? 0.0;
-              final dues = r['dues']?.toString() ?? '-';
-              final isPaid = status.toLowerCase() == 'paid';
-              final date = r['paymentdate']?.toString() ?? '-';
-              final year = r['year']?.toString() ?? '-';
-              final paymentDetails = _getPaymentDetailsStr(r);
+        Text(AppLocalizations.of(context)?.paidUpper ?? 'PAID AMOUNT', style: TextStyle(fontSize: 11, color: Colors.grey.shade600, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 2),
+        Text('${paidVal.toStringAsFixed(0)} ${AppLocalizations.of(context)?.rs ?? "Rs"}', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: isPaid ? Colors.green.shade700 : Colors.red.shade700)),
+        const SizedBox(height: 6),
+        Wrap(
+          spacing: 12,
+          runSpacing: 4,
+          children: [
+            Text('${AppLocalizations.of(context)?.totalAmountUpper ?? 'TOTAL'}: ${taxVal.toStringAsFixed(0)}', style: const TextStyle(fontSize: 12, color: Colors.black54, fontWeight: FontWeight.w500)),
+            Text('${AppLocalizations.of(context)?.pendingUpper ?? 'PENDING'}: ${balanceVal.toStringAsFixed(0)}', style: TextStyle(fontSize: 12, color: balanceVal > 0 ? Colors.red.shade600 : Colors.black54, fontWeight: FontWeight.w500)),
+          ],
+        )
+      ],
+    );
 
-              Widget financialSummary = Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(AppLocalizations.of(context)?.paidUpper ?? 'PAID AMOUNT', style: TextStyle(fontSize: 11, color: Colors.grey.shade600, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 2),
-                  Text('${paidVal.toStringAsFixed(0)} ${AppLocalizations.of(context)?.rs ?? "Rs"}', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: isPaid ? Colors.green.shade700 : Colors.red.shade700)),
-                  const SizedBox(height: 6),
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 4,
+    Widget transactionDetails = Wrap(
+      spacing: 32,
+      runSpacing: 16,
+      children: [
+        _buildDetailItem(Icons.event_outlined, 'EVENT NAME', eventName),
+        _buildDetailItem(Icons.calendar_today_outlined, AppLocalizations.of(context)?.dateUpper ?? 'DATE & YEAR', '$date ($year)'),
+        _buildDetailItem(Icons.account_balance_outlined, AppLocalizations.of(context)?.bankDetailsUpper ?? 'BANK / METHOD', paymentDetails),
+        if (dues != '-') _buildDetailItem(Icons.history_outlined, AppLocalizations.of(context)?.duesUpper ?? 'DUES', dues),
+      ],
+    );
+
+    Widget statusBadge = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(color: isPaid ? Colors.green.shade50 : Colors.red.shade50, borderRadius: BorderRadius.circular(20), border: Border.all(color: isPaid ? Colors.green.shade200 : Colors.red.shade200)),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(isPaid ? Icons.check_circle : Icons.pending, size: 14, color: isPaid ? Colors.green.shade700 : Colors.red.shade700),
+          const SizedBox(width: 6),
+          Text(isPaid ? (AppLocalizations.of(context)?.paidUpper ?? 'PAID') : (AppLocalizations.of(context)?.pendingUpper ?? 'PENDING'), style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: isPaid ? Colors.green.shade700 : Colors.red.shade700, letterSpacing: 0.5)),
+        ],
+      ),
+    );
+
+    Widget actions = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _buildActionBtn(icon: Icons.remove_red_eye_outlined, color: const Color(0xFF5D1712), tooltip: 'View', onTap: () => _viewReceipt(r, memberData)),
+        const SizedBox(width: 8),
+        _buildActionBtn(icon: Icons.print_outlined, color: Colors.indigo, tooltip: 'Print', onTap: () => _printReceiptHighFidelity(r, memberData)),
+        const SizedBox(width: 8),
+        _buildActionBtn(icon: Icons.file_download_outlined, color: Colors.blueGrey, tooltip: 'Download', onTap: () => _downloadReceiptHighFidelity(r, memberData)),
+      ],
+    );
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 8, offset: const Offset(0, 4))],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          decoration: BoxDecoration(border: Border(left: BorderSide(color: isPaid ? Colors.green.shade500 : Colors.red.shade500, width: 4))),
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: isMobile
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('${AppLocalizations.of(context)?.totalAmountUpper ?? 'TOTAL'}: ${taxVal.toStringAsFixed(0)}', style: const TextStyle(fontSize: 12, color: Colors.black54, fontWeight: FontWeight.w500)),
-                      Text('${AppLocalizations.of(context)?.pendingUpper ?? 'PENDING'}: ${balanceVal.toStringAsFixed(0)}', style: TextStyle(fontSize: 12, color: balanceVal > 0 ? Colors.red.shade600 : Colors.black54, fontWeight: FontWeight.w500)),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(child: financialSummary),
+                          statusBadge,
+                        ],
+                      ),
+                      const Padding(padding: EdgeInsets.symmetric(vertical: 16), child: Divider(height: 1, color: Colors.black12)),
+                      transactionDetails,
+                      const Padding(padding: EdgeInsets.symmetric(vertical: 16), child: Divider(height: 1, color: Colors.black12)),
+                      Center(child: actions),
                     ],
                   )
-                ],
-              );
-
-              Widget transactionDetails = Wrap(
-                spacing: 32,
-                runSpacing: 16,
-                children: [
-                  _buildDetailItem(Icons.calendar_today_outlined, AppLocalizations.of(context)?.dateUpper ?? 'DATE & YEAR', '$date ($year)'),
-                  _buildDetailItem(Icons.account_balance_outlined, AppLocalizations.of(context)?.bankDetailsUpper ?? 'BANK / METHOD', paymentDetails),
-                  if (dues != '-') _buildDetailItem(Icons.history_outlined, AppLocalizations.of(context)?.duesUpper ?? 'DUES', dues),
-                ],
-              );
-
-              Widget statusBadge = Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(color: isPaid ? Colors.green.shade50 : Colors.red.shade50, borderRadius: BorderRadius.circular(20), border: Border.all(color: isPaid ? Colors.green.shade200 : Colors.red.shade200)),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(isPaid ? Icons.check_circle : Icons.pending, size: 14, color: isPaid ? Colors.green.shade700 : Colors.red.shade700),
-                    const SizedBox(width: 6),
-                    Text(isPaid ? (AppLocalizations.of(context)?.paidUpper ?? 'PAID') : (AppLocalizations.of(context)?.pendingUpper ?? 'PENDING'), style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: isPaid ? Colors.green.shade700 : Colors.red.shade700, letterSpacing: 0.5)),
-                  ],
-                ),
-              );
-
-              Widget actions = Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _buildActionBtn(icon: Icons.remove_red_eye_outlined, color: const Color(0xFF5D1712), tooltip: 'View', onTap: () => _viewReceipt(r, _memberData!)),
-                  const SizedBox(width: 8),
-                  _buildActionBtn(icon: Icons.print_outlined, color: Colors.indigo, tooltip: 'Print', onTap: () => _printReceiptHighFidelity(r, _memberData!)),
-                  const SizedBox(width: 8),
-                  _buildActionBtn(icon: Icons.file_download_outlined, color: Colors.blueGrey, tooltip: 'Download', onTap: () => _downloadReceiptHighFidelity(r, _memberData!)),
-                ],
-              );
-
-              return Container(
-                margin: const EdgeInsets.only(bottom: 16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey.shade200),
-                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 8, offset: const Offset(0, 4))],
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: Container(
-                    decoration: BoxDecoration(border: Border(left: BorderSide(color: isPaid ? Colors.green.shade500 : Colors.red.shade500, width: 4))),
-                    child: Padding(
-                      padding: const EdgeInsets.all(20.0),
-                      child: isMobile
-                          ? Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Expanded(child: financialSummary),
-                                    statusBadge,
-                                  ],
-                                ),
-                                const Padding(padding: EdgeInsets.symmetric(vertical: 16), child: Divider(height: 1, color: Colors.black12)),
-                                transactionDetails,
-                                const Padding(padding: EdgeInsets.symmetric(vertical: 16), child: Divider(height: 1, color: Colors.black12)),
-                                Center(child: actions),
-                              ],
-                            )
-                          : Row(
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                Expanded(flex: 3, child: financialSummary),
-                                Container(width: 1, height: 60, color: Colors.grey.shade200, margin: const EdgeInsets.symmetric(horizontal: 24)),
-                                Expanded(flex: 5, child: transactionDetails),
-                                const SizedBox(width: 24),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    statusBadge,
-                                    const SizedBox(height: 12),
-                                    actions,
-                                  ],
-                                ),
-                              ],
-                            ),
-                    ),
+                : Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Expanded(flex: 3, child: financialSummary),
+                      Container(width: 1, height: 60, color: Colors.grey.shade200, margin: const EdgeInsets.symmetric(horizontal: 24)),
+                      Expanded(flex: 5, child: transactionDetails),
+                      const SizedBox(width: 24),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          statusBadge,
+                          const SizedBox(height: 12),
+                          actions,
+                        ],
+                      ),
+                    ],
                   ),
-                ),
-              );
-            }).toList(),
           ),
         ),
-      );
-    });
-    return sections;
+      ),
+    );
   }
 
   void _viewReceipt(Map<String, dynamic> receipt, Map<String, dynamic> member) {
@@ -1162,12 +1169,15 @@ class _PaymentsContentState extends State<PaymentsContent> {
         padding: const EdgeInsets.all(20.0),
         child: Column(
           children: [
-            Opacity(
-              opacity: widget.role == 2 ? 0.6 : 1.0,
-              child: AbsorbPointer(
-                absorbing: widget.role == 2,
-                child: buildRow([
-                  _buildFilterField(AppLocalizations.of(context)?.districtHeader ?? 'District', _buildDropdown(AppLocalizations.of(context)?.districtHeader ?? 'District', AppLocalizations.of(context)?.chooseDistrict ?? 'Select District', _districts, _selectedDistrict, (val) {
+            buildRow([
+              _buildFilterField(
+                AppLocalizations.of(context)?.districtHeader ?? 'District',
+                _buildDropdown(
+                  AppLocalizations.of(context)?.districtHeader ?? 'District',
+                  AppLocalizations.of(context)?.chooseDistrict ?? 'Select District',
+                  _districts,
+                  _selectedDistrict,
+                  (val) {
                     setState(() {
                       _selectedDistrict = val;
                       _selectedTaluk = null;
@@ -1177,9 +1187,21 @@ class _PaymentsContentState extends State<PaymentsContent> {
                       _selectedVillage = null;
                       _villages = [];
                     });
-                    _fetchTaluks(val!);
-                  }, icon: Icons.map, isStringList: true), isMobile),
-                  _buildFilterField(AppLocalizations.of(context)?.talukHeader ?? 'Taluk', _buildDropdown(AppLocalizations.of(context)?.talukHeader ?? 'Taluk', AppLocalizations.of(context)?.chooseTaluk ?? 'Select Taluk', _taluks, _selectedTaluk, (val) {
+                    if (val != null) _fetchTaluks(val);
+                  },
+                  icon: Icons.map,
+                  isStringList: true,
+                ),
+                isMobile,
+              ),
+              _buildFilterField(
+                AppLocalizations.of(context)?.talukHeader ?? 'Taluk',
+                _buildDropdown(
+                  AppLocalizations.of(context)?.talukHeader ?? 'Taluk',
+                  AppLocalizations.of(context)?.chooseTaluk ?? 'Select Taluk',
+                  _taluks,
+                  _selectedTaluk,
+                  (val) {
                     setState(() {
                       _selectedTaluk = val;
                       _selectedPanchayat = null;
@@ -1187,22 +1209,49 @@ class _PaymentsContentState extends State<PaymentsContent> {
                       _selectedVillage = null;
                       _villages = [];
                     });
-                    _fetchPanchayats(val!);
-                  }, icon: Icons.location_city, isStringList: true), isMobile),
-                  _buildFilterField(AppLocalizations.of(context)?.panchayatHeader ?? 'Panchayat', _buildDropdown(AppLocalizations.of(context)?.panchayatHeader ?? 'Panchayat', AppLocalizations.of(context)?.choosePanchayat ?? 'Select Panchayat', _panchayats, _selectedPanchayat, (val) {
+                    if (val != null) _fetchPanchayats(val);
+                  },
+                  icon: Icons.location_city,
+                  isStringList: true,
+                ),
+                isMobile,
+              ),
+              _buildFilterField(
+                AppLocalizations.of(context)?.panchayatHeader ?? 'Panchayat',
+                _buildDropdown(
+                  AppLocalizations.of(context)?.panchayatHeader ?? 'Panchayat',
+                  AppLocalizations.of(context)?.choosePanchayat ?? 'Select Panchayat',
+                  _panchayats,
+                  _selectedPanchayat,
+                  (val) {
                     setState(() {
                       _selectedPanchayat = val;
                       _selectedVillage = null;
                       _villages = [];
                     });
-                    _fetchVillages(val!);
-                  }, icon: Icons.business, isStringList: true), isMobile),
-                  _buildFilterField(AppLocalizations.of(context)?.villageUpperHeader ?? 'Village', _buildDropdown(AppLocalizations.of(context)?.villageUpperHeader ?? 'Village', AppLocalizations.of(context)?.chooseVillage ?? 'Select Village', _villages, _selectedVillage, (val) {
-                    setState(() => _selectedVillage = val);
-                  }, icon: Icons.home, isStringList: true), isMobile),
-                ]),
+                    if (val != null) _fetchVillages(val);
+                  },
+                  icon: Icons.business,
+                  isStringList: true,
+                ),
+                isMobile,
               ),
-            ),
+              _buildFilterField(
+                AppLocalizations.of(context)?.villageUpperHeader ?? 'Village',
+                _buildDropdown(
+                  AppLocalizations.of(context)?.villageUpperHeader ?? 'Village',
+                  AppLocalizations.of(context)?.chooseVillage ?? 'Select Village',
+                  _villages,
+                  _selectedVillage,
+                  (val) {
+                    setState(() => _selectedVillage = val);
+                  },
+                  icon: Icons.home,
+                  isStringList: true,
+                ),
+                isMobile,
+              ),
+            ]),
             SizedBox(height: isMobile ? 0 : 20),
             buildRow([
               _buildFilterField(AppLocalizations.of(context)?.eventYearLabel ?? 'Event Year', CustomDropdownSearch(
@@ -1717,13 +1766,6 @@ class _PaymentsContentState extends State<PaymentsContent> {
   }
 
   Widget _buildReceiptsHistorySection(List<dynamic> receipts, Map<String, dynamic> memberData, bool isMobile) {
-    final Map<String, List<dynamic>> grouped = {};
-    for (var r in receipts) {
-      final name = r['eventname']?.toString() ?? r['EventName']?.toString() ?? 'Other';
-      if (!grouped.containsKey(name)) grouped[name] = [];
-      grouped[name]!.add(r);
-    }
-
     int visibleCount = receipts.length;
 
     return Container(
@@ -1785,157 +1827,14 @@ class _PaymentsContentState extends State<PaymentsContent> {
               child: Center(child: Text('No payment receipts found.', style: TextStyle(color: Colors.black45))),
             )
           else
-            ...grouped.entries.map((entry) => _buildEventGroupedTable(entry.key, entry.value, memberData, isMobile)),
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                children: receipts.map((r) => _buildReceiptCardItem(r, memberData, isMobile)).toList(),
+              ),
+            ),
         ],
       ),
-    );
-  }
-
-  Widget _buildEventGroupedTable(String eventName, List<dynamic> items, Map<String, dynamic> memberData, bool isMobile) {
-    final displayItems = items;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
-          decoration: const BoxDecoration(
-            color: Color(0xFFF1F5F9),
-            border: Border(left: BorderSide(color: Color(0xFF5D1712), width: 4)),
-          ),
-          child: Text(
-            eventName.toUpperCase(),
-            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: Color(0xFF5D1712), letterSpacing: 1),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            children: displayItems.map((r) {
-              final status = r['status']?.toString() ?? 'Pending';
-              final balance = (r['balanceamount'] ?? 0.0);
-              final balanceVal = balance is double ? balance : double.tryParse(balance.toString()) ?? 0.0;
-              final taxamt = r['TaxAmount'] ?? r['taxamount'] ?? 0.0;
-              final taxVal = taxamt is double ? taxamt : double.tryParse(taxamt.toString()) ?? 0.0;
-              final paid = r['Collectedamount'] ?? r['paidamount'] ?? 0.0;
-              final paidVal = paid is double ? paid : double.tryParse(paid.toString()) ?? 0.0;
-              final dues = r['dues']?.toString() ?? '-';
-              final isPaid = status.toLowerCase() == 'paid';
-              final date = r['paymentdate']?.toString() ?? '-';
-              final year = r['year']?.toString() ?? '-';
-              final paymentDetails = _getPaymentDetailsStr(r);
-
-              Widget financialSummary = Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(AppLocalizations.of(context)?.paidUpper ?? 'PAID AMOUNT', style: TextStyle(fontSize: 11, color: Colors.grey.shade600, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 2),
-                  Text('${paidVal.toStringAsFixed(0)} ${AppLocalizations.of(context)?.rs ?? "Rs"}', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: isPaid ? Colors.green.shade700 : Colors.red.shade700)),
-                  const SizedBox(height: 6),
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 4,
-                    children: [
-                      Text('${AppLocalizations.of(context)?.totalAmountUpper ?? 'TOTAL'}: ${taxVal.toStringAsFixed(0)}', style: const TextStyle(fontSize: 12, color: Colors.black54, fontWeight: FontWeight.w500)),
-                      Text('${AppLocalizations.of(context)?.pendingUpper ?? 'PENDING'}: ${balanceVal.toStringAsFixed(0)}', style: TextStyle(fontSize: 12, color: balanceVal > 0 ? Colors.red.shade600 : Colors.black54, fontWeight: FontWeight.w500)),
-                    ],
-                  )
-                ],
-              );
-
-              Widget transactionDetails = Wrap(
-                spacing: 32,
-                runSpacing: 16,
-                children: [
-                  _buildDetailItem(Icons.calendar_today_outlined, AppLocalizations.of(context)?.dateUpper ?? 'DATE & YEAR', '$date ($year)'),
-                  _buildDetailItem(Icons.account_balance_outlined, AppLocalizations.of(context)?.bankDetailsUpper ?? 'BANK / METHOD', paymentDetails),
-                  if (dues != '-') _buildDetailItem(Icons.history_outlined, AppLocalizations.of(context)?.duesUpper ?? 'DUES', dues),
-                ],
-              );
-
-              Widget statusBadge = Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(color: isPaid ? Colors.green.shade50 : Colors.red.shade50, borderRadius: BorderRadius.circular(20), border: Border.all(color: isPaid ? Colors.green.shade200 : Colors.red.shade200)),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(isPaid ? Icons.check_circle : Icons.pending, size: 14, color: isPaid ? Colors.green.shade700 : Colors.red.shade700),
-                    const SizedBox(width: 6),
-                    Text(isPaid ? (AppLocalizations.of(context)?.paidUpper ?? 'PAID') : (AppLocalizations.of(context)?.pendingUpper ?? 'PENDING'), style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: isPaid ? Colors.green.shade700 : Colors.red.shade700, letterSpacing: 0.5)),
-                  ],
-                ),
-              );
-
-              Widget actions = Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _buildActionBtn(icon: Icons.remove_red_eye_outlined, color: const Color(0xFF5D1712), tooltip: 'View', onTap: () => _viewReceipt(r, memberData)),
-                  const SizedBox(width: 8),
-                  _buildActionBtn(icon: Icons.print_outlined, color: Colors.indigo, tooltip: 'Print', onTap: () => _printReceiptHighFidelity(r, memberData)),
-                  const SizedBox(width: 8),
-                  _buildActionBtn(icon: Icons.file_download_outlined, color: Colors.blueGrey, tooltip: 'Download', onTap: () => _downloadReceiptHighFidelity(r, memberData)),
-                ],
-              );
-
-              return Container(
-                margin: const EdgeInsets.only(bottom: 16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey.shade200),
-                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 8, offset: const Offset(0, 4))],
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: Container(
-                    decoration: BoxDecoration(border: Border(left: BorderSide(color: isPaid ? Colors.green.shade500 : Colors.red.shade500, width: 4))),
-                    child: Padding(
-                      padding: const EdgeInsets.all(20.0),
-                      child: isMobile
-                          ? Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Expanded(child: financialSummary),
-                                    statusBadge,
-                                  ],
-                                ),
-                                const Padding(padding: EdgeInsets.symmetric(vertical: 16), child: Divider(height: 1, color: Colors.black12)),
-                                transactionDetails,
-                                const Padding(padding: EdgeInsets.symmetric(vertical: 16), child: Divider(height: 1, color: Colors.black12)),
-                                Center(child: actions),
-                              ],
-                            )
-                          : Row(
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                Expanded(flex: 3, child: financialSummary),
-                                Container(width: 1, height: 60, color: Colors.grey.shade200, margin: const EdgeInsets.symmetric(horizontal: 24)),
-                                Expanded(flex: 5, child: transactionDetails),
-                                const SizedBox(width: 24),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    statusBadge,
-                                    const SizedBox(height: 12),
-                                    actions,
-                                  ],
-                                ),
-                              ],
-                            ),
-                    ),
-                  ),
-                ),
-              );
-            }).toList(),
-          ),
-        ),
-      ],
     );
   }
 

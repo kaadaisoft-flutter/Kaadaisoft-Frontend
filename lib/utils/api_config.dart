@@ -1,19 +1,24 @@
 import 'package:flutter/foundation.dart';
 
 class ApiConfig {
+  static const String _envBaseUrl = String.fromEnvironment('BASE_URL', defaultValue: '');
+
   // Use 127.0.0.1 for Web and Desktop
   // Use 10.0.2.2 for Android Emulator to access host localhost
   static String get baseUrl {
+    if (_envBaseUrl.isNotEmpty) {
+      return _envBaseUrl;
+    }
     if (kIsWeb) {
       // If we are running on a local web server, use localhost
       if (Uri.base.origin.contains('localhost') || Uri.base.origin.contains('127.0.0.1')) {
         return 'http://localhost:8000';
       }
       // Otherwise, use the live backend URL
-      return 'https://kaadaisoft-backend-6i97.onrender.com';
+      return 'https://api.kaadaikulam.org';
     } else {
-      // Live backend URL for Mobile Apps
-      return 'https://kaadaisoft-backend-6i97.onrender.com';
+      // Local backend URL for Mobile Apps (192.168.1.9:8000)
+      return 'http://192.168.1.9:8000';
     }
   }
 
@@ -50,4 +55,6 @@ class ApiConfig {
   static String rejectPaymentRequest(int id) => '$baseUrl/api/payment-requests/reject/$id';
   
   static String get sendWhatsappInvitations => '$baseUrl/api/send-whatsapp-invitations';
+  static String sendIndividualInvite(String id) => '$baseUrl/api/send-individual-invite/$id';
+  static String get toggleMemberDisabledStatus => '$baseUrl/api/toggle-member-disabled-status';
 }
