@@ -1050,11 +1050,17 @@ class _PaymentsContentState extends State<PaymentsContent> {
               const SizedBox(width: 8),
               Expanded(
                 child: ElevatedButton.icon(
-                  onPressed: () {
-                    showDialog(
-                      context: context,
-                      builder: (context) => BulkUploadDialog(years: _years),
-                    );
+                  onPressed: () async {
+                    if (_years.isEmpty) {
+                      await _fetchYears();
+                    }
+                    if (mounted) {
+                      showDialog(
+                        context: context,
+                        barrierDismissible: true,
+                        builder: (context) => BulkUploadDialog(years: _years),
+                      );
+                    }
                   },
                   icon: const Icon(Icons.upload_file, size: 18),
                   label: Text(AppLocalizations.of(context)?.uploadCsvBtn ?? 'Upload CSV'),
@@ -1123,11 +1129,17 @@ class _PaymentsContentState extends State<PaymentsContent> {
               ),
               const SizedBox(width: 8),
               ElevatedButton.icon(
-                onPressed: () {
-                  showDialog(
-                    context: context,
-                    builder: (context) => BulkUploadDialog(years: _years),
-                  );
+                onPressed: () async {
+                  if (_years.isEmpty) {
+                    await _fetchYears();
+                  }
+                  if (mounted) {
+                    showDialog(
+                      context: context,
+                      barrierDismissible: true,
+                      builder: (context) => BulkUploadDialog(years: _years),
+                    );
+                  }
                 },
                 icon: const Icon(Icons.upload_file, size: 18),
                 label: Text(AppLocalizations.of(context)?.uploadCsvBtn ?? 'Upload CSV'),

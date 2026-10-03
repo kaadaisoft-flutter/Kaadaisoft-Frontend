@@ -26,6 +26,33 @@ class _BulkUploadDialogState extends State<BulkUploadDialog> {
   bool _isLoadingEvents = false;
   PlatformFile? _selectedFile;
   bool _isUploading = false;
+  List<int> _years = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _years = List<int>.from(widget.years);
+    if (_years.isEmpty) {
+      _fetchYears();
+    }
+  }
+
+  Future<void> _fetchYears() async {
+    try {
+      final response = await http.get(Uri.parse(ApiConfig.eventYears));
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final fetched = List<int>.from(data['data']);
+        if (mounted && fetched.isNotEmpty) {
+          setState(() {
+            _years = fetched;
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Error fetching years in dialog: $e');
+    }
+  }
 
   Future<void> _fetchEvents(int year) async {
     setState(() {
@@ -356,6 +383,11 @@ class _BulkUploadDialogState extends State<BulkUploadDialog> {
   }
 
   Widget _buildYearDropdown() {
+    final currentYear = DateTime.now().year;
+    final yearList = _years.isNotEmpty 
+        ? _years 
+        : (widget.years.isNotEmpty ? widget.years : [currentYear - 1, currentYear, currentYear + 1]);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -372,7 +404,7 @@ class _BulkUploadDialogState extends State<BulkUploadDialog> {
         CustomDropdownSearch(
           label: '',
           hint: AppLocalizations.of(context)?.chooseYearHint ?? 'Choose Year',
-          dropdownMap: { for (var y in widget.years) y.toString(): y.toString() },
+          dropdownMap: { for (var y in yearList) y.toString(): y.toString() },
           value: _selectedYear?.toString(),
           onChanged: (val) {
             if (val != null) {

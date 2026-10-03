@@ -715,33 +715,31 @@ class _MemberDetailsContentState extends State<MemberDetailsContent> {
   String _calculateAge(dynamic dobStrRaw) {
     if (dobStrRaw == null || dobStrRaw.toString().trim().isEmpty) return 'N/A';
     try {
-      DateTime? dob;
-      String dobStr = dobStrRaw.toString().trim().replaceAll('/', '-');
-      // Check if it's already an ISO 8601 string (contains 'T')
+      String dobStr = dobStrRaw.toString().trim().replaceAll('/', '-').replaceAll('.', '-');
       if (dobStr.contains('T')) {
-        dob = DateTime.parse(dobStr).toLocal();
-      } else {
-        final parts = dobStr.split('-');
-        if (parts.length == 3) {
-          if (parts[0].length == 4) {
-            dob = DateTime.parse("${parts[0]}-${parts[1].padLeft(2, '0')}-${parts[2].padLeft(2, '0')}");
-          } else if (parts[2].length == 4) {
-            dob = DateTime.parse("${parts[2]}-${parts[1].padLeft(2, '0')}-${parts[0].padLeft(2, '0')}");
-          }
+        dobStr = dobStr.split('T').first;
+      }
+      final parts = dobStr.split('-');
+      int? year, month, day;
+      if (parts.length == 3) {
+        if (parts[0].length == 4) {
+          year = int.tryParse(parts[0]);
+          month = int.tryParse(parts[1]);
+          day = int.tryParse(parts[2]);
+        } else if (parts[2].length == 4) {
+          year = int.tryParse(parts[2]);
+          month = int.tryParse(parts[1]);
+          day = int.tryParse(parts[0]);
         }
       }
-      
-      if (dob == null && !dobStr.contains('T')) {
-         dob = DateTime.parse(dobStr).toLocal();
-      }
-
-      if (dob != null) {
+      if (year != null && month != null && day != null) {
+        DateTime dob = DateTime(year, month, day);
         DateTime now = DateTime.now();
         int age = now.year - dob.year;
         if (now.month < dob.month || (now.month == dob.month && now.day < dob.day)) {
           age--;
         }
-        return age.toString();
+        return age >= 0 ? age.toString() : 'N/A';
       }
       return 'N/A';
     } catch (_) {

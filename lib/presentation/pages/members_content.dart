@@ -1401,11 +1401,29 @@ class _MembersContentState extends State<MembersContent> {
       allowedExtensions: ['xlsx', 'xls'],
       withData: true,
     );
-    if (result != null) {
+    if (result != null && result.files.isNotEmpty) {
+      final fileName = result.files.single.name;
+      final ext = fileName.contains('.') ? fileName.split('.').last.toLowerCase() : '';
+      if (ext != 'xlsx' && ext != 'xls') {
+        setState(() {
+          _selectedFileName = null;
+          _bulkFile = null;
+        });
+        if (mounted) {
+          showStatusDialog(
+            context,
+            title: 'Invalid File',
+            message: 'Unsupported file format "$fileName". Only Excel spreadsheet files (.xlsx or .xls) are allowed.',
+            type: DialogType.error,
+          );
+        }
+        return;
+      }
+
       setState(() {
-        _selectedFileName = result.files.single.name;
+        _selectedFileName = fileName;
         if (kIsWeb) {
-          _bulkFile = XFile.fromData(result.files.single.bytes!, name: result.files.single.name);
+          _bulkFile = XFile.fromData(result.files.single.bytes!, name: fileName);
         } else {
           _bulkFile = XFile(result.files.single.path!);
         }
@@ -1415,6 +1433,16 @@ class _MembersContentState extends State<MembersContent> {
 
   Future<void> _uploadBulkData() async {
     if (_bulkFile == null) return;
+    final ext = _bulkFile!.name.contains('.') ? _bulkFile!.name.split('.').last.toLowerCase() : '';
+    if (ext != 'xlsx' && ext != 'xls') {
+      showStatusDialog(
+        context,
+        title: 'Invalid File',
+        message: 'Unsupported file format "${_bulkFile!.name}". Only Excel spreadsheet files (.xlsx or .xls) are allowed.',
+        type: DialogType.error,
+      );
+      return;
+    }
     setState(() => _isUploadingBulk = true);
     try {
       var request = http.MultipartRequest('POST', Uri.parse(ApiConfig.bulkUploadMembers));
@@ -1715,6 +1743,9 @@ class _MembersContentState extends State<MembersContent> {
     List<excel_pkg.CellValue> headers = [
       excel_pkg.TextCellValue('Name'),
       excel_pkg.TextCellValue('Phonenumber'),
+      excel_pkg.TextCellValue('Gender'),
+      excel_pkg.TextCellValue('Bloodgroup'),
+      excel_pkg.TextCellValue('Profession'),
       excel_pkg.TextCellValue('State'),
       excel_pkg.TextCellValue('District'),
       excel_pkg.TextCellValue('Taluk'),
@@ -1727,10 +1758,13 @@ class _MembersContentState extends State<MembersContent> {
     ];
     sheet.appendRow(headers);
     
-    // Sample Data Rows (Requested by user)
+    // Sample Data Rows
     sheet.appendRow([
       excel_pkg.TextCellValue('John Doe'),
       excel_pkg.TextCellValue('9876543210'),
+      excel_pkg.TextCellValue('Male'),
+      excel_pkg.TextCellValue('O+'),
+      excel_pkg.TextCellValue('Farmer'),
       excel_pkg.TextCellValue('Tamil Nadu'),
       excel_pkg.TextCellValue('Erode'),
       excel_pkg.TextCellValue('Erode'),
@@ -1745,6 +1779,9 @@ class _MembersContentState extends State<MembersContent> {
     sheet.appendRow([
       excel_pkg.TextCellValue('Jane Smith'),
       excel_pkg.TextCellValue('9123456789'),
+      excel_pkg.TextCellValue('Female'),
+      excel_pkg.TextCellValue('A+'),
+      excel_pkg.TextCellValue('Teacher'),
       excel_pkg.TextCellValue('Tamil Nadu'),
       excel_pkg.TextCellValue('Coimbatore'),
       excel_pkg.TextCellValue('Coimbatore North'),

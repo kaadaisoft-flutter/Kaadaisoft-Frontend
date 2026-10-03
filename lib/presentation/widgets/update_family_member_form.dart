@@ -1035,11 +1035,11 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
     String? existingUrl;
     if (type == 'member_image') {
       file = _memberImage;
-      existingUrl = widget.memberData['Memberimage'];
+      existingUrl = widget.memberData['Memberimage'] ?? widget.memberData['member_image'] ?? widget.memberData['memberimage'] ?? widget.memberData['passport_photo'];
     }
     if (type == 'community_cert') {
       file = _communityCert;
-      existingUrl = widget.memberData['Communitycertificate'];
+      existingUrl = widget.memberData['Communitycertificate'] ?? widget.memberData['Communitycertificateimage'] ?? widget.memberData['community_cert'] ?? widget.memberData['community_certificate'] ?? widget.memberData['communitycertificate'];
     }
 
     Widget? previewWidget;

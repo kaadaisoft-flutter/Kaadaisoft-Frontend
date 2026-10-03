@@ -145,7 +145,14 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
   void initState() {
     super.initState();
     _loadGeoData();
-    final d = widget.userData;
+    Map<String, dynamic> d = widget.userData;
+    if (d.containsKey('data') && d['data'] is Map<String, dynamic>) {
+      d = Map<String, dynamic>.from(d['data']);
+    } else if (d.containsKey('user') && d['user'] is Map<String, dynamic>) {
+      d = Map<String, dynamic>.from(d['user']);
+    } else if (d.containsKey('member') && d['member'] is Map<String, dynamic>) {
+      d = Map<String, dynamic>.from(d['member']);
+    }
     _nameCtrl = TextEditingController(text: d['Name'] ?? '');
     _phoneCtrl = TextEditingController(text: d['Phonenumber']?.toString() ?? '');
     _whatsappCtrl = TextEditingController(text: d['Whatsappnumber']?.toString() ?? '');
@@ -245,8 +252,19 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
     _nriState = d['Curnristate'];
     _nriCity = d['Curnricity'];
 
-    _memberImage = d['Memberimage'];
-    _communityCert = d['Communitycertificate'];
+    final rawImg = d['Memberimage'] ?? d['member_image'] ?? d['memberimage'] ?? d['passport_photo'] ?? d['ProfilePhoto'];
+    if (rawImg != null && rawImg.toString().isNotEmpty && rawImg.toString() != 'null' && rawImg.toString() != 'None') {
+      _memberImage = rawImg.toString();
+    } else {
+      _memberImage = null;
+    }
+
+    final rawCert = d['Communitycertificate'] ?? d['Communitycertificateimage'] ?? d['community_cert'] ?? d['community_certificate'] ?? d['communitycertificate'];
+    if (rawCert != null && rawCert.toString().isNotEmpty && rawCert.toString() != 'null' && rawCert.toString() != 'None') {
+      _communityCert = rawCert.toString();
+    } else {
+      _communityCert = null;
+    }
 
     _fetchDistricts();
     if (_curAddressType == 'TamilNadu') {
@@ -1072,13 +1090,25 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
     Widget? previewWidget;
 
     if (file != null) {
-       if (file is String) {
-         fileName = file.split('/').last;
-         bool isPdf = fileName.toLowerCase().endsWith('.pdf');
+       if (file is String && file.isNotEmpty && file != 'null' && file != 'None') {
+         final cleanName = file.split('?').first.split('/').last.split('\\').last;
+         final existingPrefix = AppLocalizations.of(context)?.existingFile ?? "Existing file: ";
+         fileName = '$existingPrefix$cleanName';
+         bool isPdf = cleanName.toLowerCase().endsWith('.pdf');
          if (isPdf) {
            previewWidget = const Icon(Icons.picture_as_pdf, color: Colors.red, size: 30);
          } else {
-           previewWidget = ClipRRect(borderRadius: BorderRadius.circular(4), child: Image.network('${ApiConfig.baseUrl}/uploads/$file', width: 40, height: 40, fit: BoxFit.cover, errorBuilder: (c,e,s) => const Icon(Icons.image, size: 30, color: _gold)));
+           final imageUrl = file.startsWith('http') ? file : '${ApiConfig.baseUrl}/assets/uploads/$cleanName';
+           previewWidget = ClipRRect(
+             borderRadius: BorderRadius.circular(4), 
+             child: Image.network(
+               imageUrl, 
+               width: 40, 
+               height: 40, 
+               fit: BoxFit.cover, 
+               errorBuilder: (c,e,s) => const Icon(Icons.insert_drive_file, size: 28, color: _gold)
+             )
+           );
          }
        } else if (file is XFile) {
          fileName = file.name;

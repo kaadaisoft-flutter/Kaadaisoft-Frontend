@@ -362,6 +362,17 @@ class _ReceivedApplicationsContentState extends State<ReceivedApplicationsConten
             type: DialogType.success,
           );
         }
+      } else {
+        if (mounted) {
+          final errData = jsonDecode(response.body);
+          final errDetail = errData['detail'] ?? 'Failed to update application status.';
+          showStatusDialog(
+            context,
+            title: 'Approval Denied',
+            message: errDetail,
+            type: DialogType.error,
+          );
+        }
       }
     } catch (e) {
       debugPrint('Error updating status: $e');

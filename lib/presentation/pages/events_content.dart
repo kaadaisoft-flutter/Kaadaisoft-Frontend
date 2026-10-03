@@ -307,8 +307,8 @@ class _EventsContentState extends State<EventsContent> {
                           showStatusDialog(context, title: 'Error', message: 'Tax amount must be greater than zero', type: DialogType.error);
                           return;
                         }
-                        if (double.parse(taxController.text) > 500000000) {
-                          showStatusDialog(context, title: 'Error', message: 'Tax amount cannot exceed 50 crores (500000000)', type: DialogType.error);
+                        if (double.parse(taxController.text) > 10000000 || taxController.text.trim().length > 8) {
+                          showStatusDialog(context, title: 'Validation Error', message: 'Tax amount cannot exceed 8 digits / ₹10,000,000 (1 Crore)', type: DialogType.error);
                           return;
                         }
                         setDialogState(() => isSaving = true);
@@ -828,8 +828,8 @@ class _EventsContentState extends State<EventsContent> {
                           showStatusDialog(context, title: 'Error', message: 'Tax amount must be greater than zero', type: DialogType.error);
                           return;
                         }
-                        if (double.parse(taxController.text) > 500000000) {
-                          showStatusDialog(context, title: 'Error', message: 'Tax amount cannot exceed 50 crores (500000000)', type: DialogType.error);
+                        if (double.parse(taxController.text) > 10000000 || taxController.text.trim().length > 8) {
+                          showStatusDialog(context, title: 'Validation Error', message: 'Tax amount cannot exceed 8 digits / ₹10,000,000 (1 Crore)', type: DialogType.error);
                           return;
                         }
 
@@ -857,7 +857,8 @@ class _EventsContentState extends State<EventsContent> {
                             _fetchEvents();
                             showStatusDialog(context, title: 'Success', message: 'Event created successfully', type: DialogType.success);
                           } else {
-                            final error = jsonDecode(response.body)['message'] ?? 'Failed to create event';
+                            final resJson = jsonDecode(response.body);
+                            final error = resJson['detail'] ?? resJson['message'] ?? 'Failed to create event';
                             showStatusDialog(context, title: 'Error', message: error, type: DialogType.error);
                           }
                         } catch (e) {
@@ -1180,9 +1181,14 @@ class _EventsContentState extends State<EventsContent> {
                                                   borderRadius: BorderRadius.circular(4),
                                                   border: Border.all(color: const Color(0xFF5D1712).withOpacity(0.2)),
                                                 ),
-                                                child: Text(
-                                                  '₹ ${_formatCurrency(event['TaxAmount'])}',
-                                                  style: const TextStyle(color: const Color(0xFF5D1712), fontWeight: FontWeight.bold, fontSize: 13),
+                                                child: FittedBox(
+                                                  fit: BoxFit.scaleDown,
+                                                  child: Text(
+                                                    '₹ ${_formatCurrency(event['TaxAmount'])}',
+                                                    style: const TextStyle(color: const Color(0xFF5D1712), fontWeight: FontWeight.bold, fontSize: 13),
+                                                    overflow: TextOverflow.ellipsis,
+                                                    maxLines: 1,
+                                                  ),
                                                 ),
                                               ),
                                             )),
@@ -1457,9 +1463,14 @@ class _EventsContentState extends State<EventsContent> {
                           borderRadius: BorderRadius.circular(4),
                           border: Border.all(color: const Color(0xFF5D1712).withOpacity(0.2)),
                         ),
-                        child: Text(
-                          '₹ ${_formatCurrency(event['TaxAmount'])}',
-                          style: const TextStyle(color: Color(0xFF5D1712), fontWeight: FontWeight.bold, fontSize: 13),
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            '₹ ${_formatCurrency(event['TaxAmount'])}',
+                            style: const TextStyle(color: Color(0xFF5D1712), fontWeight: FontWeight.bold, fontSize: 13),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                          ),
                         ),
                       ),
                     ],

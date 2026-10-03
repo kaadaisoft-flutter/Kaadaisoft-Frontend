@@ -17,8 +17,8 @@ class ApiConfig {
       // Otherwise, use the live backend URL
       return 'https://api.kaadaikulam.org';
     } else {
-      // Local backend URL for Mobile Apps (192.168.1.9:8000)
-      return 'http://192.168.1.9:8000';
+      // Backend URL for Mobile Apps (https://api.kaadaikulam.org)
+      return 'https://api.kaadaikulam.org';
     }
   }
 

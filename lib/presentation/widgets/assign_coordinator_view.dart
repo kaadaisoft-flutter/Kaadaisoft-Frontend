@@ -271,6 +271,12 @@ class _AssignCoordinatorViewState extends State<AssignCoordinatorView> {
             });
             
             await _fetchVillages(p, false);
+          } else {
+            setState(() {
+              _reassignSelectedVillageNames = [];
+              _reassignVillagesList = [];
+            });
+            showStatusDialog(context, title: 'Warning', message: 'Selected coordinator has no assigned villages.', type: DialogType.warning);
           }
         } else {
           setState(() {
@@ -518,6 +524,15 @@ class _AssignCoordinatorViewState extends State<AssignCoordinatorView> {
     final talukToAdd = _addTaluk == '+ Add New Taluk' ? _newTalukController.text : _addTaluk;
     final panchayatToAdd = _addPanchayat == '+ Add New Panchayat' ? _newPanchayatController.text : _addPanchayat;
     final villageNameToAdd = _addSelectedVillage == '+ Add New Village' ? _newVillageController.text : _addSelectedVillage;
+
+    final villagesList = villageNameToAdd.split(',').map((v) => v.trim()).where((v) => v.isNotEmpty).toList();
+    for (final v in villagesList) {
+      if (v.length > 100) {
+        final truncated = v.length > 15 ? '${v.substring(0, 15)}...' : v;
+        showStatusDialog(context, title: 'Validation Error', message: 'Village name \'$truncated\' exceeds maximum allowed length of 100 characters', type: DialogType.error);
+        return;
+      }
+    }
 
     setState(() => _isAddingVillage = true);
     try {
@@ -1106,11 +1121,13 @@ class _AssignCoordinatorViewState extends State<AssignCoordinatorView> {
             label: 'New Village Name(s):',
             child: TextField(
               controller: _newVillageController,
+              maxLength: 100,
               decoration: InputDecoration(
                 hintText: 'Enter new village(s) separated by commas',
                 hintStyle: const TextStyle(fontSize: 13),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: const BorderSide(color: Colors.black12)),
                 contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                counterText: '',
               ),
             ),
             width: 350,
