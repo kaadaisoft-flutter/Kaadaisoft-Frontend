@@ -620,265 +620,275 @@ class _EventsContentState extends State<EventsContent> {
           ),
           content: Container(
             width: 500,
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(AppLocalizations.of(context)?.addEventNameUpper ?? 'EVENT NAME', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black54)),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: nameController,
-                    decoration: InputDecoration(
-                      hintText: AppLocalizations.of(context)?.addEventEgName ?? 'e.g. Event_2026',
-                      filled: true,
-                      fillColor: Colors.grey[50],
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey[200]!)),
-                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey[200]!)),
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.75,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Flexible(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.only(right: 12),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(AppLocalizations.of(context)?.addEventNameUpper ?? 'EVENT NAME', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black54)),
+                        const SizedBox(height: 8),
+                        TextField(
+                          controller: nameController,
+                          decoration: InputDecoration(
+                            hintText: AppLocalizations.of(context)?.addEventEgName ?? 'e.g. Event_2026',
+                            filled: true,
+                            fillColor: Colors.grey[50],
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey[200]!)),
+                            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey[200]!)),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            const Icon(Icons.info_outline, size: 14, color: const Color(0xFF5D1712)),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                AppLocalizations.of(context)?.addEventNoteName ?? 'Note: Year should be at the end of the event name (e.g. Event_2026).',
+                                style: TextStyle(fontSize: 11, color: const Color(0xFF5D1712)),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+                        
+                        Text(AppLocalizations.of(context)?.addEventBannerUpper ?? 'EVENT BANNER', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black54)),
+                        const SizedBox(height: 8),
+                        InkWell(
+                          onTap: () async {
+                            try {
+                              FilePickerResult? result = await FilePicker.pickFiles(
+                                type: FileType.image,
+                                withData: true,
+                              );
+                              if (result != null) {
+                                if (result.files.first.size > 2 * 1024 * 1024) {
+                                  showStatusDialog(context, title: 'Error', message: 'Image size must be less than 2 MB', type: DialogType.error);
+                                  return;
+                                }
+                                String? ext = result.files.first.extension?.toLowerCase();
+                                if (ext != 'jpg' && ext != 'png') {
+                                  showStatusDialog(context, title: 'Error', message: 'Only JPG and PNG formats are supported', type: DialogType.error);
+                                  return;
+                                }
+                                setDialogState(() => selectedBanner = result.files.first);
+                              }
+                            } catch (e) {
+                              debugPrint('File picker error: $e');
+                            }
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              border: Border.all(color: Colors.grey[300]!),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey[100],
+                                    border: Border.all(color: Colors.grey[300]!),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(AppLocalizations.of(context)?.addEventChooseFile ?? 'Choose File', style: TextStyle(fontSize: 13, color: Colors.black87)),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    selectedBanner?.name ?? AppLocalizations.of(context)?.addEventNoFileChosen ?? 'No file chosen',
+                                    style: TextStyle(fontSize: 13, color: selectedBanner == null ? Colors.black45 : Colors.black87),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            const Icon(Icons.info_outline, size: 14, color: const Color(0xFF5D1712)),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                AppLocalizations.of(context)?.addEventNoteBanner ?? 'Note: Max file size 2MB (JPG, PNG).',
+                                style: TextStyle(fontSize: 11, color: const Color(0xFF5D1712)),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+
+                        Text(AppLocalizations.of(context)?.addEventDurationUpper ?? 'DURATION', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black54)),
+                        const SizedBox(height: 8),
+                        Builder(
+                          builder: (context) {
+                            bool isSmall = MediaQuery.of(context).size.width < 500;
+                            
+                            final fromDateWidget = Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(AppLocalizations.of(context)?.addEventFrom ?? 'From', style: TextStyle(fontSize: 11, color: Colors.black45)),
+                                const SizedBox(height: 4),
+                                _buildDatePicker(context, fromDate, (date) {
+                                  setDialogState(() {
+                                    fromDate = date;
+                                    if (toDate != null && !toDate!.isAfter(fromDate!)) {
+                                      toDate = fromDate!.add(const Duration(days: 1));
+                                    }
+                                  });
+                                }, minDate: DateTime.now()),
+                              ],
+                            );
+                            
+                            final toDateWidget = Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(AppLocalizations.of(context)?.addEventTo ?? 'To', style: TextStyle(fontSize: 11, color: Colors.black45)),
+                                const SizedBox(height: 4),
+                                _buildDatePicker(context, toDate, (date) => setDialogState(() => toDate = date), minDate: fromDate != null ? fromDate!.add(const Duration(days: 1)) : DateTime.now().add(const Duration(days: 1))),
+                              ],
+                            );
+
+                            if (isSmall) {
+                              return Column(
+                                children: [
+                                  fromDateWidget,
+                                  const SizedBox(height: 12),
+                                  toDateWidget,
+                                ],
+                              );
+                            }
+
+                            return Row(
+                              children: [
+                                Expanded(child: fromDateWidget),
+                                const SizedBox(width: 16),
+                                Expanded(child: toDateWidget),
+                              ],
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 24),
+
+                        Text(AppLocalizations.of(context)?.addEventTaxAmountUpper ?? 'TAX AMOUNT (₹)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black54)),
+                        const SizedBox(height: 8),
+                        TextField(
+                          controller: taxController,
+                          maxLength: 9,
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          inputFormatters: [
+                            FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                          ],
+                          onTap: () {
+                            taxController.selection = TextSelection(
+                              baseOffset: 0,
+                              extentOffset: taxController.text.length,
+                            );
+                          },
+                          decoration: InputDecoration(
+                            counterText: '',
+                            filled: true,
+                            fillColor: Colors.grey[50],
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey[200]!)),
+                            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey[200]!)),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      const Icon(Icons.info_outline, size: 14, color: const Color(0xFF5D1712)),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: Text(
-                          AppLocalizations.of(context)?.addEventNoteName ?? 'Note: Year should be at the end of the event name (e.g. Event_2026).',
-                          style: TextStyle(fontSize: 11, color: const Color(0xFF5D1712)),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  
-                  Text(AppLocalizations.of(context)?.addEventBannerUpper ?? 'EVENT BANNER', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black54)),
-                  const SizedBox(height: 8),
-                  InkWell(
-                    onTap: () async {
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton(
+                    onPressed: isSaving ? null : () async {
+                      if (nameController.text.isEmpty) {
+                        showStatusDialog(context, title: 'Error', message: 'Please enter an event name', type: DialogType.error);
+                        return;
+                      }
+                      if (!RegExp(r'_20\d{2}$').hasMatch(nameController.text.trim())) {
+                        showStatusDialog(context, title: 'Error', message: 'Event name must end with an underscore and a valid year (e.g. Event_2026)', type: DialogType.error);
+                        return;
+                      }
+                      if (selectedBanner == null) {
+                        showStatusDialog(context, title: 'Error', message: 'Please select an event banner', type: DialogType.error);
+                        return;
+                      }
+                      if (fromDate == null || toDate == null) {
+                        showStatusDialog(context, title: 'Error', message: 'Please select event duration', type: DialogType.error);
+                        return;
+                      }
+                      if (!toDate!.isAfter(fromDate!)) {
+                        showStatusDialog(context, title: 'Error', message: 'To date must be greater than From date', type: DialogType.error);
+                        return;
+                      }
+                      if (taxController.text.isEmpty || double.tryParse(taxController.text) == null || double.parse(taxController.text) <= 0) {
+                        showStatusDialog(context, title: 'Error', message: 'Tax amount must be greater than zero', type: DialogType.error);
+                        return;
+                      }
+                      if (double.parse(taxController.text) > 10000000 || taxController.text.trim().length > 8) {
+                        showStatusDialog(context, title: 'Validation Error', message: 'Tax amount cannot exceed 8 digits / ₹10,000,000 (1 Crore)', type: DialogType.error);
+                        return;
+                      }
+
+                      setDialogState(() => isSaving = true);
                       try {
-                        FilePickerResult? result = await FilePicker.pickFiles(
-                          type: FileType.image,
-                          withData: true,
-                        );
-                        if (result != null) {
-                          if (result.files.first.size > 2 * 1024 * 1024) {
-                            showStatusDialog(context, title: 'Error', message: 'Image size must be less than 2 MB', type: DialogType.error);
-                            return;
-                          }
-                          String? ext = result.files.first.extension?.toLowerCase();
-                          if (ext != 'jpg' && ext != 'png') {
-                            showStatusDialog(context, title: 'Error', message: 'Only JPG and PNG formats are supported', type: DialogType.error);
-                            return;
-                          }
-                          setDialogState(() => selectedBanner = result.files.first);
+                        var request = http.MultipartRequest('POST', Uri.parse('${ApiConfig.baseUrl}/api/add-event'));
+                        request.fields['EventName'] = nameController.text;
+                        request.fields['From_date'] = fromDate!.toIso8601String().split('T')[0];
+                        request.fields['To_date'] = toDate!.toIso8601String().split('T')[0];
+                        request.fields['TaxAmount'] = taxController.text;
+
+                        if (selectedBanner != null && selectedBanner!.bytes != null) {
+                          request.files.add(http.MultipartFile.fromBytes(
+                            'image', 
+                            selectedBanner!.bytes!,
+                            filename: selectedBanner!.name
+                          ));
+                        }
+
+                        var streamedResponse = await request.send();
+                        var response = await http.Response.fromStream(streamedResponse);
+
+                        if (response.statusCode == 200) {
+                          Navigator.pop(context);
+                          _fetchEvents();
+                          showStatusDialog(context, title: 'Success', message: 'Event created successfully', type: DialogType.success);
+                        } else {
+                          final resJson = jsonDecode(response.body);
+                          final error = resJson['detail'] ?? resJson['message'] ?? 'Failed to create event';
+                          showStatusDialog(context, title: 'Error', message: error, type: DialogType.error);
                         }
                       } catch (e) {
-                        debugPrint('File picker error: $e');
+                        showStatusDialog(context, title: 'Error', message: 'Connection error', type: DialogType.error);
+                      } finally {
+                        setDialogState(() => isSaving = false);
                       }
                     },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        border: Border.all(color: Colors.grey[300]!),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                            decoration: BoxDecoration(
-                              color: Colors.grey[100],
-                              border: Border.all(color: Colors.grey[300]!),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(AppLocalizations.of(context)?.addEventChooseFile ?? 'Choose File', style: TextStyle(fontSize: 13, color: Colors.black87)),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              selectedBanner?.name ?? AppLocalizations.of(context)?.addEventNoFileChosen ?? 'No file chosen',
-                              style: TextStyle(fontSize: 13, color: selectedBanner == null ? Colors.black45 : Colors.black87),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF5D1712),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                     ),
+                    child: isSaving 
+                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      : Text(AppLocalizations.of(context)?.addEventCreateBtn ?? 'Create Event', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                   ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      const Icon(Icons.info_outline, size: 14, color: const Color(0xFF5D1712)),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: Text(
-                          AppLocalizations.of(context)?.addEventNoteBanner ?? 'Note: Max file size 2MB (JPG, PNG).',
-                          style: TextStyle(fontSize: 11, color: const Color(0xFF5D1712)),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-
-                  Text(AppLocalizations.of(context)?.addEventDurationUpper ?? 'DURATION', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black54)),
-                  const SizedBox(height: 8),
-                  Builder(
-                    builder: (context) {
-                      bool isSmall = MediaQuery.of(context).size.width < 500;
-                      
-                      final fromDateWidget = Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(AppLocalizations.of(context)?.addEventFrom ?? 'From', style: TextStyle(fontSize: 11, color: Colors.black45)),
-                          const SizedBox(height: 4),
-                          _buildDatePicker(context, fromDate, (date) {
-                            setDialogState(() {
-                              fromDate = date;
-                              if (toDate != null && !toDate!.isAfter(fromDate!)) {
-                                toDate = fromDate!.add(const Duration(days: 1));
-                              }
-                            });
-                          }, minDate: DateTime.now()),
-                        ],
-                      );
-                      
-                      final toDateWidget = Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(AppLocalizations.of(context)?.addEventTo ?? 'To', style: TextStyle(fontSize: 11, color: Colors.black45)),
-                          const SizedBox(height: 4),
-                          _buildDatePicker(context, toDate, (date) => setDialogState(() => toDate = date), minDate: fromDate != null ? fromDate!.add(const Duration(days: 1)) : DateTime.now().add(const Duration(days: 1))),
-                        ],
-                      );
-
-                      if (isSmall) {
-                        return Column(
-                          children: [
-                            fromDateWidget,
-                            const SizedBox(height: 12),
-                            toDateWidget,
-                          ],
-                        );
-                      }
-
-                      return Row(
-                        children: [
-                          Expanded(child: fromDateWidget),
-                          const SizedBox(width: 16),
-                          Expanded(child: toDateWidget),
-                        ],
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 24),
-
-                  Text(AppLocalizations.of(context)?.addEventTaxAmountUpper ?? 'TAX AMOUNT (₹)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black54)),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: taxController,
-                    maxLength: 9,
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    inputFormatters: [
-                      FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
-                    ],
-                    onTap: () {
-                      taxController.selection = TextSelection(
-                        baseOffset: 0,
-                        extentOffset: taxController.text.length,
-                      );
-                    },
-                    decoration: InputDecoration(
-                      counterText: '',
-                      filled: true,
-                      fillColor: Colors.grey[50],
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey[200]!)),
-                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey[200]!)),
-                    ),
-                  ),
-                  const SizedBox(height: 32),
-
-                  SizedBox(
-                    width: double.infinity,
-                    height: 50,
-                    child: ElevatedButton(
-                      onPressed: isSaving ? null : () async {
-                        if (nameController.text.isEmpty) {
-                          showStatusDialog(context, title: 'Error', message: 'Please enter an event name', type: DialogType.error);
-                          return;
-                        }
-                        if (!RegExp(r'_20\d{2}$').hasMatch(nameController.text.trim())) {
-                          showStatusDialog(context, title: 'Error', message: 'Event name must end with an underscore and a valid year (e.g. Event_2026)', type: DialogType.error);
-                          return;
-                        }
-                        if (selectedBanner == null) {
-                          showStatusDialog(context, title: 'Error', message: 'Please select an event banner', type: DialogType.error);
-                          return;
-                        }
-                        if (fromDate == null || toDate == null) {
-                          showStatusDialog(context, title: 'Error', message: 'Please select event duration', type: DialogType.error);
-                          return;
-                        }
-                        if (!toDate!.isAfter(fromDate!)) {
-                          showStatusDialog(context, title: 'Error', message: 'To date must be greater than From date', type: DialogType.error);
-                          return;
-                        }
-                        if (taxController.text.isEmpty || double.tryParse(taxController.text) == null || double.parse(taxController.text) <= 0) {
-                          showStatusDialog(context, title: 'Error', message: 'Tax amount must be greater than zero', type: DialogType.error);
-                          return;
-                        }
-                        if (double.parse(taxController.text) > 10000000 || taxController.text.trim().length > 8) {
-                          showStatusDialog(context, title: 'Validation Error', message: 'Tax amount cannot exceed 8 digits / ₹10,000,000 (1 Crore)', type: DialogType.error);
-                          return;
-                        }
-
-                        setDialogState(() => isSaving = true);
-                        try {
-                          var request = http.MultipartRequest('POST', Uri.parse('${ApiConfig.baseUrl}/api/add-event'));
-                          request.fields['EventName'] = nameController.text;
-                          request.fields['From_date'] = fromDate!.toIso8601String().split('T')[0];
-                          request.fields['To_date'] = toDate!.toIso8601String().split('T')[0];
-                          request.fields['TaxAmount'] = taxController.text;
-
-                          if (selectedBanner != null && selectedBanner!.bytes != null) {
-                            request.files.add(http.MultipartFile.fromBytes(
-                              'image', 
-                              selectedBanner!.bytes!,
-                              filename: selectedBanner!.name
-                            ));
-                          }
-
-                          var streamedResponse = await request.send();
-                          var response = await http.Response.fromStream(streamedResponse);
-
-                          if (response.statusCode == 200) {
-                            Navigator.pop(context);
-                            _fetchEvents();
-                            showStatusDialog(context, title: 'Success', message: 'Event created successfully', type: DialogType.success);
-                          } else {
-                            final resJson = jsonDecode(response.body);
-                            final error = resJson['detail'] ?? resJson['message'] ?? 'Failed to create event';
-                            showStatusDialog(context, title: 'Error', message: error, type: DialogType.error);
-                          }
-                        } catch (e) {
-                          showStatusDialog(context, title: 'Error', message: 'Connection error', type: DialogType.error);
-                        } finally {
-                          setDialogState(() => isSaving = false);
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF5D1712),
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      ),
-                      child: isSaving 
-                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                        : Text(AppLocalizations.of(context)?.addEventCreateBtn ?? 'Create Event', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),
@@ -1000,6 +1010,7 @@ class _EventsContentState extends State<EventsContent> {
                 ],
               ),
             
+            const SizedBox(height: 16),
             _buildFilterTabs(),
             
             const SizedBox(height: 12),
@@ -1317,11 +1328,16 @@ class _EventsContentState extends State<EventsContent> {
   }
 
   String _formatCurrency(dynamic amountStr) {
-    if (amountStr == null) return '0';
-    final amount = double.tryParse(amountStr.toString());
-    if (amount == null) return '0';
-    if (amount == amount.toInt()) return amount.toInt().toString();
-    return amount.toStringAsFixed(2);
+    if (amountStr == null) return '0.00';
+    try {
+      final double val = double.parse(amountStr.toString());
+      final List<String> parts = val.toStringAsFixed(2).split('.');
+      final RegExp reg = RegExp(r'(\d+?)(?=(\d{3})+(?!\d))');
+      final String mathMatch = parts[0].replaceAllMapped(reg, (Match m) => '${m[1]},');
+      return '$mathMatch.${parts[1]}';
+    } catch (_) {
+      return amountStr.toString();
+    }
   }
 
   String _formatDate(dynamic dateStr) {

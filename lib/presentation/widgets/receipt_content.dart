@@ -47,7 +47,10 @@ class ReceiptContent extends StatelessWidget {
           _buildDetailRow('தற்போதைய கட்டணம் / Current Paid', '₹${receiptData['paidamount'] ?? receiptData['paid_amount'] ?? '0.00'}', isBlue: true),
           _buildDetailRow('மொத்தமாக செலுத்தியது / Total Collected', '₹${receiptData['Collectedamount'] ?? receiptData['collected_amount'] ?? receiptData['paidamount'] ?? '0.00'}', isBold: true),
           _buildDetailRow('இருப்பு தொகை / Balance', '₹${receiptData['balanceamount'] ?? receiptData['balance_amount'] ?? '0.00'}', isBold: true, isRed: true),
-          _buildDetailRow('பெறப்பட்டவர் / Agent', receiptData['receivedby'] ?? receiptData['receivername'] ?? receiptData['received_by'] ?? '-'),
+          _buildDetailRow('பெறப்பட்டவர் / Receiver', receiptData['receivedby'] ?? receiptData['receivername'] ?? receiptData['received_by'] ?? '-'),
+          _buildDetailRow('நிலை / Status', receiptData['approval_status'] ?? receiptData['status'] ?? 'Approved', isBold: true),
+          _buildDetailRow('அங்கீகரித்தவர் / Approved By', '${receiptData['approved_by_name'] ?? receiptData['approved_by'] ?? receiptData['receivedby'] ?? 'Manager'} ${receiptData['approved_by_role'] != null ? "(${receiptData['approved_by_role']})" : (receiptData['creator_role'] == '2' ? "(Coordinator)" : "(Manager)")}'),
+          _buildDetailRow('அங்கீகரித்த தேதி / Approval Date', (receiptData['approval_date'] ?? receiptData['paymentdate'] ?? '-').toString()),
           
           const SizedBox(height: 40),
           

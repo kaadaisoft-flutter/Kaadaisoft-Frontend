@@ -7,7 +7,6 @@ import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import '../../utils/api_config.dart';
-import 'loading_spinner.dart';
 import 'custom_dialog.dart';
 import '../../utils/bank_list.dart';
 import 'package:qr_flutter/qr_flutter.dart';
@@ -76,6 +75,11 @@ class _PaymentFormState extends State<PaymentForm> {
   // Receipt image
   PlatformFile? _receiptImage;
 
+  // Receiver Info State
+  String _receiverType = 'Manager';
+  List<dynamic> _coordinatorsList = [];
+  bool _isLoadingCoordinators = false;
+
   @override
   void initState() {
     super.initState();
@@ -86,6 +90,7 @@ class _PaymentFormState extends State<PaymentForm> {
       }
     });
     _fetchYears();
+    _fetchReceivers();
   }
 
   void _updateDisplayedBalance() {
@@ -125,7 +130,8 @@ class _PaymentFormState extends State<PaymentForm> {
   Future<void> _pickImage() async {
     try {
       FilePickerResult? result = await FilePicker.pickFiles(
-        type: FileType.image,
+        type: FileType.custom,
+        allowedExtensions: ['jpg', 'jpeg', 'png'],
         allowMultiple: false,
         withData: true,
       );
@@ -138,6 +144,50 @@ class _PaymentFormState extends State<PaymentForm> {
     } catch (e) {
       debugPrint('Error picking image: $e');
     }
+  }
+
+  Future<void> _fetchReceivers() async {
+    setState(() => _isLoadingCoordinators = true);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final currentUserName = prefs.getString('userName');
+      if (currentUserName != null && currentUserName.isNotEmpty && _receiverController.text.isEmpty) {
+        _receiverController.text = currentUserName;
+      }
+
+      final response = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/coordinators'));
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['data'] != null) {
+          setState(() {
+            _coordinatorsList = List<dynamic>.from(data['data']);
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Error fetching coordinators: $e');
+    } finally {
+      if (mounted) setState(() => _isLoadingCoordinators = false);
+    }
+  }
+
+  void _onReceiverTypeChanged(String? type) async {
+    if (type == null) return;
+    setState(() {
+      _receiverType = type;
+      if (_receiverType == 'Manager') {
+        SharedPreferences.getInstance().then((prefs) {
+          final userName = prefs.getString('userName');
+          if (userName != null && userName.isNotEmpty) {
+            setState(() => _receiverController.text = userName);
+          } else {
+            setState(() => _receiverController.clear());
+          }
+        });
+      } else {
+        _receiverController.clear();
+      }
+    });
   }
 
   Future<void> _fetchYears() async {
@@ -165,8 +215,22 @@ class _PaymentFormState extends State<PaymentForm> {
       final response = await http.get(Uri.parse('${ApiConfig.eventsByYear}/$year'));
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
+        final rawEvents = List<dynamic>.from(data['data'] ?? []);
+        final filteredEvents = rawEvents.where((e) {
+          final name = (e['EventName'] ?? e['eventname'] ?? '').toString().trim();
+          final reg = RegExp(r'\b(19\d{2}|20\d{2}|21\d{2})\b');
+          final match = reg.firstMatch(name) ?? RegExp(r'(\d{4})').firstMatch(name);
+          if (match != null) {
+            final evYear = int.tryParse(match.group(1)!);
+            if (evYear != null && evYear != year) {
+              return false;
+            }
+          }
+          return true;
+        }).toList();
+
         setState(() {
-          _events = data['data'] ?? [];
+          _events = filteredEvents;
           if (widget.initialEventId != null && _events.any((e) => e['Id'] == widget.initialEventId)) {
             _selectedEventId = widget.initialEventId;
             _fetchSummary(_selectedEventId!);
@@ -226,11 +290,11 @@ class _PaymentFormState extends State<PaymentForm> {
         firstErrorNode = _otherBankFocus;
       } else if (_paymentMethod == 'UPI' && _upiIdController.text.trim().isEmpty) {
         firstErrorNode = _upiIdFocus;
-      } else if (_paymentMethod == 'Bank' && _refNoController.text.trim().isEmpty) {
+      } else if (_paymentMethod == 'Bank' && (_refNoController.text.trim().isEmpty || !RegExp(r'^[a-zA-Z0-9_\-]+$').hasMatch(_refNoController.text.trim()))) {
         firstErrorNode = _refNoFocus;
       } else if (_paymentMethod == 'Cheque' && _chequeNoController.text.trim().isEmpty) {
         firstErrorNode = _chequeNoFocus;
-      } else if (_receiverController.text.trim().isEmpty) {
+      } else if (_receiverController.text.trim().isEmpty || !RegExp(r"^[\p{L}\s.'-]+$", unicode: true).hasMatch(_receiverController.text.trim())) {
         firstErrorNode = _receiverFocus;
       }
 
@@ -259,8 +323,8 @@ class _PaymentFormState extends State<PaymentForm> {
     }
 
     if ((_paymentMethod == 'UPI' || _paymentMethod == 'Cheque') && _receiptImage == null) {
-      final type = _paymentMethod == 'UPI' ? 'UPI' : 'Cheque';
-      showStatusDialog(context, title: 'Receipt Required', message: 'Please upload the payment receipt for $type transactions.', type: DialogType.warning);
+      final label = _paymentMethod == 'Cheque' ? 'valid cheque image' : 'payment receipt';
+      showStatusDialog(context, title: 'Image Required', message: 'Please upload a $label for $_paymentMethod transactions.', type: DialogType.warning);
       setState(() => _isLoading = false);
       return;
     }
@@ -931,7 +995,24 @@ class _PaymentFormState extends State<PaymentForm> {
               Row(
                 children: [
                   if (_paymentMethod == 'Bank')
-                    Expanded(child: _textField('Reference ID *', _refNoController, focusNode: _refNoFocus, maxLength: 30)),
+                    Expanded(
+                      child: _textField(
+                        'Reference ID *',
+                        _refNoController,
+                        focusNode: _refNoFocus,
+                        maxLength: 30,
+                        inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9_\-]'))],
+                        validator: (v) {
+                          if (v == null || v.trim().isEmpty) return 'Reference ID is required';
+                          if (v.trim().length < 3) return 'Must be at least 3 characters';
+                          if (v.trim().length > 30) return 'Maximum 30 characters allowed';
+                          if (!RegExp(r'^[a-zA-Z0-9_\-]+$').hasMatch(v.trim())) {
+                            return 'Reference ID cannot contain invalid special characters';
+                          }
+                          return null;
+                        },
+                      ),
+                    ),
                   if (_paymentMethod == 'Cheque')
                     Expanded(
                       child: _textField(
@@ -952,7 +1033,7 @@ class _PaymentFormState extends State<PaymentForm> {
                 ],
               ),
           ],
-          if (_paymentMethod == 'UPI' || _paymentMethod == 'Cheque')
+          if (_paymentMethod == 'Bank' || _paymentMethod == 'UPI' || _paymentMethod == 'Cheque')
             _buildImagePicker(),
         ],
       ),
@@ -960,20 +1041,45 @@ class _PaymentFormState extends State<PaymentForm> {
   }
 
   Widget _buildImagePicker() {
+    String titleText = 'Upload Receipt ';
+    String subtitleText = 'Tap to upload receipt (JPG/PNG)';
+    bool isRequired = true;
+
+    if (_paymentMethod == 'Cheque') {
+      titleText = 'Upload Cheque Image ';
+      subtitleText = 'Tap to upload valid cheque image (JPG/PNG)';
+      isRequired = true;
+    } else if (_paymentMethod == 'UPI') {
+      titleText = 'Upload UPI Payment Receipt ';
+      subtitleText = 'Tap to upload payment receipt (JPG/PNG)';
+      isRequired = true;
+    } else if (_paymentMethod == 'Bank') {
+      titleText = 'Upload Payment Receipt / Deposit Slip ';
+      subtitleText = 'Tap to upload payment receipt or deposit slip (JPG/PNG)';
+      isRequired = false;
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: 16),
         Text.rich(
           TextSpan(
-            text: 'Upload Receipt ',
+            text: titleText,
             style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF64748B)),
-            children: const [
-              TextSpan(
-                text: '*',
-                style: TextStyle(color: Colors.red),
-              ),
-            ],
+            children: isRequired
+                ? const [
+                    TextSpan(
+                      text: '*',
+                      style: TextStyle(color: Colors.red),
+                    ),
+                  ]
+                : const [
+                    TextSpan(
+                      text: '(Optional)',
+                      style: TextStyle(color: Color(0xFF94A3B8), fontWeight: FontWeight.normal),
+                    ),
+                  ],
           ),
         ),
         const SizedBox(height: 6),
@@ -1028,7 +1134,7 @@ class _PaymentFormState extends State<PaymentForm> {
                 children: [
                   const Icon(Icons.cloud_upload_outlined, color: Color(0xFF64748B), size: 32),
                   const SizedBox(height: 8),
-                  const Text('Tap to upload receipt', style: TextStyle(fontSize: 13, color: Color(0xFF64748B))),
+                  Text(subtitleText, style: const TextStyle(fontSize: 13, color: Color(0xFF64748B))),
                 ],
               ),
             ),
@@ -1138,6 +1244,136 @@ class _PaymentFormState extends State<PaymentForm> {
   }
 
   Widget _buildReceiverCard(bool isMobile) {
+    List<String> receiverTypes = ['Manager', 'Coordinator', 'Other'];
+
+    Widget receiverTypeDropdown = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Receiver Type *', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF64748B))),
+        const SizedBox(height: 6),
+        DropdownButtonFormField<String>(
+          value: _receiverType,
+          items: receiverTypes.map((type) => DropdownMenuItem(value: type, child: Text(type, style: const TextStyle(fontSize: 13)))).toList(),
+          onChanged: _onReceiverTypeChanged,
+          decoration: InputDecoration(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+            isDense: true,
+          ),
+        ),
+      ],
+    );
+
+    Widget receiverDetailField;
+    if (_receiverType == 'Coordinator') {
+      List<String> coordinatorNames = _coordinatorsList
+          .map((c) => c['Name']?.toString() ?? '')
+          .where((n) => n.isNotEmpty)
+          .toSet()
+          .toList();
+      
+      receiverDetailField = Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Select Coordinator *', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF64748B))),
+          const SizedBox(height: 6),
+          _isLoadingCoordinators
+              ? const SizedBox(height: 45, child: Center(child: CircularProgressIndicator(strokeWidth: 2)))
+              : CustomDropdownSearch(
+                  label: '',
+                  hint: 'Choose Coordinator',
+                  dropdownItems: coordinatorNames,
+                  value: coordinatorNames.contains(_receiverController.text) ? _receiverController.text : null,
+                  height: 45,
+                  onChanged: (val) {
+                    if (val != null) {
+                      setState(() {
+                        _receiverController.text = val;
+                      });
+                    }
+                  },
+                ),
+        ],
+      );
+    } else if (_receiverType == 'Manager') {
+      receiverDetailField = Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Person Received the Money (Manager) *', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF64748B))),
+          const SizedBox(height: 6),
+          TextFormField(
+            controller: _receiverController,
+            focusNode: _receiverFocus,
+            maxLength: 50,
+            inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r"[\p{L}\s.'-]", unicode: true))],
+            decoration: InputDecoration(
+              counterText: '',
+              hintText: 'Manager Name',
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            validator: (v) {
+              if (v == null || v.trim().isEmpty) return 'Required';
+              if (v.trim().length < 2) return 'Minimum 2 characters required';
+              if (v.trim().length > 50) return 'Maximum 50 characters allowed';
+              if (!RegExp(r"^[\p{L}\s.'-]+$", unicode: true).hasMatch(v.trim())) {
+                return 'Name cannot contain special characters or numbers';
+              }
+              return null;
+            },
+          ),
+        ],
+      );
+    } else {
+      receiverDetailField = Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Person Received the Money *', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF64748B))),
+          const SizedBox(height: 6),
+          TextFormField(
+            controller: _receiverController,
+            focusNode: _receiverFocus,
+            maxLength: 50,
+            inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r"[\p{L}\s.'-]", unicode: true))],
+            decoration: InputDecoration(
+              counterText: '',
+              hintText: 'Enter name of receiver',
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            validator: (v) {
+              if (v == null || v.trim().isEmpty) return 'Required';
+              if (v.trim().length < 3) return 'Minimum 3 characters required';
+              if (v.trim().length > 50) return 'Maximum 50 characters allowed';
+              if (!RegExp(r"^[\p{L}\s.'-]+$", unicode: true).hasMatch(v.trim())) {
+                return 'Name cannot contain special characters or numbers';
+              }
+              return null;
+            },
+          ),
+        ],
+      );
+    }
+
+    Widget confirmCheckbox = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: _isConfirmed ? Colors.green.withValues(alpha: 0.05) : Colors.transparent,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: _isConfirmed ? Colors.green.withValues(alpha: 0.3) : const Color(0xFFE2E8F0)),
+      ),
+      child: Row(
+        children: [
+          Checkbox(
+            value: _isConfirmed,
+            onChanged: (v) => setState(() => _isConfirmed = v!),
+            activeColor: Colors.green,
+          ),
+          const Expanded(child: Text('Confirm Details', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF059669)))),
+        ],
+      ),
+    );
+
     return _buildCard(
       title: 'Receiver Info',
       icon: Icons.person_add_alt_1_outlined,
@@ -1145,100 +1381,26 @@ class _PaymentFormState extends State<PaymentForm> {
         ? Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Person Received the Money *', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF64748B))),
-              const SizedBox(height: 6),
-              TextFormField(
-                controller: _receiverController,
-                focusNode: _receiverFocus,
-                maxLength: 50,
-                decoration: InputDecoration(
-                  counterText: '',
-                  hintText: 'Enter name of receiver',
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                ),
-                validator: (v) {
-                  if (v == null || v.trim().isEmpty) return 'Required';
-                  if (v.trim().length < 3) return 'Minimum 3 characters required';
-                  if (v.trim().length > 50) return 'Maximum 50 characters allowed';
-                  if (!RegExp(r'\p{L}', unicode: true).hasMatch(v.trim())) return 'Enter a valid name';
-                  return null;
-                },
-              ),
+              receiverTypeDropdown,
               const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
-                  color: _isConfirmed ? Colors.green.withOpacity(0.05) : Colors.transparent,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: _isConfirmed ? Colors.green.withOpacity(0.3) : const Color(0xFFE2E8F0)),
-                ),
-                child: Row(
-                  children: [
-                    Checkbox(
-                      value: _isConfirmed,
-                      onChanged: (v) => setState(() => _isConfirmed = v!),
-                      activeColor: Colors.green,
-                    ),
-                    const Expanded(child: Text('Confirm Details', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFF059669)))),
-                  ],
-                ),
-              ),
+              receiverDetailField,
+              const SizedBox(height: 16),
+              confirmCheckbox,
             ],
           )
-        : Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
+        : Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                flex: 3,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('Person Received the Money *', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF64748B))),
-                    const SizedBox(height: 6),
-                    TextFormField(
-                      controller: _receiverController,
-                      focusNode: _receiverFocus,
-                      maxLength: 50,
-                      decoration: InputDecoration(
-                        counterText: '',
-                        hintText: 'Enter name of receiver',
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                      ),
-                      validator: (v) {
-                        if (v == null || v.trim().isEmpty) return 'Required';
-                        if (v.trim().length < 3) return 'Minimum 3 characters required';
-                        if (v.trim().length > 50) return 'Maximum 50 characters allowed';
-                        if (!RegExp(r'\p{L}', unicode: true).hasMatch(v.trim())) return 'Enter a valid name';
-                        return null;
-                      },
-                    ),
-                  ],
-                ),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(flex: 2, child: receiverTypeDropdown),
+                  const SizedBox(width: 16),
+                  Expanded(flex: 3, child: receiverDetailField),
+                ],
               ),
-              const SizedBox(width: 24),
-              Expanded(
-                flex: 2,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: _isConfirmed ? Colors.green.withOpacity(0.05) : Colors.transparent,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: _isConfirmed ? Colors.green.withOpacity(0.3) : const Color(0xFFE2E8F0)),
-                  ),
-                  child: Row(
-                    children: [
-                      Checkbox(
-                        value: _isConfirmed,
-                        onChanged: (v) => setState(() => _isConfirmed = v!),
-                        activeColor: Colors.green,
-                      ),
-                      const Expanded(child: Text('Confirm Details', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFF059669)))),
-                    ],
-                  ),
-                ),
-              ),
+              const SizedBox(height: 16),
+              confirmCheckbox,
             ],
           ),
     );

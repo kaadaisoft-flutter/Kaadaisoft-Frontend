@@ -90,7 +90,19 @@ class _ReportsContentState extends State<ReportsContent> {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         setState(() {
-          _events = data['data'];
+          final rawEvents = List<dynamic>.from(data['data'] ?? []);
+          _events = rawEvents.where((e) {
+            final name = (e['EventName'] ?? e['eventname'] ?? '').toString().trim();
+            final reg = RegExp(r'\b(19\d{2}|20\d{2}|21\d{2})\b');
+            final match = reg.firstMatch(name) ?? RegExp(r'(\d{4})').firstMatch(name);
+            if (match != null) {
+              final evYear = int.tryParse(match.group(1)!);
+              if (evYear != null && evYear != year) {
+                return false;
+              }
+            }
+            return true;
+          }).toList();
           _selectedEventId = null;
         });
       }

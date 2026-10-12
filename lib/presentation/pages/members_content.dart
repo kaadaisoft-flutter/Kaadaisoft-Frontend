@@ -622,44 +622,123 @@ class _MembersContentState extends State<MembersContent> {
   Future<void> _toggleMemberDisabledStatus(String memberId, String name, bool currentDisabledState) async {
     final bool newDisabledState = !currentDisabledState;
     final String actionTitle = newDisabledState ? 'Disable ID Card' : 'Enable ID Card';
-    final String messageText = newDisabledState
-        ? 'Are you sure you want to disable the ID card and account for "$name"?\n\nThe member will NOT be able to log in or populate their details.'
-        : 'Are you sure you want to re-enable the ID card and account for "$name"?';
 
-    final bool? confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.white,
-        title: Text(actionTitle, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-        content: Text(messageText, style: const TextStyle(fontSize: 14)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel', style: TextStyle(color: Colors.black54)),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: newDisabledState ? Colors.red : Colors.green,
-              foregroundColor: Colors.white,
+    String? enteredReason;
+    bool confirm = false;
+
+    if (newDisabledState) {
+      final TextEditingController reasonController = TextEditingController();
+      String? errorMessage;
+
+      final result = await showDialog<Map<String, dynamic>>(
+        context: context,
+        builder: (context) => StatefulBuilder(
+          builder: (context, setDialogState) => AlertDialog(
+            backgroundColor: Colors.white,
+            surfaceTintColor: Colors.white,
+            title: Text(actionTitle, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Are you sure you want to disable the ID card and account for "$name"?\n\nThe member will NOT be able to log in or populate their details.',
+                    style: const TextStyle(fontSize: 14),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: reasonController,
+                    maxLines: 3,
+                    decoration: InputDecoration(
+                      labelText: 'Reason for disabling *',
+                      hintText: 'Enter reason for disabling member...',
+                      alignLabelWithHint: true,
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      errorText: errorMessage,
+                    ),
+                    onChanged: (val) {
+                      if (errorMessage != null && val.trim().isNotEmpty) {
+                        setDialogState(() => errorMessage = null);
+                      }
+                    },
+                  ),
+                ],
+              ),
             ),
-            child: Text(newDisabledState ? 'Disable' : 'Enable'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, {'confirm': false}),
+                child: const Text('Cancel', style: TextStyle(color: Colors.black54)),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  final reasonText = reasonController.text.trim();
+                  if (reasonText.isEmpty) {
+                    setDialogState(() {
+                      errorMessage = 'Reason is required';
+                    });
+                    return;
+                  }
+                  Navigator.pop(context, {'confirm': true, 'reason': reasonText});
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Disable'),
+              ),
+            ],
           ),
-        ],
-      ),
-    );
+        ),
+      );
 
-    if (confirm == true) {
+      if (result != null && result['confirm'] == true) {
+        confirm = true;
+        enteredReason = result['reason'];
+      }
+    } else {
+      final bool? res = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.white,
+          title: Text(actionTitle, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          content: Text('Are you sure you want to re-enable the ID card and account for "$name"?', style: const TextStyle(fontSize: 14)),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel', style: TextStyle(color: Colors.black54)),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Enable'),
+            ),
+          ],
+        ),
+      );
+      confirm = res == true;
+    }
+
+    if (confirm) {
       setState(() => _isLoading = true);
       try {
+        final Map<String, dynamic> bodyData = {
+          'member_id': memberId,
+          'is_disabled': newDisabledState,
+        };
+        if (newDisabledState && enteredReason != null) {
+          bodyData['disabled_reason'] = enteredReason;
+        }
+
         final response = await http.post(
           Uri.parse(ApiConfig.toggleMemberDisabledStatus),
           headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({
-            'member_id': memberId,
-            'is_disabled': newDisabledState,
-          }),
+          body: jsonEncode(bodyData),
         );
 
         if (response.statusCode == 200) {

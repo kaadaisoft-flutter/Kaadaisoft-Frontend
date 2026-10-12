@@ -764,6 +764,46 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
                 ],
               ),
               
+              if (_userData != null &&
+                  (_userData!['is_disabled'] == true ||
+                   _userData!['is_disabled'] == 1 ||
+                   _userData!['is_disabled']?.toString().toLowerCase() == 'true')) ...[
+                const SizedBox(height: 20),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.red.shade300, width: 1.5),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.block, color: Colors.red, size: 28),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Your account & member details have been disabled by the administrator.',
+                              style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 14),
+                            ),
+                            if (_userData!['disabled_reason'] != null &&
+                                _userData!['disabled_reason'].toString().trim().isNotEmpty) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                'Reason: ${_userData!['disabled_reason'].toString().trim()}',
+                                style: TextStyle(color: Colors.red.shade900, fontSize: 13, fontWeight: FontWeight.w600),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+
               const SizedBox(height: 40),
               
               // Main Profile Section

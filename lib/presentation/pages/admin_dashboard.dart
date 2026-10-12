@@ -75,13 +75,17 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
   Map<String, dynamic>? _myCoordinator;
   bool _isLoadingCoordinator = true;
   bool _isMemberDisabled = false;
+  String? _memberDisabledReason;
 
   void _navigateTo(String item) {
     if (widget.userRole == 3 && _isMemberDisabled && item != 'Dashboard' && item != 'Logout') {
+      final messageText = (_memberDisabledReason != null && _memberDisabledReason!.isNotEmpty)
+          ? 'Your account has been disabled by the administrator.\nReason: $_memberDisabledReason'
+          : 'Your account has been disabled by the administrator. Access to menu sections is restricted.';
       showStatusDialog(
         context,
         title: 'Account Disabled',
-        message: 'Your account has been disabled by the administrator. Access to menu sections is restricted.',
+        message: messageText,
         type: DialogType.warning,
       );
       return;
@@ -416,8 +420,10 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
           final bool disabled = userData['is_disabled'] == true ||
               userData['is_disabled'] == 1 ||
               userData['is_disabled']?.toString().toLowerCase() == 'true';
+          final String? reason = userData['disabled_reason']?.toString();
           setState(() {
             _isMemberDisabled = disabled;
+            _memberDisabledReason = reason;
             if (disabled && _activeItem != 'Dashboard' && _activeItem != 'Logout') {
               _activeItem = 'Dashboard';
             }
@@ -465,6 +471,9 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
             _pendingPayments = paymentsList;
             _isLoadingPayments = false;
           });
+          if (_isMemberDisabled) {
+            _fetchMyCoordinator();
+          }
         }
       } else {
         if (mounted) setState(() => _isLoadingPayments = false);
@@ -507,6 +516,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
                   onPaymentSuccess: () {
                     _fetchPaymentDetails();
                     _fetchStats();
+                    _fetchMyCoordinator();
                   },
                 ),
               ),
@@ -997,6 +1007,72 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (widget.userRole == 3 && _isMemberDisabled)
+            Container(
+              margin: const EdgeInsets.only(bottom: 16),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.red.shade50,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.red.shade300, width: 1.5),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.block, color: Colors.red, size: 28),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Your account & ID card have been disabled by the administrator.',
+                          style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 14),
+                        ),
+                        if (_memberDisabledReason != null && _memberDisabledReason!.isNotEmpty) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            'Reason: $_memberDisabledReason',
+                            style: TextStyle(color: Colors.red.shade900, fontSize: 13, fontWeight: FontWeight.w600),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          if (widget.userRole == 3 && _pendingPayments.any((p) => p['has_pending'] == 1 || p['has_pending'] == true || p['has_pending']?.toString() == '1'))
+            Container(
+              margin: const EdgeInsets.only(bottom: 24),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF3E0),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFFFB74D), width: 1.5),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.hourglass_top, color: Color(0xFFE65100), size: 28),
+                  SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Payment Under Verification',
+                          style: TextStyle(color: Color(0xFFE65100), fontWeight: FontWeight.bold, fontSize: 14),
+                        ),
+                        SizedBox(height: 4),
+                        Text(
+                          'Your payment details have been submitted and are pending verification. Your ID Card and Member Details will be automatically enabled once approved by the manager.',
+                          style: TextStyle(color: Color(0xFFBF360C), fontSize: 13, fontWeight: FontWeight.w500),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
           _buildSummaryCards(),
           const SizedBox(height: 32),
 
@@ -1882,7 +1958,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
         final isMobile = constraints.maxWidth < 600;
         final visibleCards = !kIsWeb ? (widget.userRole == 2 ? 3 : 4) : (widget.userRole == 2 ? 2 : 3);
         final cardWidth = isMobile
-            ? (constraints.maxWidth - (12 * (visibleCards - 1))) / visibleCards
+            ? (constraints.maxWidth - 12) / 2
             : ((constraints.maxWidth - (24 * (visibleCards - 1))) / visibleCards).clamp(0.0, 260.0);
 
         return Center(
@@ -2350,7 +2426,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
     final eventId = payment['Id'];
     final year = payment['year'];
 
-    final hasPending = payment['has_pending'] == 1;
+    final hasPending = payment['has_pending'] == 1 || payment['has_pending'] == true || payment['has_pending']?.toString() == '1';
 
     final Color badgeBgColor = hasPending
         ? const Color(0xFFFFF3E0)
@@ -2363,7 +2439,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
             ? const Color(0xFF2E7D32)
             : (isPartial ? const Color(0xFF1565C0) : const Color(0xFFC62828)));
     final String statusText = hasPending
-        ? 'IN PROGRESS'
+        ? 'UNDER VERIFICATION'
         : (isPaid ? (AppLocalizations.of(context)?.paidLabel ?? 'PAID') : (isPartial ? 'PARTIALLY PAID' : (AppLocalizations.of(context)?.unPaidLabel ?? 'UN PAID')));
 
     return MouseRegion(
@@ -2391,8 +2467,8 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
               } else if (hasPending) {
                 showStatusDialog(
                   context,
-                  title: 'Payment Pending Approval',
-                  message: 'Your previous payment request for this event is currently under review. Please wait for it to be processed before making another payment.',
+                  title: 'Payment Under Verification',
+                  message: 'Your payment details for this event have been submitted and are currently pending verification by the manager. Once approved, your ID Card and Member Details will be automatically enabled.',
                   type: DialogType.warning,
                 );
               } else {
@@ -2420,8 +2496,8 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
                                 shape: BoxShape.circle,
                               ),
                               child: Icon(
-                                isPaid ? Icons.check_circle : Icons.payment,
-                                color: isPaid ? Colors.green : Colors.orange,
+                                isPaid ? Icons.check_circle : (hasPending ? Icons.hourglass_top : Icons.payment),
+                                color: isPaid ? Colors.green : (hasPending ? Colors.orange : Colors.orange),
                                 size: 20,
                               ),
                             ),
@@ -2456,14 +2532,23 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
                       color: badgeBgColor,
                       borderRadius: BorderRadius.circular(20),
                     ),
-                    child: Text(
-                      statusText,
-                      style: TextStyle(
-                        color: badgeTextColor,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 0.5,
-                      ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (hasPending) ...[
+                          Icon(Icons.hourglass_top, size: 12, color: badgeTextColor),
+                          const SizedBox(width: 4),
+                        ],
+                        Text(
+                          statusText,
+                          style: TextStyle(
+                            color: badgeTextColor,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   const Divider(height: 24, color: const Color(0xFFE2E8F0)),

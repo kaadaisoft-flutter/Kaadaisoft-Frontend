@@ -377,6 +377,7 @@ class _IdCardBenefitsContentState extends State<IdCardBenefitsContent> {
                   );
 
                   final bool isUserDisabled = _userData != null && (_userData!['is_disabled'] == true || _userData!['is_disabled'] == 1 || _userData!['is_disabled']?.toString().toLowerCase() == 'true');
+                  final String? disabledReason = _userData != null ? _userData!['disabled_reason']?.toString() : null;
 
                   Widget cardSection = Column(
                     children: [
@@ -394,11 +395,25 @@ class _IdCardBenefitsContentState extends State<IdCardBenefitsContent> {
                               const Icon(Icons.block, color: Colors.red, size: 28),
                               const SizedBox(width: 16),
                               Expanded(
-                                child: Text(
-                                  _isTamil
-                                    ? 'உங்கள் அடையாள அட்டை நிர்வாகியினால் முடக்கப்பட்டிருக்கிறது. அடையாள அட்டை விவரங்கள் காண்பிக்கப்படாது.'
-                                    : 'Your ID Card has been disabled by the manager. ID Card details will not be populated.',
-                                  style: TextStyle(color: Colors.red.shade900, fontWeight: FontWeight.bold, fontSize: 14),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      _isTamil
+                                        ? 'உங்கள் அடையாள அட்டை நிர்வாகியினால் முடக்கப்பட்டிருக்கிறது. அடையாள அட்டை விவரங்கள் காண்பிக்கப்படாது.'
+                                        : 'Your ID Card has been disabled by the manager. ID Card details will not be populated.',
+                                      style: TextStyle(color: Colors.red.shade900, fontWeight: FontWeight.bold, fontSize: 14),
+                                    ),
+                                    if (disabledReason != null && disabledReason.trim().isNotEmpty) ...[
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        _isTamil
+                                          ? 'காரணம்: ${disabledReason.trim()}'
+                                          : 'Reason: ${disabledReason.trim()}',
+                                        style: TextStyle(color: Colors.red.shade800, fontSize: 13, fontWeight: FontWeight.w600),
+                                      ),
+                                    ],
+                                  ],
                                 ),
                               ),
                             ],

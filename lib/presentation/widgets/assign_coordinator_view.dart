@@ -1397,54 +1397,60 @@ class _SearchUserDialogState extends State<_SearchUserDialog> {
   final TextEditingController _controller = TextEditingController();
   List<dynamic> _results = [];
   bool _isLoading = false;
+  int _currentPage = 1;
+  int _totalPages = 1;
+  int _totalItems = 0;
+  final int _limit = 10;
 
   @override
   void initState() {
     super.initState();
-    _fetchInitial();
+    _fetchData(page: 1);
   }
 
-  Future<void> _fetchInitial() async {
-    setState(() => _isLoading = true);
+  Future<void> _fetchData({int page = 1}) async {
+    setState(() {
+      _isLoading = true;
+      _currentPage = page;
+    });
     try {
-      final endpoint = widget.isMember ? 'members?exclude_coordinators=true' : 'coordinators';
-      final url = widget.isMember 
-          ? '${ApiConfig.baseUrl}/api/$endpoint'
-          : '${ApiConfig.baseUrl}/api/$endpoint';
-      final response = await http.get(Uri.parse(url));
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        setState(() {
-          _results = data['data'];
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      setState(() => _isLoading = false);
-    }
-  }
-
-  Future<void> _search() async {
-    if (_controller.text.isEmpty) {
-      _fetchInitial();
-      return;
-    }
-    setState(() => _isLoading = true);
-    try {
+      final String searchTxt = _controller.text.trim();
       final endpoint = widget.isMember ? 'members' : 'coordinators';
-      final queryParams = widget.isMember 
-          ? '?exclude_coordinators=true&search=${_controller.text}'
-          : '?search=${_controller.text}';
+      
+      String queryParams = '?page=$page&limit=$_limit';
+      if (widget.isMember) {
+        queryParams += '&exclude_coordinators=true';
+      }
+      if (searchTxt.isNotEmpty) {
+        queryParams += '&search=${Uri.encodeComponent(searchTxt)}';
+      }
+
       final response = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/$endpoint$queryParams'));
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         setState(() {
-          _results = data['data'];
+          _results = data['data'] ?? [];
+          if (data['pagination'] != null) {
+            _totalItems = data['pagination']['total_items'] ?? _results.length;
+            _totalPages = (_totalItems / _limit).ceil();
+            if (_totalPages < 1) _totalPages = 1;
+          } else {
+            _totalItems = _results.length;
+            _totalPages = 1;
+          }
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _results = [];
           _isLoading = false;
         });
       }
     } catch (e) {
-      setState(() => _isLoading = false);
+      setState(() {
+        _results = [];
+        _isLoading = false;
+      });
     }
   }
 
@@ -1454,8 +1460,8 @@ class _SearchUserDialogState extends State<_SearchUserDialog> {
       backgroundColor: Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Container(
-        width: 400,
-        height: 500,
+        width: 420,
+        height: 540,
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1473,13 +1479,13 @@ class _SearchUserDialogState extends State<_SearchUserDialog> {
             const SizedBox(height: 16),
             TextField(
               controller: _controller,
-              onChanged: (_) => _search(),
+              onChanged: (_) => _fetchData(page: 1),
               decoration: InputDecoration(
                 hintText: AppLocalizations.of(context)?.searchHintText ?? 'Enter name or ID...',
                 hintStyle: const TextStyle(color: Colors.black38, fontSize: 14),
                 suffixIcon: IconButton(
                   icon: const Icon(Icons.search, color: Color(0xFF5D1712)), 
-                  onPressed: _search,
+                  onPressed: () => _fetchData(page: 1),
                 ),
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 filled: true,
@@ -1497,7 +1503,7 @@ class _SearchUserDialogState extends State<_SearchUserDialog> {
                   borderSide: const BorderSide(color: Color(0xFF5D1712), width: 1.5),
                 ),
               ),
-              onSubmitted: (_) => _search(),
+              onSubmitted: (_) => _fetchData(page: 1),
             ),
             const SizedBox(height: 16),
             if (_isLoading)
@@ -1553,7 +1559,48 @@ class _SearchUserDialogState extends State<_SearchUserDialog> {
                   },
                 ),
               ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
+            // Pagination bar
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  _totalItems > 0 
+                      ? 'Total: $_totalItems'
+                      : '',
+                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Colors.black54),
+                ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.chevron_left, size: 20),
+                      onPressed: _currentPage > 1 && !_isLoading
+                          ? () => _fetchData(page: _currentPage - 1)
+                          : null,
+                      tooltip: 'Previous Page',
+                      splashRadius: 18,
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                      child: Text(
+                        'Page $_currentPage of $_totalPages',
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF5D1712)),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.chevron_right, size: 20),
+                      onPressed: _currentPage < _totalPages && !_isLoading
+                          ? () => _fetchData(page: _currentPage + 1)
+                          : null,
+                      tooltip: 'Next Page',
+                      splashRadius: 18,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
             Align(
               alignment: Alignment.centerRight,
               child: TextButton(
