@@ -29,6 +29,7 @@ import 'payment_requests_content.dart';
 import '../../services/fcm_service.dart';
 import '../../utils/notification_helper.dart';
 import '../widgets/qr_scanner_dialog.dart';
+import 'attendance_content.dart';
 
 class AdminDashboard extends StatefulWidget {
   final bool showLoginSuccess;
@@ -76,8 +77,30 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
   bool _isLoadingCoordinator = true;
   bool _isMemberDisabled = false;
   String? _memberDisabledReason;
+  bool _canScanAttendance = false;
 
   void _navigateTo(String item) {
+    if (item == 'Attendance') {
+      if (kIsWeb && widget.userRole != 1) {
+        showStatusDialog(
+          context,
+          title: 'Mobile App Feature',
+          message: 'The Attendance Scanner is only available on the Mobile APK.',
+          type: DialogType.info,
+        );
+        return;
+      }
+      if (widget.userRole != 1 && !_canScanAttendance) {
+        showStatusDialog(
+          context,
+          title: 'Access Restricted',
+          message: 'Only authorized persons can access the Attendance Scanner module.',
+          type: DialogType.warning,
+        );
+        return;
+      }
+    }
+
     if (widget.userRole == 3 && _isMemberDisabled && item != 'Dashboard' && item != 'Logout') {
       final messageText = (_memberDisabledReason != null && _memberDisabledReason!.isNotEmpty)
           ? 'Your account has been disabled by the administrator.\nReason: $_memberDisabledReason'
@@ -300,6 +323,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
     _fetchStats();
     _fetchPaymentDetails();
     _fetchMyCoordinator();
+    _checkScannerPermission();
     _loadActiveItem();
     _loadSeenCounts();
     
@@ -421,9 +445,13 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
               userData['is_disabled'] == 1 ||
               userData['is_disabled']?.toString().toLowerCase() == 'true';
           final String? reason = userData['disabled_reason']?.toString();
+          final bool canScan = userData['can_scan_attendance'] == true ||
+              userData['can_scan_attendance'] == 1 ||
+              userData['can_scan_attendance']?.toString().toLowerCase() == 'true';
           setState(() {
             _isMemberDisabled = disabled;
             _memberDisabledReason = reason;
+            _canScanAttendance = canScan || widget.userRole == 1;
             if (disabled && _activeItem != 'Dashboard' && _activeItem != 'Logout') {
               _activeItem = 'Dashboard';
             }
@@ -631,6 +659,25 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
     }
   }
 
+  Future<void> _checkScannerPermission() async {
+    if (widget.userRole == 1) {
+      if (mounted) setState(() => _canScanAttendance = true);
+      return;
+    }
+    if (widget.userId == null) return;
+    try {
+      final res = await http.get(Uri.parse(ApiConfig.checkScannerPermission(widget.userId)));
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        if (mounted) {
+          setState(() {
+            _canScanAttendance = data['can_scan_attendance'] == true;
+          });
+        }
+      }
+    } catch (_) {}
+  }
+
   List<Map<String, dynamic>> get _menuItems {
     final allItems = [
       {'title': 'Dashboard', 'icon': Icons.bar_chart, 'color': const Color(0xFF0EA5E9)},
@@ -640,6 +687,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
       {'title': 'Members', 'icon': Icons.group_outlined, 'color': const Color(0xFF8B5CF6)},
       {'title': 'Events', 'icon': Icons.list_alt, 'color': const Color(0xFFEC4899)},
       {'title': 'Payments', 'icon': Icons.credit_card, 'color': const Color(0xFF14B8A6)},
+      {'title': 'Attendance', 'icon': Icons.how_to_reg, 'color': const Color(0xFF10B981)},
       {'title': 'Reports', 'icon': Icons.file_copy_outlined, 'color': const Color(0xFFF97316)},
       {'title': 'Update Requests', 'icon': Icons.person_add_alt_1, 'color': const Color(0xFF06B6D4)},
       {'title': 'Payment Requests', 'icon': Icons.receipt_long, 'color': const Color(0xFF6366F1)},
@@ -654,6 +702,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
         item['title'] == 'Events' || 
         item['title'] == 'Payments' || 
         item['title'] == 'ID Card Benefits' ||
+        (!kIsWeb && _canScanAttendance && item['title'] == 'Attendance') ||
         item['title'] == 'Logout'
       ).toList();
     }
@@ -663,7 +712,8 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
       return allItems.where((item) => 
         item['title'] != 'Coordinators' && 
         item['title'] != 'Reports' &&
-        item['title'] != 'Payment Requests'
+        item['title'] != 'Payment Requests' &&
+        (kIsWeb || !_canScanAttendance ? item['title'] != 'Attendance' : true)
       ).toList();
     }
 
@@ -987,6 +1037,25 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
         padding: contentPadding,
         child: const IdCardBenefitsContent(
           key: ValueKey('ID Card Benefits'),
+        ),
+      );
+    }
+
+    if (_activeItem == 'Attendance') {
+      if (widget.userRole != 1 && !_canScanAttendance) {
+        return const Center(
+          child: Text(
+            'Access Denied: You do not have permission to access the Attendance Scanner module.',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.red),
+          ),
+        );
+      }
+      return Padding(
+        padding: contentPadding,
+        child: AttendanceContent(
+          key: const ValueKey('Attendance'),
+          userId: widget.userId,
+          role: widget.userRole,
         ),
       );
     }

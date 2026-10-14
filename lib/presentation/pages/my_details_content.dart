@@ -731,7 +731,12 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
         }
 
         return SingleChildScrollView(
-          padding: EdgeInsets.all(isMobile ? 16.0 : 32.0),
+          padding: EdgeInsets.fromLTRB(
+            isMobile ? 16.0 : 32.0,
+            isMobile ? 16.0 : 32.0,
+            isMobile ? 16.0 : 32.0,
+            isMobile ? 80.0 : 100.0,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -874,6 +879,7 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
               ),
               const SizedBox(height: 24),
               _isTreeView ? _buildFamilyTree(isMobile) : _buildFamilyTable(isMobile),
+              SizedBox(height: isMobile ? 60 : 80),
             ],
           ),
         );
@@ -936,9 +942,9 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
               _buildRoundIcon(Icons.contact_page, 'Certificate', _userData?['Communitycertificate']),
             ],
           ),
-          const SizedBox(height: 32),
+          const SizedBox(height: 36),
           _buildActionButton(AppLocalizations.of(context)?.eventParticipation ?? 'Event Participation', Icons.event_available, const Color(0xFFE8F5E9), const Color(0xFF2E7D32), onTap: _showEventParticipationDialog),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           _buildActionButton(AppLocalizations.of(context)?.updateDetails ?? 'Update Details', Icons.person_outline, const Color(0xFFFFF8E1), const Color(0xFFF57C00), onTap: () {
             if (_userData != null) {
               showDialog(
@@ -961,7 +967,7 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
               );
             }
           }),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           _buildActionButton(AppLocalizations.of(context)?.addFamilyMember ?? 'Add Family Member', Icons.person_add_alt_1, const Color(0xFFF5E6E6), const Color(0xFF5D1712), onTap: () {
             if (_userData != null) {
               showDialog(

@@ -96,6 +96,16 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
   String? _selectedCountry;
   String? _selectedCurrCity;
   String? _selectedHusbandKulam;
+  String? _selectedKulam;
+
+  bool get _isKulamSelectable {
+    final r = _selectedRelationship?.trim().toLowerCase();
+    return r == 'wife' ||
+           r == 'son-in-law' ||
+           r == 'son in law' ||
+           r == 'daughter-in-law' ||
+           r == 'daughter in law';
+  }
 
   final List<String> _kulams = ['Poondurai Kaadai', 'Aanthuvan Kulam', 'Azhagu Kulam', 'Aathe Kulam', 'Aanthai Kulam', 'Aadar Kulam', 'Aavan Kulam', 'Eenjan Kulam', 'Ozukkar Kulam', 'Oothaalar Kulam', 'Kannakkan Kulam', 'Kannan Kulam', 'Kannaanthai Kulam', 'Kaadai Kulam', 'Kaari Kulam', 'Keeran Kulam', 'Kuzhlaayan Kulam', 'Koorai Kulam', 'Koovendhar Kulam', 'Saathanthai Kulam', 'Sellan Kulam', 'Semban Kulam', 'Sengkannan Kulam', 'Sembuthan Kulam', 'Senkunnier Kulam', 'Sevvaayar Kulam', 'Cheran Kulam', 'Chedan Kulam', 'Dananjayan Kulam', 'Thazhinji Kulam', 'Thooran Kulam', 'Devendran Kulam', 'Thoodar Kulam', 'Neerunniyar Kulam', 'Pavazhalar Kulam', 'Panayan Kulam', 'Pathuman Kulam', 'Payiran Kulam', 'Panagkaadar Kulam', 'Pathariar Kulam', 'Pandiyan Kulam', 'Pillar Kulam', 'Poosan Kulam', 'Poochanthai Kulam', 'Periyan Kulam', 'Perunkudiyaan Kulam', 'Porulaanthai Kulam', 'Ponnar Kulam', 'Maniyan Kulam', 'Mayilar Kulam', 'Maadar Kulam', 'Mutthan Kulam', 'Muzhukathan Kulam', 'Medhi Kulam', 'Vannakkan Kulam', 'Villiyar Kulam', 'Vilayan Kulam', 'Vizhiyar Kulam', 'Venduvan Kulam', 'Vennag Kulam', 'Vellampar Kulam', 'Others'];
 
@@ -164,6 +174,8 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
         _selectedMarried = 'Yes';
       }
     }
+
+    _selectedKulam = _isKulamSelectable ? null : 'Poondurai Kaadai';
 
     _fetchDistricts();
     _loadGeoData();
@@ -495,6 +507,7 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
                                 showStatusDialog(context, title: 'Validation Error', message: 'Family Head is Male. Cannot add a Husband.', type: DialogType.error, autoDismiss: false);
                               }
                               setState(() {
+                                final oldSelectable = _isKulamSelectable;
                                 _selectedRelationship = v;
                                 if (['Wife', 'Daughter', 'Mother', 'Grand Mother', 'Daughter-in-law', 'Sister'].contains(v)) {
                                   _selectedGender = 'Female';
@@ -504,6 +517,14 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
                                 
                                 if (v == 'Wife' || v == 'Husband' || v == 'Father' || v == 'Mother' || v == 'Grand Father' || v == 'Grand Mother' || v == 'Daughter-in-law' || v == 'Son-in-law') {
                                   _selectedMarried = 'Yes';
+                                }
+
+                                if (_isKulamSelectable) {
+                                  if (!oldSelectable || _selectedKulam == 'Poondurai Kaadai') {
+                                    _selectedKulam = null;
+                                  }
+                                } else {
+                                  _selectedKulam = 'Poondurai Kaadai';
                                 }
                               });
                             }
@@ -543,7 +564,16 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
                         _buildResponsiveRow(isMobile, [
                           _buildInputField('Valuvu', _valuvuController, isMobile, maxLength: 254),
                           _buildInputField('Thottam', _thottamController, isMobile, maxLength: 254),
-                          _buildInputField('Kulam *', TextEditingController(text: 'Poondurai Kaadai'), isMobile, readOnly: true),
+                          _isKulamSelectable
+                              ? _buildDropdownField(
+                                  'Kulam *', 
+                                  _kulams, 
+                                  isMobile, 
+                                  value: _selectedKulam, 
+                                  onChanged: (v) => setState(() => _selectedKulam = v),
+                                  validator: (v) => (v == null || v.isEmpty) ? 'Required' : null,
+                                )
+                              : _buildInputField('Kulam *', TextEditingController(text: 'Poondurai Kaadai'), isMobile, readOnly: true),
                         ]),
 
                         if (_selectedRelationship == 'Daughter' && _selectedMarried == 'Yes') ...[
@@ -1256,6 +1286,7 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
       request.fields['married'] = _selectedMarried ?? '';
       request.fields['valuvu'] = _valuvuController.text;
       request.fields['thottam'] = _thottamController.text;
+      request.fields['kulam'] = _isKulamSelectable ? (_selectedKulam ?? 'Poondurai Kaadai') : 'Poondurai Kaadai';
       request.fields['education'] = _selectedEducation == 'Others' ? _educationController.text : (_selectedEducation ?? '');
       request.fields['profession'] = _selectedProfession == 'Others' ? _professionController.text : (_selectedProfession ?? '');
       request.fields['relationship'] = _selectedRelationship == 'Other' ? _otherRelationshipController.text : (_selectedRelationship ?? '');

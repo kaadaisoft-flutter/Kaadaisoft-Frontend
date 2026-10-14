@@ -93,7 +93,6 @@ class _ReceivedApplicationsContentState extends State<ReceivedApplicationsConten
     return LayoutBuilder(
       builder: (context, constraints) {
         final isMobile = constraints.maxWidth < 900;
-        final isSmallScreen = constraints.maxWidth < 600;
         
         if (_isLoading) {
           return const LoadingSpinner(message: 'Loading applications...');
@@ -153,40 +152,70 @@ class _ReceivedApplicationsContentState extends State<ReceivedApplicationsConten
                 ),
                 child: Column(
                   children: [
-                    // Scrollable table area
-                    isSmallScreen
-                        ? Scrollbar(
-                            controller: _scrollController,
-                            thumbVisibility: true,
-                            child: SingleChildScrollView(
-                              controller: _scrollController,
-                              scrollDirection: Axis.horizontal,
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                    ClipRRect(
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                      child: RawScrollbar(
+                        controller: _scrollController,
+                        thumbVisibility: true,
+                        thickness: 5,
+                        radius: const Radius.circular(8),
+                        thumbColor: const Color(0xFF5D1712).withOpacity(0.4),
+                        trackVisibility: true,
+                        trackColor: const Color(0x0F5D1712),
+                        trackRadius: const Radius.circular(8),
+                        padding: const EdgeInsets.only(bottom: 2),
+                        child: SingleChildScrollView(
+                          controller: _scrollController,
+                          scrollDirection: Axis.horizontal,
+                          child: SizedBox(
+                            width: 1140,
+                            child: Padding(
+                              padding: const EdgeInsets.only(bottom: 10),
+                              child: Column(
                                 children: [
-                                  _buildFixedColumns(currentApplications),
-                                  _buildScrollableColumns(currentApplications),
+                                  // Header Row
+                                  Container(
+                                    height: 50,
+                                    color: const Color(0xFF2D1B18),
+                                    child: Row(
+                                      children: [
+                                        _buildHeaderCell(AppLocalizations.of(context)?.sNo.toUpperCase() ?? 'S.NO', 60, alignment: Alignment.center),
+                                        _buildHeaderCell(AppLocalizations.of(context)?.memberNameHeader ?? 'MEMBER NAME', 170),
+                                        _buildHeaderCell(AppLocalizations.of(context)?.mobileNumber.toUpperCase() ?? 'MOBILE NUMBER', 140),
+                                        _buildHeaderCell(AppLocalizations.of(context)?.districtHeader ?? 'DISTRICT', 140),
+                                        _buildHeaderCell(AppLocalizations.of(context)?.talukHeader ?? 'TALUK', 140),
+                                        _buildHeaderCell(AppLocalizations.of(context)?.panchayatHeader ?? 'PANCHAYAT', 150),
+                                        _buildHeaderCell(AppLocalizations.of(context)?.villageUpperHeader ?? 'VILLAGE', 140),
+                                        _buildHeaderCell(AppLocalizations.of(context)?.actionHeader.toUpperCase() ?? 'ACTIONS', 170, hasDivider: false),
+                                      ],
+                                    ),
+                                  ),
+                                  // Data Rows
+                                  if (_applications.isEmpty)
+                                    Container(
+                                      height: 120,
+                                      alignment: Alignment.center,
+                                      child: Text(
+                                        AppLocalizations.of(context)?.noPendingApplications ?? 'No pending applications found.',
+                                        style: const TextStyle(color: Colors.black45, fontSize: 15),
+                                      ),
+                                    )
+                                  else
+                                    Column(
+                                      children: [
+                                        for (int index = 0; index < currentApplications.length; index++) ...[
+                                          if (index > 0) const Divider(height: 1, thickness: 1, color: Color(0xFFEEEEEE)),
+                                          _buildApplicationRow(index, currentApplications[index], startIndex),
+                                        ],
+                                      ],
+                                    ),
                                 ],
                               ),
                             ),
-                          )
-                        : Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _buildFixedColumns(currentApplications),
-                              Expanded(
-                                child: Scrollbar(
-                                  controller: _scrollController,
-                                  thumbVisibility: true,
-                                  child: SingleChildScrollView(
-                                    controller: _scrollController,
-                                    scrollDirection: Axis.horizontal,
-                                    child: _buildScrollableColumns(currentApplications),
-                                  ),
-                                ),
-                              ),
-                            ],
                           ),
+                        ),
+                      ),
+                    ),
 
                     // Pagination Footer
                     if (!_isLoading && _applications.isNotEmpty)
@@ -668,133 +697,105 @@ class _ReceivedApplicationsContentState extends State<ReceivedApplicationsConten
     );
   }
 
-  Widget _buildFixedColumns(List<dynamic> currentApplications) {
-    return SizedBox(
-      width: 376, // 60 + 160 + 140 + 16(padding)
-      child: Column(
-        children: [
-          // Fixed Header
-          Container(
-            height: 50,
-            decoration: const BoxDecoration(
-              color: const Color(0xFF2D1B18),
-              borderRadius: BorderRadius.only(topLeft: Radius.circular(12)),
-            ),
-            padding: const EdgeInsets.only(left: 16),
-            child: Row(
-              children: [
-                SizedBox(width: 60, child: Align(alignment: Alignment.centerLeft, child: Text(AppLocalizations.of(context)?.sNo?.toUpperCase() ?? 'S.NO', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)))),
-                SizedBox(width: 160, child: Align(alignment: Alignment.centerLeft, child: Text(AppLocalizations.of(context)?.memberNameHeader ?? 'MEMBER NAME', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)))),
-                SizedBox(width: 140, child: Align(alignment: Alignment.centerLeft, child: Text(AppLocalizations.of(context)?.mobileNumber?.toUpperCase() ?? 'MOBILE NUMBER', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)))),
-              ],
-            ),
-          ),
-          // Fixed Rows
-          if (_applications.isEmpty)
-            Container(height: 120)
-          else
-            ...currentApplications.asMap().entries.map((entry) {
-              int index = entry.key;
-              dynamic app = entry.value;
-              int sno = ((_currentPage - 1) * _itemsPerPage) + index + 1;
-              return InkWell(
-                onTap: () => _showApplicationDetails(app),
-                child: Container(
-                  height: 60,
-                  decoration: const BoxDecoration(
-                    border: Border(
-                      bottom: BorderSide(color: Colors.black12),
-                    ),
-                  ),
-                  padding: const EdgeInsets.only(left: 16),
-                  child: Row(
-                    children: [
-                      SizedBox(width: 60, child: Align(alignment: Alignment.centerLeft, child: Text(sno.toString(), style: const TextStyle(color: Colors.black87)))),
-                      SizedBox(width: 160, child: Align(alignment: Alignment.centerLeft, child: Text(app['Name']?.toString() ?? '', maxLines: 1, style: const TextStyle(color: const Color(0xFF5D1712), fontWeight: FontWeight.w500, overflow: TextOverflow.ellipsis)))),
-                      SizedBox(width: 140, child: Align(alignment: Alignment.centerLeft, child: Text(app['Phonenumber']?.toString() ?? '', style: const TextStyle(color: Colors.black54)))),
-                    ],
-                  ),
-                ),
-              );
-            }).toList(),
-        ],
+  Widget _buildHeaderCell(String label, double width, {bool hasDivider = true, Alignment alignment = Alignment.centerLeft}) {
+    return Container(
+      width: width,
+      height: double.infinity,
+      decoration: BoxDecoration(
+        border: hasDivider ? const Border(right: BorderSide(color: Colors.white24, width: 1)) : null,
+      ),
+      alignment: alignment,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      child: Text(
+        label,
+        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
       ),
     );
   }
 
-  Widget _buildScrollableColumns(List<dynamic> currentApplications) {
-    return SizedBox(
-      width: 786, // 150 + 150 + 160 + 150 + 160 + 16(padding)
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Scrollable Header
-          Container(
-            height: 50,
-            decoration: const BoxDecoration(
-              color: const Color(0xFF2D1B18),
-              borderRadius: BorderRadius.only(topRight: Radius.circular(12)),
+  Widget _buildDataCell(double width, {Widget? child, String? text, TextStyle? style, bool hasDivider = true, Alignment alignment = Alignment.centerLeft}) {
+    return Container(
+      width: width,
+      height: double.infinity,
+      decoration: BoxDecoration(
+        border: hasDivider ? Border(right: BorderSide(color: Colors.grey.shade200, width: 1)) : null,
+      ),
+      alignment: alignment,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      child: child ?? Text(
+        text ?? '',
+        style: style ?? const TextStyle(color: Colors.black87, fontSize: 13),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+    );
+  }
+
+  Widget _buildApplicationRow(int index, dynamic app, int startIndex) {
+    int sno = startIndex + index + 1;
+    return InkWell(
+      onTap: () => _showApplicationDetails(app),
+      child: Container(
+        height: 56,
+        color: index % 2 == 0 ? Colors.white : const Color(0xFFF9FAFB),
+        child: Row(
+          children: [
+            _buildDataCell(60, text: sno.toString(), alignment: Alignment.center),
+            _buildDataCell(
+              170,
+              text: app['Name']?.toString() ?? '',
+              style: const TextStyle(color: Color(0xFF5D1712), fontWeight: FontWeight.w600, fontSize: 13),
             ),
-            padding: const EdgeInsets.only(right: 16),
-            child: Row(
-              children: [
-                SizedBox(width: 150, child: Align(alignment: Alignment.centerLeft, child: Text(AppLocalizations.of(context)?.districtHeader ?? 'DISTRICT', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)))),
-                SizedBox(width: 150, child: Align(alignment: Alignment.centerLeft, child: Text(AppLocalizations.of(context)?.talukHeader ?? 'TALUK', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)))),
-                SizedBox(width: 160, child: Align(alignment: Alignment.centerLeft, child: Text(AppLocalizations.of(context)?.panchayatHeader ?? 'PANCHAYAT', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)))),
-                SizedBox(width: 150, child: Align(alignment: Alignment.centerLeft, child: Text(AppLocalizations.of(context)?.villageUpperHeader ?? 'VILLAGE', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)))),
-                SizedBox(width: 160, child: Align(alignment: Alignment.centerLeft, child: Text(AppLocalizations.of(context)?.actionHeader?.toUpperCase() ?? 'ACTIONS', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)))),
-              ],
+            _buildDataCell(
+              140,
+              text: app['Phonenumber']?.toString() ?? '',
+              style: const TextStyle(color: Colors.black54, fontSize: 13),
             ),
-          ),
-          // Scrollable Rows
-          if (_applications.isEmpty)
-            Container(
-              height: 120,
-              width: 786,
-              child: Center(
-                child: Text(
-                  AppLocalizations.of(context)?.noPendingApplications ?? 'No pending applications found.',
-                  style: const TextStyle(color: Colors.black45, fontSize: 15),
-                ),
+            _buildDataCell(
+              140,
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: _buildBadge(app['District']?.toString() ?? '', Colors.grey.shade200, textColor: Colors.black87),
               ),
-            )
-          else
-            ...currentApplications.map((app) {
-              return InkWell(
-                onTap: () => _showApplicationDetails(app),
-                child: Container(
-                  height: 60,
-                  decoration: const BoxDecoration(
-                    border: Border(bottom: BorderSide(color: Colors.black12)),
+            ),
+            _buildDataCell(
+              140,
+              text: app['Taluk']?.toString() ?? '',
+              style: const TextStyle(color: Colors.black54, fontSize: 13),
+            ),
+            _buildDataCell(
+              150,
+              text: app['Panchayat']?.toString() ?? '',
+              style: const TextStyle(color: Colors.black54, fontSize: 13),
+            ),
+            _buildDataCell(
+              140,
+              text: app['Village']?.toString() ?? '',
+              style: const TextStyle(color: Colors.black54, fontSize: 13),
+            ),
+            _buildDataCell(
+              170,
+              hasDivider: false,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  GestureDetector(
+                    onTap: () => _confirmStatusUpdate(app['Id'], 'Verified'),
+                    child: _buildBadge('Approve', Colors.green),
                   ),
-                  padding: const EdgeInsets.only(right: 16),
-                  child: Row(
-                    children: [
-                      SizedBox(width: 150, child: Align(alignment: Alignment.centerLeft, child: _buildBadge(app['District']?.toString() ?? '', Colors.grey.shade200, textColor: Colors.black87))),
-                      SizedBox(width: 150, child: Align(alignment: Alignment.centerLeft, child: Text(app['Taluk']?.toString() ?? '', maxLines: 1, style: const TextStyle(color: Colors.black54, overflow: TextOverflow.ellipsis)))),
-                      SizedBox(width: 160, child: Align(alignment: Alignment.centerLeft, child: Text(app['Panchayat']?.toString() ?? '', maxLines: 1, style: const TextStyle(color: Colors.black54, overflow: TextOverflow.ellipsis)))),
-                      SizedBox(width: 150, child: Align(alignment: Alignment.centerLeft, child: Text(app['Village']?.toString() ?? '', maxLines: 1, style: const TextStyle(color: Colors.black54, overflow: TextOverflow.ellipsis)))),
-                      SizedBox(width: 160, child: Row(
-                        mainAxisAlignment: MainAxisAlignment.start,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          GestureDetector(
-                            onTap: () => _confirmStatusUpdate(app['Id'], 'Verified'),
-                            child: _buildBadge('Approve', Colors.green)
-                          ),
-                          const SizedBox(width: 8),
-                          GestureDetector(
-                            onTap: () => _confirmStatusUpdate(app['Id'], 'Rejected'),
-                            child: _buildBadge('Reject', Colors.red)
-                          ),
-                        ],
-                      )),
-                    ],
+                  const SizedBox(width: 8),
+                  GestureDetector(
+                    onTap: () => _confirmStatusUpdate(app['Id'], 'Rejected'),
+                    child: _buildBadge('Reject', Colors.red),
                   ),
-                ),
-              );
-            }).toList(),
-        ],
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

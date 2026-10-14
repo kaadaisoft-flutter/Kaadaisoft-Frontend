@@ -9,8 +9,11 @@ class ApiConfig {
     if (_envBaseUrl.isNotEmpty) {
       return _envBaseUrl;
     }
+    if (kReleaseMode) {
+      return 'https://api.kaadaikulam.org';
+    }
     if (kIsWeb) {
-      // If we are running on a local web server, use localhost
+      // If we are running on a local web server in debug mode, use localhost
       if (Uri.base.origin.contains('localhost') || Uri.base.origin.contains('127.0.0.1')) {
         return 'http://localhost:8000';
       }
@@ -58,4 +61,12 @@ class ApiConfig {
   static String get sendWhatsappInvitations => '$baseUrl/api/send-whatsapp-invitations';
   static String sendIndividualInvite(String id) => '$baseUrl/api/send-individual-invite/$id';
   static String get toggleMemberDisabledStatus => '$baseUrl/api/toggle-member-disabled-status';
+
+  // Attendance Scanning Module
+  static String checkScannerPermission(dynamic userId) => '$baseUrl/api/attendance/check-permission/$userId';
+  static String get toggleScannerPermission => '$baseUrl/api/attendance/toggle-permission';
+  static String get attendanceScanners => '$baseUrl/api/attendance/scanners';
+  static String get attendanceScan => '$baseUrl/api/attendance/scan';
+  static String attendanceEvent(dynamic eventId) => '$baseUrl/api/attendance/event/$eventId';
+  static String deleteAttendance(dynamic attendanceId) => '$baseUrl/api/attendance/$attendanceId';
 }

@@ -104,15 +104,24 @@ class _UpdateRequestsContentState extends State<UpdateRequestsContent> {
               borderRadius: BorderRadius.circular(8),
               child: Column(
                 children: [
-                  Scrollbar(
+                  RawScrollbar(
                     controller: _horizontalScrollController,
                     thumbVisibility: true,
+                    thickness: 5,
+                    radius: const Radius.circular(8),
+                    thumbColor: const Color(0xFF5D1712).withOpacity(0.4),
+                    trackVisibility: true,
+                    trackColor: const Color(0x0F5D1712),
+                    trackRadius: const Radius.circular(8),
+                    padding: const EdgeInsets.only(bottom: 2),
                     child: SingleChildScrollView(
                       controller: _horizontalScrollController,
                       scrollDirection: Axis.horizontal,
                       child: SizedBox(
                         width: 1260, // 1180 + 80 for new action buttons
-                        child: Column(
+                        child: Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: Column(
                           children: [
                             Container(
                               color: const Color(0xFF2D1B18),
@@ -141,17 +150,16 @@ class _UpdateRequestsContentState extends State<UpdateRequestsContent> {
                                           padding: const EdgeInsets.all(48.0),
                                           child: Center(child: Text(AppLocalizations.of(context)?.noPendingUpdateRequests ?? 'No pending update requests.', style: const TextStyle(color: Colors.black54))),
                                         )
-                                    : ListView.separated(
-                                        shrinkWrap: true,
-                                        physics: const NeverScrollableScrollPhysics(),
-                                        itemCount: currentPageData.length,
-                                        separatorBuilder: (_, __) => const Divider(height: 1),
-                                        itemBuilder: (context, index) {
-                                          final req = currentPageData[index];
-                                          return _buildFullDataRow(index, req, startIndex);
-                                        },
+                                    : Column(
+                                        children: [
+                                          for (int index = 0; index < currentPageData.length; index++) ...[
+                                            if (index > 0) const Divider(height: 1, thickness: 1, color: Color(0xFFEEEEEE)),
+                                            _buildFullDataRow(index, currentPageData[index], startIndex),
+                                          ],
+                                        ],
                                       ),
                           ],
+                        ),
                         ),
                       ),
                     ),

@@ -86,6 +86,16 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
   String? _selectedCurrCity;
   String _selectedAliveStatus = 'Alive';
   String? _selectedHusbandKulam;
+  String? _selectedKulam;
+
+  bool get _isKulamSelectable {
+    final r = _selectedRelationship?.trim().toLowerCase();
+    return r == 'wife' ||
+           r == 'son-in-law' ||
+           r == 'son in law' ||
+           r == 'daughter-in-law' ||
+           r == 'daughter in law';
+  }
 
   XFile? _memberImage;
   XFile? _communityCert;
@@ -237,6 +247,9 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
     if (['Wife', 'Husband', 'Father', 'Mother', 'Grand Father', 'Grand Mother', 'Daughter-in-law', 'Son-in-law'].contains(_selectedRelationship)) {
       _selectedMarried = 'Yes';
     }
+
+    final rawKulam = (d['Kulam']?.toString() ?? '').trim();
+    _selectedKulam = _kulams.contains(rawKulam) ? rawKulam : (_isKulamSelectable ? null : 'Poondurai Kaadai');
     
     _selectedEducation = d['Education'];
     _selectedProfession = d['Profession'];
@@ -514,6 +527,7 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
                       _buildResponsiveRow(isMobile, [
                         _buildDropdownField('Relationship *', _relationships, _selectedRelationship, (v) {
                           setState(() {
+                            final oldSelectable = _isKulamSelectable;
                             _selectedRelationship = v;
                             if (['Wife', 'Daughter', 'Mother', 'Grand Mother', 'Daughter-in-law', 'Sister'].contains(v)) {
                               _selectedGender = 'Female';
@@ -522,6 +536,14 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
                             }
                             if (v == 'Wife' || v == 'Husband' || v == 'Father' || v == 'Mother' || v == 'Grand Father' || v == 'Grand Mother' || v == 'Daughter-in-law' || v == 'Son-in-law') {
                               _selectedMarried = 'Yes';
+                            }
+
+                            if (_isKulamSelectable) {
+                              if (!oldSelectable || _selectedKulam == 'Poondurai Kaadai') {
+                                _selectedKulam = null;
+                              }
+                            } else {
+                              _selectedKulam = 'Poondurai Kaadai';
                             }
                           });
                         }),
@@ -551,7 +573,9 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
                         _buildInputField('Thottam', _thottamController, maxLength: 100),
                       ]),
                       _buildResponsiveRow(isMobile, [
-                        _buildInputField('Kulam *', TextEditingController(text: 'Poondurai Kaadai'), readOnly: true),
+                        _isKulamSelectable
+                            ? _buildDropdownField('Kulam *', _kulams, _selectedKulam, (v) => setState(() => _selectedKulam = v))
+                            : _buildInputField('Kulam *', TextEditingController(text: 'Poondurai Kaadai'), readOnly: true),
                         if (!isMobile) const SizedBox(),
                         if (!isMobile) const SizedBox(),
                       ]),
@@ -1230,7 +1254,7 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
       request.fields['alive_status'] = _selectedAliveStatus ?? 'Alive';
       request.fields['valuvu'] = _valuvuController.text.trim();
       request.fields['thottam'] = _thottamController.text.trim();
-      request.fields['kulam'] = 'Poondurai Kaadai';
+      request.fields['kulam'] = _isKulamSelectable ? (_selectedKulam ?? 'Poondurai Kaadai') : 'Poondurai Kaadai';
       request.fields['exist_family_id'] = widget.memberData['Existfamilyid']?.toString() ?? '';
       request.fields['education'] = _selectedEducation ?? '';
       request.fields['profession'] = _selectedProfession ?? '';
