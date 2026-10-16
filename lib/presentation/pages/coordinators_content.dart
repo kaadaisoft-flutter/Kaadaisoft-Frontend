@@ -705,6 +705,7 @@ class _CoordinatorsContentState extends State<CoordinatorsContent> {
   }
 
   Widget _buildScrollableRow(int index, String numericId, String id, String district, String taluk, String panchayat, String village, String assignedVillage) {
+    final isTamil = Localizations.localeOf(context).languageCode == 'ta';
     final isHovered = _hoveredIndex == index;
     return MouseRegion(
       onEnter: (_) => setState(() => _hoveredIndex = index),
@@ -730,12 +731,12 @@ class _CoordinatorsContentState extends State<CoordinatorsContent> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   if (widget.role != 3) ...[
-                    _actionIcon(Icons.edit_outlined, const Color(0xFF5D1712), () => _showEditCoordinatorDialog(numericId), tooltip: 'Edit'),
+                    _actionIcon(Icons.edit_outlined, const Color(0xFF5D1712), () => _showEditCoordinatorDialog(numericId), tooltip: isTamil ? 'திருத்து' : 'Edit'),
                     const SizedBox(width: 8),
                   ],
-                  _actionIcon(Icons.assignment_ind_outlined, Colors.orange, () => _showCoordinatorResponsibilitiesDialog(numericId, id), tooltip: 'Responsibilities'),
+                  _actionIcon(Icons.assignment_ind_outlined, Colors.orange, () => _showCoordinatorResponsibilitiesDialog(numericId, id), tooltip: isTamil ? 'பொறுப்புகள்' : 'Responsibilities'),
                   const SizedBox(width: 8),
-                  _actionIcon(Icons.visibility_outlined, Colors.green, () => _showCoordinatorDetailsDialog(numericId, id), tooltip: 'View'),
+                  _actionIcon(Icons.visibility_outlined, Colors.green, () => _showCoordinatorDetailsDialog(numericId, id), tooltip: isTamil ? 'பார்' : 'View'),
                 ],
               )),
             ],

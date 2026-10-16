@@ -184,10 +184,11 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
   }
 
   Future<void> _checkExistence(String phone) async {
-    final familyId = widget.parentData['Familymembershipid'] ?? 
-                     widget.parentData['familymembershipid'] ?? 
-                     widget.parentData['Existfamilyid'] ?? 
-                     widget.parentData['existfamilyid'] ?? '';
+    final existId = widget.parentData['Existfamilyid'] ?? widget.parentData['existfamilyid'];
+    final fmId = widget.parentData['Familymembershipid'] ?? widget.parentData['familymembershipid'];
+    final familyId = (existId != null && existId.toString().trim().isNotEmpty)
+        ? existId.toString().trim()
+        : (fmId?.toString().trim() ?? '');
 
     try {
       final response = await http.post(
@@ -280,6 +281,30 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
       } catch (_) {}
     }
     setState(() => _selectedMarried = marriedVal);
+  }
+
+  void _checkChildAgeValidation() {
+    if ((_selectedRelationship == 'Son' || _selectedRelationship == 'Daughter') && _dobController.text.isNotEmpty) {
+      try {
+        DateTime? dob;
+        final parts = _dobController.text.split('-');
+        if (parts.length == 3) {
+          if (parts[0].length == 4) {
+            dob = DateTime.parse(_dobController.text);
+          } else if (parts[2].length == 4) {
+            dob = DateTime.parse("${parts[2]}-${parts[1]}-${parts[0]}");
+          }
+        }
+        if (dob != null) {
+          final now = DateTime.now();
+          final threeMonthsAgo = DateTime(now.year, now.month - 3, now.day);
+          if (dob.isAfter(threeMonthsAgo)) {
+            showStatusDialog(context, title: 'Validation Error', message: 'A Son or Daughter must be at least 3 months old to be added.', type: DialogType.error);
+            setState(() => _dobController.clear());
+          }
+        }
+      } catch (_) {}
+    }
   }
 
   void _updateCities(String countryName, String stateName) {
@@ -527,6 +552,7 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
                                   _selectedKulam = 'Poondurai Kaadai';
                                 }
                               });
+                              _checkChildAgeValidation();
                             }
                           ),
                           _buildInputField('Name *', _nameController, isMobile, maxLength: 254),
@@ -903,7 +929,10 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
             final picked = await showDatePicker(context: context, initialDate: DateTime.now(), firstDate: DateTime(1900), lastDate: DateTime.now());
             if (picked != null) {
               setState(() => controller.text = "${picked.day.toString().padLeft(2, '0')}-${picked.month.toString().padLeft(2, '0')}-${picked.year}");
-              if (controller == _dobController && _selectedMarried == 'Yes') _checkMarriedAgeValidation('Yes');
+              if (controller == _dobController) {
+                if (_selectedMarried == 'Yes') _checkMarriedAgeValidation('Yes');
+                _checkChildAgeValidation();
+              }
             }
           },
           decoration: InputDecoration(
@@ -1290,7 +1319,11 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
       request.fields['education'] = _selectedEducation == 'Others' ? _educationController.text : (_selectedEducation ?? '');
       request.fields['profession'] = _selectedProfession == 'Others' ? _professionController.text : (_selectedProfession ?? '');
       request.fields['relationship'] = _selectedRelationship == 'Other' ? _otherRelationshipController.text : (_selectedRelationship ?? '');
-      request.fields['family_id'] = widget.parentData['Familymembershipid'] ?? '';
+      final existId = widget.parentData['Existfamilyid'] ?? widget.parentData['existfamilyid'];
+      final fmId = widget.parentData['Familymembershipid'] ?? widget.parentData['familymembershipid'];
+      request.fields['family_id'] = (existId != null && existId.toString().trim().isNotEmpty)
+          ? existId.toString().trim()
+          : (fmId?.toString().trim() ?? '');
       
       if (_selectedRelationship == 'Daughter' && _selectedMarried == 'Yes') {
         request.fields['husband_name'] = _husbandNameController.text;

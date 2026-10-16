@@ -164,7 +164,7 @@ class _IdCardBenefitsContentState extends State<IdCardBenefitsContent> {
         'desc': 'Directs contributions and volunteer efforts to community-driven pond renovations and water body revival.',
       },
       'ta': {
-        'title': 'நீர்வழி தடம் & குளம் சீரமைப்பு',
+        'title': 'நீர்வழித் தடம் & குளம் சீரமைப்பு',
         'desc': 'சமூக அளவிலான குளம் சீரமைப்பு மற்றும் நீர்நிலை மீட்புப் பணிகளுக்கு பங்களிப்புகளையும் தன்னார்வ முயற்சிகளையும் வழிநடத்துகிறது.',
       }
     }
@@ -210,7 +210,7 @@ class _IdCardBenefitsContentState extends State<IdCardBenefitsContent> {
                                 const SizedBox(width: 12),
                                 Flexible(
                                   child: Text(
-                                    _isTamil ? 'பிரத்தியேக சலுகைகள்' : 'EXCLUSIVE PRIVILEGES',
+                                    _isTamil ? 'சிறப்புச் சலுகைகள்' : 'EXCLUSIVE PRIVILEGES',
                                     style: const TextStyle(
                                       color: const Color(0xFFC49A3C),
                                       fontWeight: FontWeight.bold,
@@ -245,7 +245,7 @@ class _IdCardBenefitsContentState extends State<IdCardBenefitsContent> {
                                 launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
                               },
                               icon: const Icon(Icons.file_download_outlined, size: 18),
-                              label: Text(_isTamil ? 'அடையாள அட்டையை பதிவிறக்க' : 'Download ID Card', style: const TextStyle(fontWeight: FontWeight.bold)),
+                              label: Text(_isTamil ? 'அடையாள அட்டையைப் பதிவிறக்க' : 'Download ID Card', style: const TextStyle(fontWeight: FontWeight.bold)),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFF5D1712),
                                 foregroundColor: Colors.white,
@@ -288,7 +288,7 @@ class _IdCardBenefitsContentState extends State<IdCardBenefitsContent> {
                               const SizedBox(width: 12),
                               Flexible(
                                 child: Text(
-                                  _isTamil ? 'பிரத்தியேக சலுகைகள்' : 'EXCLUSIVE PRIVILEGES',
+                                  _isTamil ? 'சிறப்புச் சலுகைகள்' : 'EXCLUSIVE PRIVILEGES',
                                   style: const TextStyle(
                                     color: const Color(0xFFC49A3C),
                                     fontWeight: FontWeight.bold,
@@ -322,7 +322,7 @@ class _IdCardBenefitsContentState extends State<IdCardBenefitsContent> {
                                 launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
                               },
                               icon: const Icon(Icons.file_download_outlined, size: 18),
-                              label: Text(_isTamil ? 'அடையாள அட்டையை பதிவிறக்க' : 'Download ID Card', style: const TextStyle(fontWeight: FontWeight.bold)),
+                              label: Text(_isTamil ? 'அடையாள அட்டையைப் பதிவிறக்க' : 'Download ID Card', style: const TextStyle(fontWeight: FontWeight.bold)),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFF5D1712),
                                 foregroundColor: Colors.white,
@@ -364,8 +364,8 @@ class _IdCardBenefitsContentState extends State<IdCardBenefitsContent> {
                     children: [
                       Text(
                         _isTamil 
-                          ? 'பூந்துறை காடை அடையாள அட்டை என்பது வெறும் அடையாளம் மட்டுமல்ல; இது கூட்டு பாதுகாப்பு, சமூக செழிப்பு மற்றும் பண்பாட்டு பாதுகாப்பிற்கான ஒரு நுழைவாயிலாகும். நமது உறுப்பினர்களை ஆதரிப்பதற்காக வடிவமைக்கப்பட்ட பன்னிரண்டு முக்கிய நன்மைகளை இங்கே ஆராயுங்கள்.' 
-                          : 'The Poondurai Kaadai ID Card is more than an identity; it is a gateway to collective security, community prosperity, and cultural preservation. Explore the twelve core benefits designed to support and elevate our members.',
+                          ? 'பூந்துறை காடைகுல அடையாள அட்டை என்பது வெறும் அடையாளம் மட்டுமல்ல; இது கூட்டுப் பாதுகாப்பு, சமூகச் செழிப்பு மற்றும் பண்பாட்டுப் பாதுகாப்பிற்கான ஒரு நுழைவாயிலாகும். நமது உறுப்பினர்களை ஆதரிப்பதற்காக வடிவமைக்கப்பட்ட பதினொரு முக்கிய நன்மைகளை இங்கே ஆராயுங்கள்.' 
+                          : 'The Poondurai Kaadai ID Card is more than an identity; it is a gateway to collective security, community prosperity, and cultural preservation. Explore the eleven core benefits designed to support and elevate our members.',
                         style: const TextStyle(
                           fontSize: 18,
                           height: 1.6,

@@ -139,16 +139,17 @@ class _AttendanceContentState extends State<AttendanceContent> {
       return;
     }
 
+    final isTa = Localizations.localeOf(context).languageCode == 'ta';
     final textController = TextEditingController();
     await showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.edit_note, color: Color(0xFFC49A3C)),
-            SizedBox(width: 8),
-            Text('Manual Attendance Check-In', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const Icon(Icons.edit_note, color: Color(0xFFC49A3C)),
+            const SizedBox(width: 8),
+            Text(isTa ? 'கைமுறை வருகைப் பதிவு' : 'Manual Attendance Check-In', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           ],
         ),
         content: Column(
@@ -156,18 +157,18 @@ class _AttendanceContentState extends State<AttendanceContent> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Event: ${_selectedEvent['EventName']}',
+              '${isTa ? 'விசேஷம்: ' : 'Event: '}${_selectedEvent['EventName']}',
               style: const TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF2D1B18)),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: textController,
               autofocus: true,
-              decoration: const InputDecoration(
-                labelText: 'Member ID / Family ID / Phone',
-                hintText: 'e.g., NMK00023 or 9791265880',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.badge_outlined),
+              decoration: InputDecoration(
+                labelText: isTa ? 'உறுப்பினர் எண் / குடும்ப எண் / போன்' : 'Member ID / Family ID / Phone',
+                hintText: isTa ? 'எ.கா., NMK00023 அல்லது 9791265880' : 'e.g., NMK00023 or 9791265880',
+                border: const OutlineInputBorder(),
+                prefixIcon: const Icon(Icons.badge_outlined),
               ),
             ),
           ],
@@ -175,7 +176,7 @@ class _AttendanceContentState extends State<AttendanceContent> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
+            child: Text(isTa ? 'ரத்து செய்' : 'Cancel'),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -189,7 +190,7 @@ class _AttendanceContentState extends State<AttendanceContent> {
                 _processAttendanceScan(id);
               }
             },
-            child: const Text('Submit Check-In'),
+            child: Text(isTa ? 'பதிவு செய்' : 'Submit Check-In'),
           ),
         ],
       ),
@@ -313,7 +314,9 @@ class _AttendanceContentState extends State<AttendanceContent> {
               ),
               const SizedBox(height: 14),
               Text(
-                isAlreadyMarked ? 'ALREADY CHECKED IN' : 'ATTENDANCE RECORDED',
+                isAlreadyMarked 
+                    ? (Localizations.localeOf(context).languageCode == 'ta' ? 'ஏற்கனவே பதிவு செய்யப்பட்டது' : 'ALREADY CHECKED IN') 
+                    : (Localizations.localeOf(context).languageCode == 'ta' ? 'வருகை பதிவு செய்யப்பட்டது' : 'ATTENDANCE RECORDED'),
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -412,7 +415,7 @@ class _AttendanceContentState extends State<AttendanceContent> {
                       ),
                       onPressed: () => Navigator.pop(ctx),
                       icon: const Icon(Icons.done),
-                      label: const Text('Close'),
+                      label: Text(Localizations.localeOf(context).languageCode == 'ta' ? 'மூடு' : 'Close'),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -433,7 +436,11 @@ class _AttendanceContentState extends State<AttendanceContent> {
                         }
                       },
                       icon: Icon(kIsWeb ? Icons.keyboard : Icons.qr_code_scanner),
-                      label: Text(kIsWeb ? 'Next Entry' : 'Scan Next'),
+                      label: Text(
+                        Localizations.localeOf(context).languageCode == 'ta'
+                            ? (kIsWeb ? 'அடுத்த பதிவு' : 'அடுத்ததை ஸ்கேன் செய்')
+                            : (kIsWeb ? 'Next Entry' : 'Scan Next'),
+                      ),
                     ),
                   ),
                 ],
@@ -456,17 +463,18 @@ class _AttendanceContentState extends State<AttendanceContent> {
       return;
     }
 
+    final isTa = Localizations.localeOf(context).languageCode == 'ta';
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Remove Check-In?'),
-        content: const Text('Are you sure you want to remove this attendance record?'),
+        title: Text(isTa ? 'வருகைப் பதிவை நீக்கவா?' : 'Remove Check-In?'),
+        content: Text(isTa ? 'இந்த வருகைப் பதிவை நிச்சயமாக நீக்க விரும்புகிறீர்களா?' : 'Are you sure you want to remove this attendance record?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(isTa ? 'ரத்து செய்' : 'Cancel')),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Remove'),
+            child: Text(isTa ? 'நீக்கு' : 'Remove'),
           ),
         ],
       ),
@@ -523,8 +531,9 @@ class _AttendanceContentState extends State<AttendanceContent> {
 
   @override
   Widget build(BuildContext context) {
+    final isTa = Localizations.localeOf(context).languageCode == 'ta';
     if (_isLoading) {
-      return const LoadingSpinner(message: 'Loading attendance module...');
+      return LoadingSpinner(message: isTa ? 'வருகைப் பதிவு ஏற்றப்படுகிறது...' : 'Loading attendance module...');
     }
 
     final isMobile = MediaQuery.of(context).size.width < 700;
@@ -535,45 +544,98 @@ class _AttendanceContentState extends State<AttendanceContent> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Header Bar
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    kIsWeb ? 'Event Attendance' : 'Event Attendance Scanner',
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF2D1B18),
-                      letterSpacing: -0.5,
-                    ),
+          if (isMobile)
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  isTa 
+                      ? (kIsWeb ? 'நிகழ்வு வருகைப் பதிவு' : 'வருகைப் பதிவு ஸ்கேனர்')
+                      : (kIsWeb ? 'Event Attendance' : 'Event Attendance Scanner'),
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF2D1B18),
+                    letterSpacing: -0.5,
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    kIsWeb
-                        ? 'View attendance records, manage scanner access, and record manual check-ins'
-                        : 'Scan member ID card QR codes to record event presence',
-                    style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  kIsWeb
+                      ? (isTa 
+                          ? 'வருகைப் பதிவு விவரங்களைக் காணவும், ஸ்கேனர் அனுமதிகளை நிர்வகிக்கவும், பதிவுகளை உள்ளிடவும்' 
+                          : 'View attendance records, manage scanner access, and record manual check-ins')
+                      : (isTa 
+                          ? 'உறுப்பினரின் அடையாள அட்டை QR குறியீட்டை ஸ்கேன் செய்து வருகையைப் பதிவு செய்யவும்' 
+                          : 'Scan member ID card QR codes to record event presence'),
+                  style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+                ),
+                if (widget.role == 1) ...[
+                  const SizedBox(height: 12),
+                  ElevatedButton.icon(
+                    onPressed: _showManageScannersDialog,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF2D1B18),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    icon: const Icon(Icons.admin_panel_settings, size: 18),
+                    label: Text(isTa ? 'ஸ்கேனர் அனுமதிகள்' : 'Manage Scanner Access'),
                   ),
                 ],
-              ),
-              if (widget.role == 1)
-                ElevatedButton.icon(
-                  onPressed: _showManageScannersDialog,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF2D1B18),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ],
+            )
+          else
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        isTa 
+                            ? (kIsWeb ? 'நிகழ்வு வருகைப் பதிவு' : 'வருகைப் பதிவு ஸ்கேனர்')
+                            : (kIsWeb ? 'Event Attendance' : 'Event Attendance Scanner'),
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF2D1B18),
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        kIsWeb
+                            ? (isTa 
+                                ? 'வருகைப் பதிவு விவரங்களைக் காணவும், ஸ்கேனர் அனுமதிகளை நிர்வகிக்கவும், பதிவுகளை உள்ளிடவும்' 
+                                : 'View attendance records, manage scanner access, and record manual check-ins')
+                            : (isTa 
+                                ? 'உறுப்பினரின் அடையாள அட்டை QR குறியீட்டை ஸ்கேன் செய்து வருகையைப் பதிவு செய்யவும்' 
+                                : 'Scan member ID card QR codes to record event presence'),
+                        style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+                      ),
+                    ],
                   ),
-                  icon: const Icon(Icons.admin_panel_settings, size: 18),
-                  label: const Text('Manage Scanner Access'),
                 ),
-            ],
-          ),
+                if (widget.role == 1) ...[
+                  const SizedBox(width: 16),
+                  ElevatedButton.icon(
+                    onPressed: _showManageScannersDialog,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF2D1B18),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    icon: const Icon(Icons.admin_panel_settings, size: 18),
+                    label: Text(isTa ? 'ஸ்கேனர் அனுமதிகள்' : 'Manage Scanner Access'),
+                  ),
+                ],
+              ],
+            ),
 
           const SizedBox(height: 20),
 
@@ -595,12 +657,16 @@ class _AttendanceContentState extends State<AttendanceContent> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                Wrap(
+                  alignment: WrapAlignment.spaceBetween,
+                  runAlignment: WrapAlignment.center,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 12,
+                  runSpacing: 8,
                   children: [
-                    const Text(
-                      'Select Event for Attendance',
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF2D1B18)),
+                    Text(
+                      isTa ? 'வருகைப் பதிவுக்கான விசேஷத்தைத் தேர்ந்தெடுக்கவும்' : 'Select Event for Attendance',
+                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF2D1B18)),
                     ),
                     if (_selectedEvent != null)
                       Container(
@@ -616,7 +682,7 @@ class _AttendanceContentState extends State<AttendanceContent> {
                             const Icon(Icons.how_to_reg, size: 14, color: Colors.green),
                             const SizedBox(width: 4),
                             Text(
-                              '${_attendees.length} Members Checked In',
+                              isTa ? '${_attendees.length} உறுப்பினர்கள் பதிவு செய்துள்ளனர்' : '${_attendees.length} Members Checked In',
                               style: TextStyle(color: Colors.green.shade800, fontSize: 12, fontWeight: FontWeight.bold),
                             ),
                           ],
@@ -626,7 +692,7 @@ class _AttendanceContentState extends State<AttendanceContent> {
                 ),
                 const SizedBox(height: 12),
                 if (_events.isEmpty)
-                  const Text('No events found in system. Please create an event first.', style: TextStyle(color: Colors.red))
+                  Text(isTa ? 'விசேஷங்கள் எதுவும் இல்லை. முதலில் ஒரு விசேஷத்தை உருவாக்கவும்.' : 'No events found in system. Please create an event first.', style: const TextStyle(color: Colors.red))
                 else
                   DropdownButtonFormField<int>(
                     value: _selectedEvent?['Id'],
@@ -642,7 +708,7 @@ class _AttendanceContentState extends State<AttendanceContent> {
                       return DropdownMenuItem<int>(
                         value: ev['Id'],
                         child: Text(
-                          '${ev['EventName'] ?? 'Event'}$yrDisplay - Fee: ₹${ev['TaxAmount'] ?? '0'}',
+                          '${ev['EventName'] ?? (isTa ? 'விசேஷம்' : 'Event')}$yrDisplay - ${isTa ? 'கட்டணம்' : 'Fee'}: ₹${ev['TaxAmount'] ?? '0'}',
                           style: const TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF2D1B18)),
                         ),
                       );
@@ -674,9 +740,9 @@ class _AttendanceContentState extends State<AttendanceContent> {
                         ),
                         onPressed: _startQrScanner,
                         icon: const Icon(Icons.qr_code_scanner, size: 22),
-                        label: const Text(
-                          'SCAN MEMBER QR CODE',
-                          style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 0.5),
+                        label: Text(
+                          isTa ? 'உறுப்பினர் QR குறியீட்டை ஸ்கேன் செய்' : 'SCAN MEMBER QR CODE',
+                          style: const TextStyle(fontWeight: FontWeight.bold, letterSpacing: 0.5),
                         ),
                       ),
                     ElevatedButton.icon(
@@ -690,9 +756,9 @@ class _AttendanceContentState extends State<AttendanceContent> {
                       ),
                       onPressed: _showManualCheckInDialog,
                       icon: const Icon(Icons.keyboard, size: 20),
-                      label: const Text(
-                        'Manual ID Entry',
-                        style: TextStyle(fontWeight: FontWeight.bold),
+                      label: Text(
+                        isTa ? 'கைமுறை ஐடி பதிவு' : 'Manual ID Entry',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                     ),
                     if (kIsWeb)
@@ -703,14 +769,16 @@ class _AttendanceContentState extends State<AttendanceContent> {
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(color: const Color(0xFFE2E8F0)),
                         ),
-                        child: const Row(
+                        child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.phone_android, size: 18, color: Color(0xFFC49A3C)),
-                            SizedBox(width: 8),
+                            const Icon(Icons.phone_android, size: 18, color: Color(0xFFC49A3C)),
+                            const SizedBox(width: 8),
                             Text(
-                              'Camera QR Scanner is enabled exclusively on the Mobile APK',
-                              style: TextStyle(fontSize: 12, color: Colors.black87, fontWeight: FontWeight.w500),
+                              isTa 
+                                  ? 'கேமரா QR ஸ்கேனர் மொபைல் செயலியில் (Mobile APK) மட்டுமே செயல்படும்'
+                                  : 'Camera QR Scanner is enabled exclusively on the Mobile APK',
+                              style: const TextStyle(fontSize: 12, color: Colors.black87, fontWeight: FontWeight.w500),
                             ),
                           ],
                         ),
@@ -728,7 +796,7 @@ class _AttendanceContentState extends State<AttendanceContent> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Attendance Log (${_filteredAttendees.length})',
+                '${isTa ? 'வருகைப் பதிவு பட்டியல்' : 'Attendance Log'} (${_filteredAttendees.length})',
                 style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF2D1B18)),
               ),
               IconButton(
@@ -736,7 +804,7 @@ class _AttendanceContentState extends State<AttendanceContent> {
                 onPressed: () {
                   if (_selectedEvent != null) _fetchAttendees(_selectedEvent['Id']);
                 },
-                tooltip: 'Refresh list',
+                tooltip: isTa ? 'பட்டியலைப் புதுப்பி' : 'Refresh list',
               ),
             ],
           ),
@@ -746,7 +814,7 @@ class _AttendanceContentState extends State<AttendanceContent> {
           TextField(
             controller: _searchController,
             decoration: InputDecoration(
-              hintText: 'Search checked-in attendees by name, ID, phone, village...',
+              hintText: isTa ? 'பெயர், உறுப்பினர் எண், போன், கிராமம் மூலம் தேடுக...' : 'Search checked-in attendees by name, ID, phone, village...',
               prefixIcon: const Icon(Icons.search, color: Colors.grey),
               suffixIcon: _searchQuery.isNotEmpty
                   ? IconButton(
@@ -783,13 +851,21 @@ class _AttendanceContentState extends State<AttendanceContent> {
                 children: [
                   Icon(Icons.how_to_reg_outlined, size: 54, color: Colors.grey.shade400),
                   const SizedBox(height: 12),
-                  const Text('No attendance records yet', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black54)),
+                  Text(
+                    isTa ? 'வருகைப் பதிவுகள் எதுவும் இல்லை' : 'No attendance records yet', 
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black54),
+                  ),
                   const SizedBox(height: 4),
                   Text(
                     kIsWeb
-                        ? 'Click "Manual ID Entry" above to record attendance, or use the mobile app (APK) to scan QR codes.'
-                        : 'Click "SCAN MEMBER QR CODE" above to begin recording attendance.',
+                        ? (isTa 
+                            ? 'வருகையைப் பதிவு செய்ய மேலே உள்ள "கைமுறை ஐடி பதிவு" என்பதைக் கிளிக் செய்யவும், அல்லது QR குறியீட்டை ஸ்கேன் செய்ய மொபைல் செயலியைப் (APK) பயன்படுத்தவும்.' 
+                            : 'Click "Manual ID Entry" above to record attendance, or use the mobile app (APK) to scan QR codes.')
+                        : (isTa 
+                            ? 'வருகையைப் பதிவு செய்ய மேலே உள்ள "உறுப்பினர் QR குறியீட்டை ஸ்கேன் செய்" என்பதைக் கிளிக் செய்யவும்.' 
+                            : 'Click "SCAN MEMBER QR CODE" above to begin recording attendance.'),
                     style: const TextStyle(fontSize: 13, color: Colors.black38),
+                    textAlign: TextAlign.center,
                   ),
                 ],
               ),
@@ -883,13 +959,13 @@ class _AttendanceContentState extends State<AttendanceContent> {
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
-                              att['scanned_at_formatted'] ?? 'Recorded',
+                              att['scanned_at_formatted'] ?? (Localizations.localeOf(context).languageCode == 'ta' ? 'பதிவு செய்யப்பட்டது' : 'Recorded'),
                               style: TextStyle(color: Colors.green.shade800, fontSize: 11, fontWeight: FontWeight.w600),
                             ),
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'By: ${att['scanned_by_name'] ?? 'System'}',
+                            '${Localizations.localeOf(context).languageCode == 'ta' ? 'பதிவு செய்தவர்' : 'By'}: ${att['scanned_by_name'] ?? (Localizations.localeOf(context).languageCode == 'ta' ? 'அமைப்பு' : 'System')}',
                             style: const TextStyle(fontSize: 11, color: Colors.black38),
                           ),
                         ],
@@ -899,7 +975,7 @@ class _AttendanceContentState extends State<AttendanceContent> {
                         const SizedBox(width: 8),
                         IconButton(
                           icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
-                          tooltip: 'Remove attendance',
+                          tooltip: Localizations.localeOf(context).languageCode == 'ta' ? 'வருகைப் பதிவை நீக்கு' : 'Remove attendance',
                           onPressed: () {
                             final attId = att['Id'] ?? att['id'];
                             _deleteAttendance(attId);
@@ -1015,6 +1091,7 @@ class _ScannerPermissionDialogState extends State<_ScannerPermissionDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final isTa = Localizations.localeOf(context).languageCode == 'ta';
     // Only display approved members (Approvedstatus == 'Verified') and Admins/Coordinators
     final validUsers = _users.where((u) {
       final status = (u['Approvedstatus'] ?? '').toString();
@@ -1053,46 +1130,58 @@ class _ScannerPermissionDialogState extends State<_ScannerPermissionDialog> {
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Container(
-        width: 650,
-        height: 700,
+        constraints: const BoxConstraints(maxWidth: 650, maxHeight: 700),
         padding: const EdgeInsets.all(22),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Row(
-                  children: [
-                    const Icon(Icons.shield, color: Color(0xFFC49A3C), size: 24),
-                    const SizedBox(width: 8),
-                    const Text('Attendance Scanner Permissions', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFC49A3C).withOpacity(0.12),
-                        borderRadius: BorderRadius.circular(12),
+                const Icon(Icons.shield, color: Color(0xFFC49A3C), size: 24),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 8,
+                    runSpacing: 4,
+                    children: [
+                      Text(
+                        isTa ? 'வருகைப் பதிவு ஸ்கேனர் அனுமதிகள்' : 'Attendance Scanner Permissions',
+                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                       ),
-                      child: Text(
-                        '$authorizedCount Active Scanners',
-                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF8C6D23)),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFC49A3C).withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          isTa ? '$authorizedCount அனுமதிக்கப்பட்டவை' : '$authorizedCount Active',
+                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF8C6D23)),
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-                IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.pop(context),
+                  tooltip: isTa ? 'மூடு' : 'Close',
+                ),
               ],
             ),
             const SizedBox(height: 4),
-            const Text(
-              'Select coordinators or approved members who are authorized to access the Attendance Scanner module.',
-              style: TextStyle(fontSize: 13, color: Colors.black54),
+            Text(
+              isTa 
+                  ? 'வருகைப் பதிவு தொகுதியை அணுக அனுமதிக்கப்பட்ட நிர்வாகிகள், ஒருங்கிணைப்பாளர்கள் அல்லது உறுப்பினர்களைத் தேர்ந்தெடுக்கவும்.'
+                  : 'Select coordinators or approved members who are authorized to access the Attendance Scanner module.',
+              style: const TextStyle(fontSize: 13, color: Colors.black54),
             ),
             const SizedBox(height: 14),
             TextField(
               decoration: InputDecoration(
-                hintText: 'Search by name, phone, Family ID, or village...',
+                hintText: isTa ? 'பெயர், போன், குடும்ப எண் அல்லது கிராமம் மூலம் தேடுக...' : 'Search by name, phone, Family ID, or village...',
                 prefixIcon: const Icon(Icons.search),
                 contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
@@ -1105,7 +1194,7 @@ class _ScannerPermissionDialogState extends State<_ScannerPermissionDialog> {
               runSpacing: 8,
               children: [
                 ChoiceChip(
-                  label: Text('All (${validUsers.length})'),
+                  label: Text(isTa ? 'அனைத்தும் (${validUsers.length})' : 'All (${validUsers.length})'),
                   selected: _selectedFilter == 0,
                   onSelected: (val) => setState(() => _selectedFilter = 0),
                   selectedColor: const Color(0xFFC49A3C).withOpacity(0.2),
@@ -1115,7 +1204,7 @@ class _ScannerPermissionDialogState extends State<_ScannerPermissionDialog> {
                   ),
                 ),
                 ChoiceChip(
-                  label: Text('Authorized ($authorizedCount)'),
+                  label: Text(isTa ? 'அனுமதிக்கப்பட்டவை ($authorizedCount)' : 'Authorized ($authorizedCount)'),
                   selected: _selectedFilter == 1,
                   onSelected: (val) => setState(() => _selectedFilter = 1),
                   selectedColor: Colors.green.shade100,
@@ -1125,7 +1214,7 @@ class _ScannerPermissionDialogState extends State<_ScannerPermissionDialog> {
                   ),
                 ),
                 ChoiceChip(
-                  label: Text('Coordinators ($coordCount)'),
+                  label: Text(isTa ? 'ஒருங்கிணைப்பாளர்கள் ($coordCount)' : 'Coordinators ($coordCount)'),
                   selected: _selectedFilter == 2,
                   onSelected: (val) => setState(() => _selectedFilter = 2),
                   selectedColor: Colors.orange.shade100,
@@ -1135,7 +1224,7 @@ class _ScannerPermissionDialogState extends State<_ScannerPermissionDialog> {
                   ),
                 ),
                 ChoiceChip(
-                  label: Text('Approved Members ($memberCount)'),
+                  label: Text(isTa ? 'உறுப்பினர்கள் ($memberCount)' : 'Approved Members ($memberCount)'),
                   selected: _selectedFilter == 3,
                   onSelected: (val) => setState(() => _selectedFilter = 3),
                   selectedColor: Colors.blue.shade100,
@@ -1157,7 +1246,7 @@ class _ScannerPermissionDialogState extends State<_ScannerPermissionDialog> {
                             children: [
                               Icon(Icons.search_off, size: 48, color: Colors.grey.shade400),
                               const SizedBox(height: 8),
-                              const Text('No members found matching the criteria', style: TextStyle(color: Colors.grey)),
+                              Text(isTa ? 'நிபந்தனைகளுக்கு ஏற்ப உறுப்பினர்கள் யாரும் கிடைக்கவில்லை' : 'No members found matching the criteria', style: const TextStyle(color: Colors.grey)),
                             ],
                           ),
                         )
@@ -1219,7 +1308,7 @@ class _ScannerPermissionDialogState extends State<_ScannerPermissionDialog> {
                                             borderRadius: BorderRadius.circular(4),
                                             border: Border.all(color: Colors.red.shade300),
                                           ),
-                                          child: Text('Admin', style: TextStyle(color: Colors.red.shade900, fontSize: 10, fontWeight: FontWeight.bold)),
+                                          child: Text(isTa ? 'நிர்வாகி' : 'Admin', style: TextStyle(color: Colors.red.shade900, fontSize: 10, fontWeight: FontWeight.bold)),
                                         )
                                       else if (isCoord)
                                         Container(
@@ -1229,7 +1318,7 @@ class _ScannerPermissionDialogState extends State<_ScannerPermissionDialog> {
                                             borderRadius: BorderRadius.circular(4),
                                             border: Border.all(color: Colors.orange.shade300),
                                           ),
-                                          child: Text('Coordinator', style: TextStyle(color: Colors.orange.shade900, fontSize: 10, fontWeight: FontWeight.bold)),
+                                          child: Text(isTa ? 'ஒருங்கிணைப்பாளர்' : 'Coordinator', style: TextStyle(color: Colors.orange.shade900, fontSize: 10, fontWeight: FontWeight.bold)),
                                         ),
                                     ],
                                   ),
@@ -1241,11 +1330,11 @@ class _ScannerPermissionDialogState extends State<_ScannerPermissionDialog> {
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                   trailing: isAdmin
-                                      ? const Padding(
-                                          padding: EdgeInsets.only(right: 6),
+                                      ? Padding(
+                                          padding: const EdgeInsets.only(right: 6),
                                           child: Tooltip(
-                                            message: 'Admins always have scanning privileges',
-                                            child: Icon(Icons.check_circle, color: Colors.green),
+                                            message: isTa ? 'நிர்வாகிகளுக்கு எப்போதும் ஸ்கேனிங் அனுமதி உண்டு' : 'Admins always have scanning privileges',
+                                            child: const Icon(Icons.check_circle, color: Colors.green),
                                           ),
                                         )
                                       : Switch(

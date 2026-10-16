@@ -69,4 +69,9 @@ class ApiConfig {
   static String get attendanceScan => '$baseUrl/api/attendance/scan';
   static String attendanceEvent(dynamic eventId) => '$baseUrl/api/attendance/event/$eventId';
   static String deleteAttendance(dynamic attendanceId) => '$baseUrl/api/attendance/$attendanceId';
+
+  // Community Professionals (Doctors & Lawyers)
+  static String get professionals => '$baseUrl/api/professionals';
+  static String professional(dynamic id) => '$baseUrl/api/professionals/$id';
 }
+

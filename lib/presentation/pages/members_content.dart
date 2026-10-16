@@ -179,6 +179,7 @@ class _MembersContentState extends State<MembersContent> {
     }
 
     final isMobile = MediaQuery.of(context).size.width < 700;
+    final isTa = Localizations.localeOf(context).languageCode == 'ta';
     return SingleChildScrollView(
       padding: EdgeInsets.all(isMobile ? 8 : 16),
       child: Column(
@@ -284,8 +285,8 @@ class _MembersContentState extends State<MembersContent> {
                               _buildHeaderCell(AppLocalizations.of(context)?.talukHeader ?? 'TALUK', 110),
                               _buildHeaderCell(AppLocalizations.of(context)?.panchayatHeader ?? 'PANCHAYAT', 130),
                               _buildHeaderCell(AppLocalizations.of(context)?.villageUpperHeader ?? 'VILLAGE', 130),
-                              _buildHeaderCell('LAST LOGIN', 150),
-                              _buildHeaderCell('ACTIONS', 190),
+                              _buildHeaderCell(isTa ? 'கடைசி உள்நுழைவு' : 'LAST LOGIN', 150),
+                              _buildHeaderCell(isTa ? 'செயல்கள்' : 'ACTIONS', 190),
                             ],
                           ),
                         ),
@@ -317,7 +318,7 @@ class _MembersContentState extends State<MembersContent> {
                                         member['Id'].toString(),
                                         member['Name'] ?? '-',
                                         member['Familymembershipid'] ?? 'N/A',
-                                        member['last_login'] != null ? member['last_login'].toString().replaceAll('T', ' ').substring(0, 16) : 'Never',
+                                        member['last_login'] != null ? member['last_login'].toString().replaceAll('T', ' ').substring(0, 16) : (isTa ? 'உள்நுழையவில்லை' : 'Never'),
                                         isDisabled,
                                         member['Phonenumber']?.toString() ?? '-',
                                       );
@@ -426,7 +427,7 @@ class _MembersContentState extends State<MembersContent> {
                           _fetchMembers(resetPage: false);
                         },
                       ),
-                        Text('Showing page $_currentPage of $totalPages', style: const TextStyle(color: Colors.black45, fontSize: 12)),
+                        Text(isTa ? 'பக்கம் $_currentPage / $totalPages' : 'Showing page $_currentPage of $totalPages', style: const TextStyle(color: Colors.black45, fontSize: 12)),
                       ],
                     ),
                   ),
@@ -954,6 +955,7 @@ class _MembersContentState extends State<MembersContent> {
   }
 
   Widget _buildActionButtons(bool isMobile) {
+    final isTa = Localizations.localeOf(context).languageCode == 'ta';
     if (isMobile) {
       return Wrap(
         spacing: 8,
@@ -974,9 +976,9 @@ class _MembersContentState extends State<MembersContent> {
           if (widget.role == 1)
             _buildSolidButton(AppLocalizations.of(context)?.assignBtn ?? 'Assign', Icons.person_add_alt_1, const Color(0xFF5D1712), isMobile: true, onPressed: widget.onAssignPressed),
           if (widget.role == 1)
-            _buildSolidButton('Send Invites', Icons.send, const Color(0xFF25D366), isMobile: true, onPressed: _showBatchInvitationDialog),
+            _buildSolidButton(isTa ? 'அழைப்பு அனுப்புக' : 'Send Invites', Icons.send, const Color(0xFF25D366), isMobile: true, onPressed: _showBatchInvitationDialog),
           if (widget.role == 1)
-            _buildSolidButton('Invite Report', Icons.assessment, const Color(0xFF1E88E5), isMobile: true, onPressed: _showDownloadReportDialog),
+            _buildSolidButton(isTa ? 'அழைப்பு அறிக்கை' : 'Invite Report', Icons.assessment, const Color(0xFF1E88E5), isMobile: true, onPressed: _showDownloadReportDialog),
           _buildSolidButton(AppLocalizations.of(context)?.addBtn ?? 'Add', Icons.add, const Color(0xFF5D1712), isMobile: true, onPressed: _showAddMemberDialog),
         ],
       );
@@ -999,11 +1001,9 @@ class _MembersContentState extends State<MembersContent> {
         })),
         _buildOutlinedButton(AppLocalizations.of(context)?.downloadBtn ?? 'Download', Icons.download_outlined, const Color(0xFF5D1712), onPressed: _downloadMembersData),
         if (widget.role == 1)
-          _buildSolidButton(AppLocalizations.of(context)?.assignBtn ?? 'Assign', Icons.person_add_alt_1, const Color(0xFF5D1712), onPressed: widget.onAssignPressed),
+          _buildSolidButton(isTa ? 'அழைப்பு அனுப்புக' : 'Send Invites', Icons.send, const Color(0xFF25D366), onPressed: _showBatchInvitationDialog),
         if (widget.role == 1)
-          _buildSolidButton('Send Invites', Icons.send, const Color(0xFF25D366), onPressed: _showBatchInvitationDialog),
-        if (widget.role == 1)
-          _buildSolidButton('Invite Report', Icons.assessment, const Color(0xFF1E88E5), onPressed: _showDownloadReportDialog),
+          _buildSolidButton(isTa ? 'அழைப்பு அறிக்கை' : 'Invite Report', Icons.assessment, const Color(0xFF1E88E5), onPressed: _showDownloadReportDialog),
         _buildSolidButton(AppLocalizations.of(context)?.addBtn ?? 'Add', Icons.add, const Color(0xFF5D1712), onPressed: _showAddMemberDialog),
       ],
     );

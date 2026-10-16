@@ -70,89 +70,161 @@ class _MemberDetailsContentState extends State<MemberDetailsContent> {
   }
 
   void _showEventParticipationDialog() async {
+    final horizontalScrollController = ScrollController();
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text('Event Participation:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
-            IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
-          ],
-        ),
-        content: SizedBox(
-          width: 900,
-          child: FutureBuilder<http.Response>(
-            future: http.get(Uri.parse('${ApiConfig.baseUrl}/api/event-participation/${widget.numericId}')),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const SizedBox(height: 200, child: LoadingSpinner(message: 'Fetching participation records...'));
-              }
-              if (snapshot.hasError || snapshot.data?.statusCode != 200) {
-                return const SizedBox(height: 100, child: Center(child: Text('Failed to load participation data')));
-              }
-              
-              final data = jsonDecode(snapshot.data!.body)['data'] as List;
-              if (data.isEmpty) {
-                return const SizedBox(height: 100, child: Center(child: Text('No event participation found.')));
-              }
-
-              return LayoutBuilder(
-                builder: (context, constraints) {
-                  return SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(minWidth: constraints.maxWidth),
-                      child: DataTable(
-                        border: TableBorder(verticalInside: BorderSide(color: Colors.grey.shade300, width: 1)),
-                        headingRowColor: MaterialStateProperty.all(Colors.grey[50]),
-                        columns: const [
-                          DataColumn(label: Text('SNo', style: TextStyle(fontWeight: FontWeight.bold))),
-                          DataColumn(label: Text('Event Name', style: TextStyle(fontWeight: FontWeight.bold))),
-                          DataColumn(label: Text('Tax Amount', style: TextStyle(fontWeight: FontWeight.bold))),
-                          DataColumn(label: Text('Paid Amount', style: TextStyle(fontWeight: FontWeight.bold))),
-                          DataColumn(label: Text('Balance Amount', style: TextStyle(fontWeight: FontWeight.bold))),
-                          DataColumn(label: Text('Status', style: TextStyle(fontWeight: FontWeight.bold))),
-                          DataColumn(label: Text('Payment Date', style: TextStyle(fontWeight: FontWeight.bold))),
-                        ],
-                        rows: data.asMap().entries.map<DataRow>((entry) {
-                          final i = entry.key;
-                          final row = entry.value;
-                          final bool isPaid = row['status'] == 'PAID';
-                          
-                          return DataRow(cells: [
-                            DataCell(Text('${i + 1}')),
-                            DataCell(Text(row['EventName'] ?? '-')),
-                            DataCell(Text(row['TaxAmount']?.toString() ?? '0')),
-                            DataCell(Text(row['PaidAmount']?.toString() ?? '0')),
-                            DataCell(Text(row['BalanceAmount']?.toString() ?? '0')),
-                            DataCell(
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: isPaid ? const Color(0xFF2E7D32) : const Color(0xFF5D1712),
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Text(
-                                  row['status'] ?? 'PENDING',
-                                  style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
-                                ),
-                              ),
-                            ),
-                            DataCell(Text(row['PaymentDate'] ?? '-')),
-                          ]);
-                        }).toList(),
+      builder: (context) {
+        final isTamil = Localizations.localeOf(context).languageCode == 'ta';
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                isTamil ? 'விசேஷங்களில் பங்கேற்பு' : 'Event Participation',
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Color(0xFF2D1B18)),
+              ),
+              IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () => Navigator.pop(context),
+                tooltip: isTamil ? 'மூடு' : 'Close',
+              ),
+            ],
+          ),
+          content: Container(
+            width: 900,
+            constraints: BoxConstraints(
+              maxWidth: 900,
+              maxHeight: MediaQuery.of(context).size.height * 0.8,
+            ),
+            child: FutureBuilder<http.Response>(
+              future: http.get(Uri.parse('${ApiConfig.baseUrl}/api/event-participation/${widget.numericId}')),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return SizedBox(
+                    height: 200,
+                    child: LoadingSpinner(
+                      message: isTamil ? 'பங்கேற்பு விவரங்கள் பெறப்படுகின்றன...' : 'Fetching participation records...',
+                    ),
+                  );
+                }
+                if (snapshot.hasError || snapshot.data?.statusCode != 200) {
+                  return SizedBox(
+                    height: 100,
+                    child: Center(
+                      child: Text(
+                        isTamil ? 'பங்கேற்பு விவரங்களை ஏற்றுவதில் தோல்வி' : 'Failed to load participation data',
+                        style: const TextStyle(color: Colors.red),
                       ),
                     ),
                   );
                 }
-              );
-            },
+                
+                final data = jsonDecode(snapshot.data!.body)['data'] as List;
+                if (data.isEmpty) {
+                  return SizedBox(
+                    height: 100,
+                    child: Center(
+                      child: Text(
+                        isTamil ? 'விசேஷப் பங்கேற்பு விவரங்கள் எதுவும் இல்லை.' : 'No event participation found.',
+                        style: const TextStyle(color: Colors.grey),
+                      ),
+                    ),
+                  );
+                }
+
+                return LayoutBuilder(
+                  builder: (context, constraints) {
+                    return RawScrollbar(
+                      controller: horizontalScrollController,
+                      thumbVisibility: true,
+                      trackVisibility: true,
+                      interactive: true,
+                      thickness: 8,
+                      radius: const Radius.circular(8),
+                      thumbColor: const Color(0xFFC49A3C).withValues(alpha: 0.7),
+                      trackColor: Colors.grey.shade200,
+                      padding: const EdgeInsets.only(bottom: 2),
+                      child: SingleChildScrollView(
+                        controller: horizontalScrollController,
+                        scrollDirection: Axis.horizontal,
+                        padding: const EdgeInsets.only(bottom: 14),
+                        child: SingleChildScrollView(
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(minWidth: constraints.maxWidth),
+                            child: DataTable(
+                              border: TableBorder(verticalInside: BorderSide(color: Colors.grey.shade300, width: 1)),
+                              headingRowColor: WidgetStateProperty.all(const Color(0xFF5D1712)),
+                              columns: [
+                                DataColumn(label: Text(isTamil ? 'வ.எண்' : 'SNo', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white))),
+                                DataColumn(label: Text(isTamil ? 'விசேஷத்தின் பெயர்' : 'Event Name', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white))),
+                                DataColumn(label: Text(isTamil ? 'கட்டணத் தொகை' : 'Tax Amount', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white))),
+                                DataColumn(label: Text(isTamil ? 'செலுத்திய தொகை' : 'Paid Amount', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white))),
+                                DataColumn(label: Text(isTamil ? 'நிலுவைத் தொகை' : 'Balance Amount', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white))),
+                                DataColumn(label: Text(isTamil ? 'நிலை' : 'Status', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white))),
+                                DataColumn(label: Text(isTamil ? 'செலுத்திய தேதி' : 'Payment Date', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white))),
+                              ],
+                              rows: data.asMap().entries.map<DataRow>((entry) {
+                                final i = entry.key;
+                                final row = entry.value;
+                                final statusRaw = (row['status'] ?? '').toString().toUpperCase();
+                                final bool isPaid = statusRaw == 'PAID';
+                                final bool isPartial = statusRaw == 'PARTIALLY PAID';
+
+                                String statusText = row['status'] ?? 'UNKNOWN';
+                                if (isTamil) {
+                                  if (isPaid) {
+                                    statusText = 'முழுவதும் செலுத்தப்பட்டது';
+                                  } else if (isPartial) {
+                                    statusText = 'பகுதி செலுத்தப்பட்டது';
+                                  } else if (statusRaw == 'UNPAID') {
+                                    statusText = 'செலுத்தப்படவில்லை';
+                                  } else if (statusRaw == 'PENDING') {
+                                    statusText = 'நிலுவை';
+                                  }
+                                }
+
+                                return DataRow(cells: [
+                                  DataCell(Text('${i + 1}')),
+                                  DataCell(Text(row['EventName'] ?? '-')),
+                                  DataCell(Text('₹${row['TaxAmount']?.toString() ?? '0'}')),
+                                  DataCell(Text('₹${row['PaidAmount']?.toString() ?? '0'}')),
+                                  DataCell(Text('₹${row['BalanceAmount']?.toString() ?? '0'}')),
+                                  DataCell(
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: isPaid
+                                            ? const Color(0xFF2E7D32)
+                                            : (isPartial ? Colors.orange.shade800 : const Color(0xFF5D1712)),
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Text(
+                                        statusText,
+                                        style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                  ),
+                                  DataCell(Text(row['PaymentDate'] ?? '-')),
+                                ]);
+                              }).toList(),
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
           ),
-        ),
-      ),
-    );
+        );
+      },
+    ).then((_) {
+      horizontalScrollController.dispose();
+    });
   }
 
   void _showImageViewer(String? imageName, String title) {
@@ -244,9 +316,22 @@ class _MemberDetailsContentState extends State<MemberDetailsContent> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) return const LoadingSpinner(message: 'Loading member profile...');
+    final bool isTamil = Localizations.localeOf(context).languageCode == 'ta';
+
+    if (_isLoading) {
+      return LoadingSpinner(
+        message: isTamil ? 'உறுப்பினர் விவரங்கள் ஏற்றப்படுகின்றன...' : 'Loading member profile...',
+      );
+    }
     if (_error != null) return Center(child: Text(_error!, style: const TextStyle(color: Colors.red)));
-    if (_userData == null) return const Center(child: Text('No data found'));
+    if (_userData == null) {
+      return Center(
+        child: Text(
+          isTamil ? 'விவரங்கள் எதுவும் கிடைக்கவில்லை' : 'No data found',
+          style: const TextStyle(color: Colors.grey),
+        ),
+      );
+    }
 
     final bool isMobile = MediaQuery.of(context).size.width < 800;
 
@@ -264,52 +349,58 @@ class _MemberDetailsContentState extends State<MemberDetailsContent> {
               spacing: 16,
               runSpacing: 16,
               children: [
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: const [
-                  Icon(Icons.person, color: Color(0xFF5D1712), size: 28),
-                  SizedBox(width: 12),
-                  Text('Member Details:', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF2D1B18))),
-                ],
-              ),
-              ElevatedButton.icon(
-                onPressed: () {
-                  final url = '${ApiConfig.baseUrl}/api/download-id-card/${widget.numericId}?origin=${Uri.base.origin}';
-                  launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-                },
-                icon: const Icon(Icons.badge_outlined, size: 18),
-                label: const Text('Download ID Card'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF5D1712),
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.person, color: Color(0xFF5D1712), size: 28),
+                    const SizedBox(width: 12),
+                    Text(
+                      isTamil ? 'உறுப்பினர் விவரங்கள்:' : 'Member Details:',
+                      style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF2D1B18)),
+                    ),
+                  ],
                 ),
-              ),
-            ],
+                ElevatedButton.icon(
+                  onPressed: () {
+                    final url = '${ApiConfig.baseUrl}/api/download-id-card/${widget.numericId}?origin=${Uri.base.origin}';
+                    launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+                  },
+                  icon: const Icon(Icons.badge_outlined, size: 18),
+                  label: Text(isTamil ? 'அடையாள அட்டையைப் பதிவிறக்குக' : 'Download ID Card'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF5D1712),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
           const SizedBox(height: 32),
 
           // Profile Section
-          _buildProfileSection(isMobile),
+          _buildProfileSection(isMobile, isTamil),
           const SizedBox(height: 48),
 
           // Family Members Section
-          const Row(
+          Row(
             children: [
-              Icon(Icons.group, color: Color(0xFF5D1712), size: 24),
-              SizedBox(width: 12),
-              Text('Family Members', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF2D1B18))),
+              const Icon(Icons.group, color: Color(0xFF5D1712), size: 24),
+              const SizedBox(width: 12),
+              Text(
+                isTamil ? 'குடும்ப உறுப்பினர்கள்' : 'Family Members',
+                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF2D1B18)),
+              ),
             ],
           ),
           const SizedBox(height: 16),
-          _buildFamilyTable(),
+          _buildFamilyTable(isTamil, isMobile),
         ],
       ),
     );
   }
 
-  Widget _buildProfileSection(bool isMobile) {
+  Widget _buildProfileSection(bool isMobile, bool isTamil) {
     return Center(
       child: Container(
         width: isMobile ? double.infinity : 800,
@@ -326,11 +417,11 @@ class _MemberDetailsContentState extends State<MemberDetailsContent> {
             ? Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  _buildAvatarAndActions(),
+                  _buildAvatarAndActions(isTamil),
                   const SizedBox(height: 32),
                   Container(
                     constraints: const BoxConstraints(maxWidth: 450),
-                    child: _buildDetailsColumn(),
+                    child: _buildDetailsColumn(isTamil),
                   ),
                 ],
               )
@@ -339,11 +430,11 @@ class _MemberDetailsContentState extends State<MemberDetailsContent> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  _buildAvatarAndActions(),
+                  _buildAvatarAndActions(isTamil),
                   const SizedBox(width: 60),
                   Container(
                     constraints: const BoxConstraints(maxWidth: 450),
-                    child: _buildDetailsColumn(),
+                    child: _buildDetailsColumn(isTamil),
                   ),
                 ],
               ),
@@ -351,7 +442,7 @@ class _MemberDetailsContentState extends State<MemberDetailsContent> {
     );
   }
 
-  Widget _buildAvatarAndActions() {
+  Widget _buildAvatarAndActions(bool isTamil) {
     return Column(
       children: [
         Builder(
@@ -362,10 +453,14 @@ class _MemberDetailsContentState extends State<MemberDetailsContent> {
                 final bool isValidImage = hasString && !profileImageFailed;
                 
                 return Tooltip(
-                  message: !isValidImage ? 'Profile Image Not Found' : '',
+                  message: !isValidImage
+                      ? (isTamil ? 'சுயவிவரப் படம் கிடைக்கவில்லை' : 'Profile Image Not Found')
+                      : '',
                   waitDuration: const Duration(milliseconds: 300),
                   child: GestureDetector(
-                    onTap: isValidImage ? () => _showImageViewer(_userData?['Memberimage'], 'Profile Photo') : null,
+                    onTap: isValidImage
+                        ? () => _showImageViewer(_userData?['Memberimage'], isTamil ? 'சுயவிவரப் படம்' : 'Profile Photo')
+                        : null,
                     child: MouseRegion(
                       cursor: isValidImage ? SystemMouseCursors.click : SystemMouseCursors.basic,
                       child: Container(
@@ -409,22 +504,34 @@ class _MemberDetailsContentState extends State<MemberDetailsContent> {
           children: [
             _roundIcon(
               Icons.contact_page_outlined, 
-              'Community Certificate', 
-              onTap: () => _showImageViewer(_userData?['Communitycertificateimage'], 'Community Certificate'),
+              isTamil ? 'சாதிச் சான்றிதழ்' : 'Community Certificate', 
+              onTap: () => _showImageViewer(_userData?['Communitycertificateimage'], isTamil ? 'சாதிச் சான்றிதழ்' : 'Community Certificate'),
               disabled: _userData?['Communitycertificateimage'] == null || _userData!['Communitycertificateimage'].toString().isEmpty || _userData!['Communitycertificateimage'].toString() == 'null',
             ),
           ],
         ),
         const SizedBox(height: 16),
-        _actionButton('Event Participation', Icons.event_available, const Color(0xFFE8F5E9), Colors.green, onTap: _showEventParticipationDialog),
+        _actionButton(
+          isTamil ? 'விசேஷங்களில் பங்கேற்பு' : 'Event Participation',
+          Icons.event_available,
+          const Color(0xFFE8F5E9),
+          Colors.green,
+          onTap: _showEventParticipationDialog,
+        ),
         const SizedBox(height: 12),
-        _actionButton('Update Details', Icons.edit_note, const Color(0xFFFFF3E0), Colors.orange, onTap: _showUpdateDetailsDialog),
+        _actionButton(
+          isTamil ? 'விவரங்களைப் புதுப்பிக்கவும்' : 'Update Details',
+          Icons.edit_note,
+          const Color(0xFFFFF3E0),
+          Colors.orange,
+          onTap: _showUpdateDetailsDialog,
+        ),
       ],
     );
   }
 
-  String _formatDate(String? dateStr) {
-    if (dateStr == null || dateStr.isEmpty) return 'Never';
+  String _formatDate(String? dateStr, bool isTamil) {
+    if (dateStr == null || dateStr.isEmpty) return isTamil ? 'உள்நுழையவில்லை' : 'Never';
     try {
       final date = DateTime.parse(dateStr).toLocal();
       return DateFormat('MMM dd, yyyy hh:mm a').format(date);
@@ -433,19 +540,19 @@ class _MemberDetailsContentState extends State<MemberDetailsContent> {
     }
   }
 
-  Widget _buildDetailsColumn() {
+  Widget _buildDetailsColumn(bool isTamil) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _detailItem('Name:', _userData!['Name'] ?? 'N/A', isBlue: true, isBold: true),
+        _detailItem(isTamil ? 'பெயர்:' : 'Name:', _userData!['Name'] ?? 'N/A', isBlue: true, isBold: true),
         const SizedBox(height: 24),
-        _detailItem('Family Membership ID:', _userData!['Familymembershipid'] ?? 'N/A', isPill: true),
+        _detailItem(isTamil ? 'குடும்ப உறுப்பினர் எண்:' : 'Family Membership ID:', _userData!['Familymembershipid'] ?? 'N/A', isPill: true),
         const SizedBox(height: 24),
-        _detailItem('Phone Number:', _userData!['Phonenumber']?.toString() ?? 'N/A'),
+        _detailItem(isTamil ? 'மொபைல் எண்:' : 'Phone Number:', _userData!['Phonenumber']?.toString() ?? 'N/A'),
         const SizedBox(height: 24),
-        _detailItem('Last Login:', _formatDate(_userData!['last_login']?.toString())),
+        _detailItem(isTamil ? 'கடைசி உள்நுழைவு:' : 'Last Login:', _formatDate(_userData!['last_login']?.toString(), isTamil)),
         const SizedBox(height: 24),
-        _addressItem('Address:', _userData!),
+        _addressItem(isTamil ? 'முகவரி:' : 'Address:', _userData!),
       ],
     );
   }
@@ -613,9 +720,40 @@ class _MemberDetailsContentState extends State<MemberDetailsContent> {
     return role;
   }
 
-  Widget _buildFamilyTable() {
-    bool isMobile = MediaQuery.of(context).size.width < 800;
-    
+  String _translateRel(String rel, bool isTamil) {
+    if (!isTamil) return rel;
+    switch (rel) {
+      case 'Head': return 'குடும்பத் தலைவர்';
+      case 'Grand Father': return 'தாத்தா';
+      case 'Grand Mother': return 'பாட்டி';
+      case 'Grand Son': return 'பேரன்';
+      case 'Grand Daughter': return 'பேத்தி';
+      case 'Father': return 'தந்தை';
+      case 'Mother': return 'தாய்';
+      case 'Father-in-law': return 'மாமனார்';
+      case 'Mother-in-law': return 'மாமியார்';
+      case 'Husband': return 'கணவர்';
+      case 'Wife': return 'மனைவி';
+      case 'Son': return 'மகன்';
+      case 'Daughter': return 'மகள்';
+      case 'Son-in-law': return 'மருமகன்';
+      case 'Daughter-in-law': return 'மருமகள்';
+      case 'Brother': return 'சகோதரர்';
+      case 'Sister': return 'சகோதரி';
+      case 'Brother-in-law': return 'மைத்துனர்';
+      case 'Sister-in-law': return 'மைத்துனி';
+      case 'Uncle': return 'மாமா / பெரியப்பா / சித்தப்பா';
+      case 'Aunt': return 'அத்தை / பெரியம்மா / சித்தி';
+      case 'Nephew': return 'மருமகன்';
+      case 'Niece': return 'மருமகள்';
+      case 'Great Grand Father': return 'கொள்ளுத் தாத்தா';
+      case 'Great Grand Mother': return 'கொள்ளுப் பாட்டி';
+      case 'Other': return 'மற்றவை';
+      default: return rel;
+    }
+  }
+
+  Widget _buildFamilyTable(bool isTamil, bool isMobile) {
     String currentFmId = _userData?['Familymembershipid']?.toString() ?? '';
     String currentExistId = _userData?['Existfamilyid']?.toString() ?? '';
     bool amITopHeadFamily = currentExistId.isEmpty;
@@ -652,7 +790,12 @@ class _MemberDetailsContentState extends State<MemberDetailsContent> {
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: const Color(0xFFE2E8F0)),
           ),
-          child: const Center(child: Text('No family members found.', style: TextStyle(color: Colors.grey))),
+          child: Center(
+            child: Text(
+              isTamil ? 'குடும்ப உறுப்பினர்கள் யாரும் இல்லை.' : 'No family members found.',
+              style: const TextStyle(color: Colors.grey),
+            ),
+          ),
         ),
       );
     }
@@ -678,30 +821,38 @@ class _MemberDetailsContentState extends State<MemberDetailsContent> {
                   constraints: BoxConstraints(minWidth: constraints.maxWidth),
                   child: DataTable(
                     showCheckboxColumn: false,
-              headingRowHeight: 50,
-              columnSpacing: 32,
-              headingRowColor: MaterialStateProperty.all(const Color(0xFF2D1B18)),
-              columns: const [
-                DataColumn(label: Text('S.No', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
-                DataColumn(label: Text('Name', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
-                DataColumn(label: Text('Relationship', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
-                DataColumn(label: Text('Gender', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
-                DataColumn(label: Text('Age', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
-              ],
-              rows: tableMembers.asMap().entries.map<DataRow>((entry) {
-                final index = entry.key;
-                final fm = entry.value;
-                
-                return DataRow(
-                  cells: [
-                    DataCell(Text((index + 1).toString())),
-                    DataCell(Text(fm['Name'] ?? 'N/A')),
-                    DataCell(Text(_getDisplayRole(fm))),
-                    DataCell(Text(fm['Gender'] ?? 'N/A')),
-                    DataCell(Text(_calculateAge(fm['Dob']))),
-                  ],
-                );
-              }).toList(),
+                    headingRowHeight: 50,
+                    columnSpacing: 32,
+                    headingRowColor: WidgetStateProperty.all(const Color(0xFF2D1B18)),
+                    columns: [
+                      DataColumn(label: Text(isTamil ? 'வ.எண்' : 'S.No', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
+                      DataColumn(label: Text(isTamil ? 'பெயர்' : 'Name', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
+                      DataColumn(label: Text(isTamil ? 'உறவுமுறை' : 'Relationship', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
+                      DataColumn(label: Text(isTamil ? 'பாலினம்' : 'Gender', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
+                      DataColumn(label: Text(isTamil ? 'வயது' : 'Age', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
+                    ],
+                    rows: tableMembers.asMap().entries.map<DataRow>((entry) {
+                      final index = entry.key;
+                      final fm = entry.value;
+                      String gender = fm['Gender']?.toString() ?? 'N/A';
+                      if (isTamil) {
+                        if (gender.toLowerCase() == 'male') {
+                          gender = 'ஆண்';
+                        } else if (gender.toLowerCase() == 'female') {
+                          gender = 'பெண்';
+                        }
+                      }
+                      
+                      return DataRow(
+                        cells: [
+                          DataCell(Text((index + 1).toString())),
+                          DataCell(Text(fm['Name'] ?? 'N/A')),
+                          DataCell(Text(_translateRel(_getDisplayRole(fm), isTamil))),
+                          DataCell(Text(gender)),
+                          DataCell(Text(_calculateAge(fm['Dob']))),
+                        ],
+                      );
+                    }).toList(),
                   ),
                 ),
               );

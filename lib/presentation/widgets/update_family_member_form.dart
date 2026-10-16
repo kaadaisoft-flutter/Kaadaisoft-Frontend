@@ -397,6 +397,30 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
     }
   }
 
+  void _checkChildAgeValidation() {
+    if ((_selectedRelationship == 'Son' || _selectedRelationship == 'Daughter') && _dobController.text.isNotEmpty) {
+      try {
+        DateTime? dob;
+        final parts = _dobController.text.split('-');
+        if (parts.length == 3) {
+          if (parts[0].length == 4) {
+            dob = DateTime.parse(_dobController.text);
+          } else if (parts[2].length == 4) {
+            dob = DateTime.parse("${parts[2]}-${parts[1]}-${parts[0]}");
+          }
+        }
+        if (dob != null) {
+          final now = DateTime.now();
+          final threeMonthsAgo = DateTime(now.year, now.month - 3, now.day);
+          if (dob.isAfter(threeMonthsAgo)) {
+            showStatusDialog(context, title: 'Validation Error', message: 'A Son or Daughter must be at least 3 months old to be added.', type: DialogType.error);
+            setState(() => _dobController.clear());
+          }
+        }
+      } catch (_) {}
+    }
+  }
+
   void _updateStates(String countryName, {bool resetSelection = true}) {
     setState(() {
       final states = _geoService.getStates(countryName);
@@ -976,7 +1000,10 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
               controller.text = "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
               _markChanged();
             });
-            if (controller == _dobController && _selectedMarried == 'Yes') _checkMarriedAgeValidation('Yes');
+            if (controller == _dobController) {
+              if (_selectedMarried == 'Yes') _checkMarriedAgeValidation('Yes');
+              _checkChildAgeValidation();
+            }
           }
         },
         decoration: InputDecoration(

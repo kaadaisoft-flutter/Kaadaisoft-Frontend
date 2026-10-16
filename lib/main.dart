@@ -84,7 +84,7 @@ class _MyAppState extends State<MyApp> {
     return ToastificationWrapper(
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
-        title: 'Poondurai Kaadai Kulam',
+        onGenerateTitle: (context) => AppLocalizations.of(context)?.appTitle ?? 'Poondurai Kaadai Kulam',
         locale: localeProvider.locale,
         supportedLocales: AppLocalizations.supportedLocales,
         localizationsDelegates: AppLocalizations.localizationsDelegates,

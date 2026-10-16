@@ -45,93 +45,161 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
   }
 
   void _showEventParticipationDialog() async {
+    final horizontalScrollController = ScrollController();
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(AppLocalizations.of(context)?.eventParticipation ?? 'Event Participation', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
-            IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
-          ],
-        ),
-        content: Container(
-          width: 900,
-          child: FutureBuilder<http.Response>(
-            future: http.get(Uri.parse('${ApiConfig.baseUrl}/api/event-participation/${widget.userId}')),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const SizedBox(height: 200, child: LoadingSpinner(message: 'Fetching participation records...'));
-              }
-              if (snapshot.hasError || snapshot.data?.statusCode != 200) {
-                return const SizedBox(height: 100, child: Center(child: Text('Failed to load participation data')));
-              }
-              
-              final data = jsonDecode(snapshot.data!.body)['data'] as List;
-              if (data.isEmpty) {
-                return const SizedBox(height: 100, child: Center(child: Text('No event participation found.')));
-              }
-
-              return LayoutBuilder(
-                builder: (context, constraints) {
-                  return SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: SingleChildScrollView(
-                      child: ConstrainedBox(
-                        constraints: BoxConstraints(minWidth: constraints.maxWidth),
-                        child: DataTable(
-                          border: TableBorder(verticalInside: BorderSide(color: Colors.grey.shade300, width: 1)),
-                          headingRowColor: MaterialStateProperty.all(const Color(0xFF5D1712)),
-                          columns: const [
-                            DataColumn(label: Text('SNo', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white))),
-                            DataColumn(label: Text('Event Name', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white))),
-                            DataColumn(label: Text('Tax Amount', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white))),
-                            DataColumn(label: Text('Paid Amount', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white))),
-                            DataColumn(label: Text('Balance Amount', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white))),
-                            DataColumn(label: Text('Status', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white))),
-                            DataColumn(label: Text('Payment Date', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white))),
-                          ],
-                          rows: data.asMap().entries.map((entry) {
-                            final i = entry.key;
-                            final row = entry.value;
-                            final bool isPaid = row['status'] == 'PAID';
-                            
-                            return DataRow(cells: [
-                              DataCell(Text('${i + 1}')),
-                              DataCell(Text(row['EventName'] ?? '-')),
-                              DataCell(Text(row['TaxAmount']?.toString() ?? '0')),
-                              DataCell(Text(row['PaidAmount']?.toString() ?? '0')),
-                              DataCell(Text(row['BalanceAmount']?.toString() ?? '0')),
-                              DataCell(
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: isPaid ? const Color(0xFF2E7D32) : const Color(0xFF5D1712),
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  child: Text(
-                                    row['status'] ?? 'UNKNOWN',
-                                    style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
-                                  ),
-                                ),
-                              ),
-                              DataCell(Text(row['PaymentDate'] ?? '-')),
-                            ]);
-                          }).toList(),
-                        ),
+      builder: (context) {
+        final isTamil = Localizations.localeOf(context).languageCode == 'ta';
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                isTamil ? 'விசேஷங்களில் பங்கேற்பு' : (AppLocalizations.of(context)?.eventParticipation ?? 'Event Participation'),
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Color(0xFF2D1B18)),
+              ),
+              IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () => Navigator.pop(context),
+                tooltip: isTamil ? 'மூடு' : 'Close',
+              ),
+            ],
+          ),
+          content: Container(
+            width: 900,
+            constraints: BoxConstraints(
+              maxWidth: 900,
+              maxHeight: MediaQuery.of(context).size.height * 0.8,
+            ),
+            child: FutureBuilder<http.Response>(
+              future: http.get(Uri.parse('${ApiConfig.baseUrl}/api/event-participation/${widget.userId}')),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return SizedBox(
+                    height: 200,
+                    child: LoadingSpinner(
+                      message: isTamil ? 'பங்கேற்பு விவரங்கள் பெறப்படுகின்றன...' : 'Fetching participation records...',
+                    ),
+                  );
+                }
+                if (snapshot.hasError || snapshot.data?.statusCode != 200) {
+                  return SizedBox(
+                    height: 100,
+                    child: Center(
+                      child: Text(
+                        isTamil ? 'பங்கேற்பு விவரங்களை ஏற்றுவதில் தோல்வி' : 'Failed to load participation data',
+                        style: const TextStyle(color: Colors.red),
                       ),
                     ),
                   );
                 }
-              );
-            },
+                
+                final data = jsonDecode(snapshot.data!.body)['data'] as List;
+                if (data.isEmpty) {
+                  return SizedBox(
+                    height: 100,
+                    child: Center(
+                      child: Text(
+                        isTamil ? 'விசேஷப் பங்கேற்பு விவரங்கள் எதுவும் இல்லை.' : 'No event participation found.',
+                        style: const TextStyle(color: Colors.grey),
+                      ),
+                    ),
+                  );
+                }
+
+                return LayoutBuilder(
+                  builder: (context, constraints) {
+                    return RawScrollbar(
+                      controller: horizontalScrollController,
+                      thumbVisibility: true,
+                      trackVisibility: true,
+                      interactive: true,
+                      thickness: 8,
+                      radius: const Radius.circular(8),
+                      thumbColor: const Color(0xFFC49A3C).withValues(alpha: 0.7),
+                      trackColor: Colors.grey.shade200,
+                      padding: const EdgeInsets.only(bottom: 2),
+                      child: SingleChildScrollView(
+                        controller: horizontalScrollController,
+                        scrollDirection: Axis.horizontal,
+                        padding: const EdgeInsets.only(bottom: 14),
+                        child: SingleChildScrollView(
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(minWidth: constraints.maxWidth),
+                            child: DataTable(
+                              border: TableBorder(verticalInside: BorderSide(color: Colors.grey.shade300, width: 1)),
+                              headingRowColor: WidgetStateProperty.all(const Color(0xFF5D1712)),
+                              columns: [
+                                DataColumn(label: Text(isTamil ? 'வ.எண்' : 'SNo', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white))),
+                                DataColumn(label: Text(isTamil ? 'விசேஷத்தின் பெயர்' : 'Event Name', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white))),
+                                DataColumn(label: Text(isTamil ? 'கட்டணத் தொகை' : 'Tax Amount', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white))),
+                                DataColumn(label: Text(isTamil ? 'செலுத்திய தொகை' : 'Paid Amount', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white))),
+                                DataColumn(label: Text(isTamil ? 'நிலுவைத் தொகை' : 'Balance Amount', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white))),
+                                DataColumn(label: Text(isTamil ? 'நிலை' : 'Status', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white))),
+                                DataColumn(label: Text(isTamil ? 'செலுத்திய தேதி' : 'Payment Date', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white))),
+                              ],
+                              rows: data.asMap().entries.map((entry) {
+                                final i = entry.key;
+                                final row = entry.value;
+                                final statusRaw = (row['status'] ?? '').toString().toUpperCase();
+                                final bool isPaid = statusRaw == 'PAID';
+                                final bool isPartial = statusRaw == 'PARTIALLY PAID';
+
+                                String statusText = row['status'] ?? 'UNKNOWN';
+                                if (isTamil) {
+                                  if (isPaid) {
+                                    statusText = 'முழுவதும் செலுத்தப்பட்டது';
+                                  } else if (isPartial) {
+                                    statusText = 'பகுதி செலுத்தப்பட்டது';
+                                  } else if (statusRaw == 'UNPAID') {
+                                    statusText = 'செலுத்தப்படவில்லை';
+                                  } else if (statusRaw == 'PENDING') {
+                                    statusText = 'நிலுவை';
+                                  }
+                                }
+
+                                return DataRow(cells: [
+                                  DataCell(Text('${i + 1}')),
+                                  DataCell(Text(row['EventName'] ?? '-')),
+                                  DataCell(Text('₹${row['TaxAmount']?.toString() ?? '0'}')),
+                                  DataCell(Text('₹${row['PaidAmount']?.toString() ?? '0'}')),
+                                  DataCell(Text('₹${row['BalanceAmount']?.toString() ?? '0'}')),
+                                  DataCell(
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: isPaid
+                                            ? const Color(0xFF2E7D32)
+                                            : (isPartial ? Colors.orange.shade800 : const Color(0xFF5D1712)),
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Text(
+                                        statusText,
+                                        style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                  ),
+                                  DataCell(Text(row['PaymentDate'] ?? '-')),
+                                ]);
+                              }).toList(),
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
           ),
-        ),
-      ),
-    );
+        );
+      },
+    ).then((_) {
+      horizontalScrollController.dispose();
+    });
   }
 
   @override
@@ -259,11 +327,26 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
   }
 
   void _showLinkFamilyDialog() {
+    final isTamil = Localizations.localeOf(context).languageCode == 'ta';
     final _formKey = GlobalKey<FormState>();
     final _familyIdController = TextEditingController();
     final _mobileController = TextEditingController();
     String? _selectedRel;
-    final _rels = ['Grand Father','Grand Mother','Father','Mother','Husband','Wife','Son','Daughter','Son-in-law','Daughter-in-law','Brother','Sister','Other'];
+    final _relsMap = {
+      'Grand Father': isTamil ? 'தாத்தா' : 'Grand Father',
+      'Grand Mother': isTamil ? 'பாட்டி' : 'Grand Mother',
+      'Father': isTamil ? 'தந்தை' : 'Father',
+      'Mother': isTamil ? 'தாய்' : 'Mother',
+      'Husband': isTamil ? 'கணவர்' : 'Husband',
+      'Wife': isTamil ? 'மனைவி' : 'Wife',
+      'Son': isTamil ? 'மகன்' : 'Son',
+      'Daughter': isTamil ? 'மகள்' : 'Daughter',
+      'Son-in-law': isTamil ? 'மருமகன்' : 'Son-in-law',
+      'Daughter-in-law': isTamil ? 'மருமகள்' : 'Daughter-in-law',
+      'Brother': isTamil ? 'சகோதரர்' : 'Brother',
+      'Sister': isTamil ? 'சகோதரி' : 'Sister',
+      'Other': isTamil ? 'மற்றவை' : 'Other',
+    };
 
     showDialog(
       context: context,
@@ -272,19 +355,27 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
           backgroundColor: Colors.white,
           surfaceTintColor: Colors.white,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text('Link Another Family', style: TextStyle(color: Color(0xFF5D1712), fontWeight: FontWeight.bold)),
+          title: Text(
+            isTamil ? 'மற்றொரு குடும்பத்தை இணைக்க' : 'Link Another Family', 
+            style: const TextStyle(color: Color(0xFF5D1712), fontWeight: FontWeight.bold),
+          ),
           content: SingleChildScrollView(
             child: Form(
               key: _formKey,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
               children: [
-                const Text('Provide either the Target Family ID or the Mobile Number of the Target Family Head:', style: TextStyle(fontSize: 13, color: Colors.black87)),
+                Text(
+                  isTamil 
+                    ? 'இணைக்கப்பட வேண்டிய குடும்ப எண் (Family ID) அல்லது குடும்பத் தலைவரின் மொபைல் எண்ணை உள்ளிடவும்:' 
+                    : 'Provide either the Target Family ID or the Mobile Number of the Target Family Head:', 
+                  style: const TextStyle(fontSize: 13, color: Colors.black87),
+                ),
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _familyIdController,
                   decoration: InputDecoration(
-                    labelText: 'Target Family ID', 
+                    labelText: isTamil ? 'குடும்ப எண் (Target Family ID)' : 'Target Family ID', 
                     hintText: 'e.g. KDS-1234',
                     fillColor: Colors.white,
                     filled: true,
@@ -292,42 +383,45 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
                   ),
                   validator: (val) {
                     if ((val == null || val.trim().isEmpty) && _mobileController.text.trim().isEmpty) {
-                      return 'Enter Family ID or Mobile Number';
+                      return isTamil ? 'குடும்ப எண் அல்லது மொபைல் எண்ணை உள்ளிடவும்' : 'Enter Family ID or Mobile Number';
                     }
                     return null;
                   },
                 ),
                 const SizedBox(height: 12),
-                const Text('OR', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black54)),
+                Text(isTamil ? 'அல்லது' : 'OR', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black54)),
                 const SizedBox(height: 12),
                 CustomPhoneField(
-                  label: 'Mobile Number',
+                  label: isTamil ? 'மொபைல் எண்' : 'Mobile Number',
                   hint: 'e.g. 9876543210',
                   controller: _mobileController,
                   validator: (val) {
                     if ((val == null || val.trim().isEmpty) && _familyIdController.text.trim().isEmpty) {
-                      return 'Enter Family ID or Mobile Number';
+                      return isTamil ? 'குடும்ப எண் அல்லது மொபைல் எண்ணை உள்ளிடவும்' : 'Enter Family ID or Mobile Number';
                     }
                     return null;
                   },
                 ),
                 const SizedBox(height: 16),
                 CustomDropdownSearch(
-                  label: 'Relationship *',
-                  dropdownItems: _rels,
+                  label: isTamil ? 'உறவுமுறை *' : 'Relationship *',
+                  dropdownMap: _relsMap,
                   value: _selectedRel,
                   onChanged: (val) {
                     if (val != null) setStateDialog(() => _selectedRel = val);
                   },
                   requiredMark: true,
-                  validator: (val) => (val == null || val.isEmpty) ? 'Required' : null,
+                  validator: (val) => (val == null || val.isEmpty) ? (isTamil ? 'தேவைப்படுகிறது' : 'Required') : null,
                 ),
               ],
             ),
           ),
           ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context), 
+            child: Text(isTamil ? 'ரத்து செய்' : 'Cancel'),
+          ),
           ElevatedButton(
             onPressed: () async {
               if (_formKey.currentState!.validate()) {
@@ -354,22 +448,22 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
                   if (res.statusCode == 200) {
                     Navigator.pop(context);
                     _fetchLinkedFamilies();
-                    if (mounted) showStatusDialog(context, title: 'Success', message: 'Family link request created successfully.', type: DialogType.success);
+                    if (mounted) showStatusDialog(context, title: isTamil ? 'வெற்றி' : 'Success', message: isTamil ? 'குடும்ப இணைப்பு கோரிக்கை வெற்றிகரமாக அனுப்பப்பட்டது.' : 'Family link request created successfully.', type: DialogType.success);
                   } else {
                     try {
                       final body = jsonDecode(res.body);
-                      if (mounted) showStatusDialog(context, title: 'Error', message: body['detail'] ?? 'Failed to link family', type: DialogType.error);
+                      if (mounted) showStatusDialog(context, title: isTamil ? 'பிழை' : 'Error', message: body['detail'] ?? (isTamil ? 'குடும்பத்தை இணைக்க முடியவில்லை' : 'Failed to link family'), type: DialogType.error);
                     } catch (e) {
-                      if (mounted) showStatusDialog(context, title: 'Error', message: 'Failed to link family', type: DialogType.error);
+                      if (mounted) showStatusDialog(context, title: isTamil ? 'பிழை' : 'Error', message: isTamil ? 'குடும்பத்தை இணைக்க முடியவில்லை' : 'Failed to link family', type: DialogType.error);
                     }
                   }
                 } catch (e) {
-                  if (mounted) showStatusDialog(context, title: 'Error', message: 'Error connecting to server', type: DialogType.error);
+                  if (mounted) showStatusDialog(context, title: isTamil ? 'பிழை' : 'Error', message: isTamil ? 'சேவையகத்துடன் இணைப்பதில் பிழை' : 'Error connecting to server', type: DialogType.error);
                 }
               }
             },
             style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF5D1712), foregroundColor: Colors.white),
-            child: const Text('Link'),
+            child: Text(isTamil ? 'இணைக்க' : 'Link'),
           ),
         ],
       )),
@@ -377,31 +471,33 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
   }
 
   Future<void> _deleteFamilyLink(int linkId) async {
+    final isTamil = Localizations.localeOf(context).languageCode == 'ta';
     try {
       final res = await http.delete(Uri.parse('${ApiConfig.baseUrl}/api/family-links/$linkId'));
       if (res.statusCode == 200) {
         _fetchLinkedFamilies();
-        if (mounted) showStatusDialog(context, title: 'Success', message: 'Link deleted successfully.', type: DialogType.success);
+        if (mounted) showStatusDialog(context, title: isTamil ? 'வெற்றி' : 'Success', message: isTamil ? 'இணைப்பு வெற்றிகரமாக நீக்கப்பட்டது.' : 'Link deleted successfully.', type: DialogType.success);
       } else {
-        if (mounted) showStatusDialog(context, title: 'Error', message: 'Failed to delete link.', type: DialogType.error);
+        if (mounted) showStatusDialog(context, title: isTamil ? 'பிழை' : 'Error', message: isTamil ? 'இணைப்பை நீக்க முடியவில்லை.' : 'Failed to delete link.', type: DialogType.error);
       }
     } catch (e) {
-      if (mounted) showStatusDialog(context, title: 'Error', message: 'Error connecting to server.', type: DialogType.error);
+      if (mounted) showStatusDialog(context, title: isTamil ? 'பிழை' : 'Error', message: isTamil ? 'சேவையகத்துடன் இணைப்பதில் பிழை.' : 'Error connecting to server.', type: DialogType.error);
     }
   }
 
   Future<void> _confirmDeleteFamilyLink(int linkId, String action) async {
+    final isTamil = Localizations.localeOf(context).languageCode == 'ta';
     String title = '';
     String content = '';
     if (action == 'cancel') {
-      title = 'Cancel Request';
-      content = 'Are you sure you want to cancel this family link request?';
+      title = isTamil ? 'கோரிக்கையை ரத்துசெய்' : 'Cancel Request';
+      content = isTamil ? 'இக்குடும்ப இணைப்பு கோரிக்கையை நிச்சயமாக ரத்து செய்ய விரும்புகிறீர்களா?' : 'Are you sure you want to cancel this family link request?';
     } else if (action == 'reject') {
-      title = 'Reject Request';
-      content = 'Are you sure you want to reject this family link request?';
+      title = isTamil ? 'கோரிக்கையை நிராகரி' : 'Reject Request';
+      content = isTamil ? 'இக்குடும்ப இணைப்பு கோரிக்கையை நிச்சயமாக நிராகரிக்க விரும்புகிறீர்களா?' : 'Are you sure you want to reject this family link request?';
     } else {
-      title = 'Delete Link';
-      content = 'Are you sure you want to delete this linked family?';
+      title = isTamil ? 'இணைப்பை நீக்கு' : 'Delete Link';
+      content = isTamil ? 'இந்த இணைக்கப்பட்ட குடும்பத்தை நிச்சயமாக நீக்க விரும்புகிறீர்களா?' : 'Are you sure you want to delete this linked family?';
     }
 
     final confirmed = await showDialog<bool>(
@@ -414,12 +510,17 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+            child: Text(isTamil ? 'ரத்து செய்' : 'Cancel', style: const TextStyle(color: Colors.grey)),
           ),
           ElevatedButton(
             onPressed: () => Navigator.of(ctx).pop(true),
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: Text(action == 'cancel' ? 'Cancel Request' : (action == 'reject' ? 'Reject' : 'Delete'), style: const TextStyle(color: Colors.white)),
+            child: Text(
+              action == 'cancel' 
+                ? (isTamil ? 'கோரிக்கையை ரத்துசெய்' : 'Cancel Request') 
+                : (action == 'reject' ? (isTamil ? 'நிராகரி' : 'Reject') : (isTamil ? 'நீக்கு' : 'Delete')), 
+              style: const TextStyle(color: Colors.white),
+            ),
           ),
         ],
       ),
@@ -431,16 +532,17 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
   }
 
   Future<void> _approveFamilyLink(int linkId) async {
+    final isTamil = Localizations.localeOf(context).languageCode == 'ta';
     try {
       final res = await http.put(Uri.parse('${ApiConfig.baseUrl}/api/family-links/$linkId/approve'));
       if (res.statusCode == 200) {
         _fetchLinkedFamilies();
-        if (mounted) showStatusDialog(context, title: 'Success', message: 'Link approved successfully.', type: DialogType.success);
+        if (mounted) showStatusDialog(context, title: isTamil ? 'வெற்றி' : 'Success', message: isTamil ? 'இணைப்பு வெற்றிகரமாக ஏற்றுக்கொள்ளப்பட்டது.' : 'Link approved successfully.', type: DialogType.success);
       } else {
-        if (mounted) showStatusDialog(context, title: 'Error', message: 'Failed to approve link.', type: DialogType.error);
+        if (mounted) showStatusDialog(context, title: isTamil ? 'பிழை' : 'Error', message: isTamil ? 'இணைப்பை ஏற்க முடியவில்லை.' : 'Failed to approve link.', type: DialogType.error);
       }
     } catch (e) {
-      if (mounted) showStatusDialog(context, title: 'Error', message: 'Error connecting to server.', type: DialogType.error);
+      if (mounted) showStatusDialog(context, title: isTamil ? 'பிழை' : 'Error', message: isTamil ? 'சேவையகத்துடன் இணைப்பதில் பிழை.' : 'Error connecting to server.', type: DialogType.error);
     }
   }
 
@@ -471,7 +573,32 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
     }
   }
 
+  String _translateRel(String rel, bool isTamil) {
+    if (!isTamil) return rel;
+    switch (rel) {
+      case 'Grand Father': return 'தாத்தா';
+      case 'Grand Mother': return 'பாட்டி';
+      case 'Grand Son': return 'பேரன்';
+      case 'Grand Daughter': return 'பேத்தி';
+      case 'Father': return 'தந்தை';
+      case 'Mother': return 'தாய்';
+      case 'Father-in-law': return 'மாமனார்';
+      case 'Mother-in-law': return 'மாமியார்';
+      case 'Husband': return 'கணவர்';
+      case 'Wife': return 'மனைவி';
+      case 'Son': return 'மகன்';
+      case 'Daughter': return 'மகள்';
+      case 'Son-in-law': return 'மருமகன்';
+      case 'Daughter-in-law': return 'மருமகள்';
+      case 'Brother': return 'சகோதரர்';
+      case 'Sister': return 'சகோதரி';
+      case 'Other': return 'மற்றவை';
+      default: return rel;
+    }
+  }
+
   Widget _buildLinkedFamiliesCard() {
+    final isTamil = Localizations.localeOf(context).languageCode == 'ta';
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24),
@@ -496,10 +623,10 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
             children: [
               const Icon(Icons.link, color: Color(0xFF5D1712), size: 28),
               const SizedBox(width: 12),
-              const Expanded(
+              Expanded(
                 child: Text(
-                  'Linked Families',
-                  style: TextStyle(
+                  isTamil ? 'இணைக்கப்பட்ட குடும்பங்கள்' : 'Linked Families',
+                  style: const TextStyle(
                     color: Color(0xFF5D1712),
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -509,7 +636,7 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
               ElevatedButton.icon(
                 onPressed: _showLinkFamilyDialog,
                 icon: const Icon(Icons.add_link, size: 16),
-                label: const Text('Link Family'),
+                label: Text(isTamil ? 'குடும்பத்தை இணைக்க' : 'Link Family'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF5D1712),
                   foregroundColor: Colors.white,
@@ -522,10 +649,13 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
           if (_isLoadingLinkedFamilies)
             const Center(child: CircularProgressIndicator())
           else if (_linkedFamilies.isEmpty)
-            const Center(
+            Center(
               child: Padding(
-                padding: EdgeInsets.all(16.0),
-                child: Text('No linked families.', style: TextStyle(color: Colors.black54)),
+                padding: const EdgeInsets.all(16.0),
+                child: Text(
+                  isTamil ? 'இணைக்கப்பட்ட குடும்பங்கள் எதுவும் இல்லை.' : 'No linked families.', 
+                  style: const TextStyle(color: Colors.black54),
+                ),
               ),
             )
           else
@@ -546,10 +676,13 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
                     trailingWidget = Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Text('Pending Approval...', style: TextStyle(color: Colors.orange, fontSize: 12, fontWeight: FontWeight.bold)),
+                        Text(
+                          isTamil ? 'ஒப்புதல் நிலுவையில்...' : 'Pending Approval...', 
+                          style: const TextStyle(color: Colors.orange, fontSize: 12, fontWeight: FontWeight.bold),
+                        ),
                         IconButton(
                           icon: const Icon(Icons.cancel, color: Colors.red),
-                          tooltip: 'Cancel Request',
+                          tooltip: isTamil ? 'கோரிக்கையை ரத்துசெய்' : 'Cancel Request',
                           onPressed: () => _confirmDeleteFamilyLink(link['Id'], 'cancel'),
                         ),
                       ],
@@ -561,13 +694,13 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
                         ElevatedButton(
                           onPressed: () => _approveFamilyLink(link['Id']),
                           style: ElevatedButton.styleFrom(backgroundColor: Colors.green, padding: const EdgeInsets.symmetric(horizontal: 12), minimumSize: const Size(0, 36)),
-                          child: const Text('Approve', style: TextStyle(color: Colors.white)),
+                          child: Text(isTamil ? 'ஏற்கவும்' : 'Approve', style: const TextStyle(color: Colors.white)),
                         ),
                         const SizedBox(width: 8),
                         ElevatedButton(
                           onPressed: () => _confirmDeleteFamilyLink(link['Id'], 'reject'),
                           style: ElevatedButton.styleFrom(backgroundColor: Colors.red, padding: const EdgeInsets.symmetric(horizontal: 12), minimumSize: const Size(0, 36)),
-                          child: const Text('Reject', style: TextStyle(color: Colors.white)),
+                          child: Text(isTamil ? 'மறுக்கவும்' : 'Reject', style: const TextStyle(color: Colors.white)),
                         ),
                       ],
                     );
@@ -575,6 +708,7 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
                 } else {
                   trailingWidget = IconButton(
                     icon: const Icon(Icons.delete, color: Colors.red),
+                    tooltip: isTamil ? 'நீக்கு' : 'Delete',
                     onPressed: () => _confirmDeleteFamilyLink(link['Id'], 'delete'),
                   );
                 }
@@ -582,8 +716,8 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
                 return ListTile(
                   contentPadding: EdgeInsets.zero,
                   leading: const Icon(Icons.family_restroom, color: Colors.black54),
-                  title: Text('Family: $otherFamilyId', style: const TextStyle(fontWeight: FontWeight.bold)),
-                  subtitle: Text('Head: $otherHeadName\nRel: $displayRel'),
+                  title: Text('${isTamil ? 'குடும்பம்' : 'Family'}: $otherFamilyId', style: const TextStyle(fontWeight: FontWeight.bold)),
+                  subtitle: Text('${isTamil ? 'தலைவர்' : 'Head'}: $otherHeadName\n${isTamil ? 'உறவு' : 'Rel'}: ${_translateRel(displayRel, isTamil)}'),
                   isThreeLine: true,
                   trailing: trailingWidget,
                 );
@@ -735,7 +869,7 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
             isMobile ? 16.0 : 32.0,
             isMobile ? 16.0 : 32.0,
             isMobile ? 16.0 : 32.0,
-            isMobile ? 80.0 : 100.0,
+            isMobile ? 24.0 : 32.0,
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -879,7 +1013,6 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
               ),
               const SizedBox(height: 24),
               _isTreeView ? _buildFamilyTree(isMobile) : _buildFamilyTable(isMobile),
-              SizedBox(height: isMobile ? 60 : 80),
             ],
           ),
         );
@@ -2137,7 +2270,8 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
       }
     }
 
-    bool isNewMemberPending = member['Approvedstatus'] == 'Pending';
+    bool isStaffMember = member['Role'] == 1 || member['Role'] == 2 || member['Role']?.toString() == '1' || member['Role']?.toString() == '2';
+    bool isNewMemberPending = !isStaffMember && member['Approvedstatus'] == 'Pending';
 
     bool isHovered = false;
 
@@ -2292,7 +2426,7 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
               textAlign: TextAlign.center,
             ),
           ),
-          if (member['Approvedstatus'] == 'Pending' || member['pending_status'] == 'Pending') ...[
+          if (!isStaffMember && (member['Approvedstatus'] == 'Pending' || member['pending_status'] == 'Pending')) ...[
             const SizedBox(height: 4),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -2412,7 +2546,8 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
                     }
       
                     bool isDead = fm['is_dead']?.toString().toLowerCase() == 'dead' || fm['is_dead']?.toString() == '1';
-                    bool isNewMemberPending = fm['Approvedstatus'] == 'Pending';
+                    bool isStaffFm = fm['Role'] == 1 || fm['Role'] == 2 || fm['Role']?.toString() == '1' || fm['Role']?.toString() == '2';
+                    bool isNewMemberPending = !isStaffFm && fm['Approvedstatus'] == 'Pending';
                     bool isUpdatePending = fm['pending_status'] == 'Pending';
 
                     return DataRow(

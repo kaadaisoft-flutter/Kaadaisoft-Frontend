@@ -30,6 +30,7 @@ import '../../services/fcm_service.dart';
 import '../../utils/notification_helper.dart';
 import '../widgets/qr_scanner_dialog.dart';
 import 'attendance_content.dart';
+import 'professionals_content.dart';
 
 class AdminDashboard extends StatefulWidget {
   final bool showLoginSuccess;
@@ -81,11 +82,14 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
 
   void _navigateTo(String item) {
     if (item == 'Attendance') {
+      final isTa = Provider.of<LocaleProvider>(context, listen: false).locale.languageCode == 'ta';
       if (kIsWeb && widget.userRole != 1) {
         showStatusDialog(
           context,
-          title: 'Mobile App Feature',
-          message: 'The Attendance Scanner is only available on the Mobile APK.',
+          title: isTa ? 'மொபைல் செயலி அம்சம்' : 'Mobile App Feature',
+          message: isTa 
+              ? 'வருகைப் பதிவு ஸ்கேனர் மொபைல் செயலியில் மட்டுமே கிடைக்கும்.' 
+              : 'The Attendance Scanner is only available on the Mobile APK.',
           type: DialogType.info,
         );
         return;
@@ -93,8 +97,10 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
       if (widget.userRole != 1 && !_canScanAttendance) {
         showStatusDialog(
           context,
-          title: 'Access Restricted',
-          message: 'Only authorized persons can access the Attendance Scanner module.',
+          title: isTa ? 'அனுமதி மறுக்கப்பட்டது' : 'Access Restricted',
+          message: isTa 
+              ? 'அனுமதிக்கப்பட்ட நபர்கள் மட்டுமே வருகைப் பதிவு தொகுதியைப் பயன்படுத்த முடியும்.' 
+              : 'Only authorized persons can access the Attendance Scanner module.',
           type: DialogType.warning,
         );
         return;
@@ -179,6 +185,14 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
       'Received Applications': [
         'received applications', 'applications', 'new applications', 'pending applications',
         'பெறப்பட்ட விண்ணப்பங்கள்', 'விண்ணப்பங்கள்'
+      ],
+      'Doctors & Lawyers': [
+        'doctors & lawyers', 'doctors', 'lawyers', 'advocates', 'doctor', 'lawyer', 'advocate',
+        'medical', 'legal', 'மருத்துவர்கள்', 'வழக்கறிஞர்கள்', 'மருத்துவர்', 'வழக்கறிஞர்', 'வழக்கறிஞர் பட்டியல்'
+      ],
+      'Attendance': [
+        'attendance', 'attendance scanner', 'scan attendance', 'roll call', 'present',
+        'வருகைப் பதிவு', 'வருகை', 'வருகை பதிவு'
       ],
       'Logout': [
         'logout', 'log out', 'sign out', 'signout', 'exit',
@@ -683,6 +697,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
       {'title': 'Dashboard', 'icon': Icons.bar_chart, 'color': const Color(0xFF0EA5E9)},
       {'title': 'ID Card Benefits', 'icon': Icons.card_membership, 'color': const Color(0xFFC49A3C)},
       {'title': 'My Details', 'icon': Icons.person_outline, 'color': const Color(0xFF10B981)},
+      {'title': 'Doctors & Lawyers', 'icon': Icons.medical_services_outlined, 'color': const Color(0xFFC49A3C)},
       {'title': 'Coordinators', 'icon': Icons.shopping_cart_checkout, 'color': const Color(0xFFF59E0B)}, 
       {'title': 'Members', 'icon': Icons.group_outlined, 'color': const Color(0xFF8B5CF6)},
       {'title': 'Events', 'icon': Icons.list_alt, 'color': const Color(0xFFEC4899)},
@@ -699,6 +714,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
       return allItems.where((item) => 
         item['title'] == 'Dashboard' || 
         item['title'] == 'My Details' || 
+        item['title'] == 'Doctors & Lawyers' || 
         item['title'] == 'Events' || 
         item['title'] == 'Payments' || 
         item['title'] == 'ID Card Benefits' ||
@@ -1060,6 +1076,14 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
       );
     }
 
+    if (_activeItem == 'Doctors & Lawyers') {
+      return ProfessionalsContent(
+        key: const ValueKey('Doctors & Lawyers'),
+        userRole: widget.userRole,
+        globalSearchQuery: _globalSearchController.text,
+      );
+    }
+
     // Default: Dashboard Content
     return _buildDashboardContent();
   }
@@ -1191,13 +1215,13 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
                     ),
                   ),
                   const SizedBox(width: 12),
-                  const Expanded(
+                  Expanded(
                     child: FittedBox(
                       fit: BoxFit.scaleDown,
                       alignment: Alignment.centerLeft,
                       child: Text(
-                        'Poondurai Kaadai Kulam',
-                        style: TextStyle(
+                        AppLocalizations.of(context)?.appTitle ?? 'Poondurai Kaadai Kulam',
+                        style: const TextStyle(
                           color: Colors.white,
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -1262,6 +1286,12 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
       case 'Reports': return loc?.reports ?? title;
       case 'Update Requests': return loc?.updateRequests ?? title;
       case 'Payment Requests': return loc?.paymentRequests ?? title;
+      case 'Doctors & Lawyers':
+        final isTa = Provider.of<LocaleProvider>(context, listen: false).locale.languageCode == 'ta';
+        return isTa ? 'மருத்துவர்கள் & வழக்கறிஞர்கள்' : 'Doctors & Lawyers';
+      case 'Attendance':
+        final isTa = Provider.of<LocaleProvider>(context, listen: false).locale.languageCode == 'ta';
+        return isTa ? 'வருகைப் பதிவு' : 'Attendance';
       case 'Logout': return loc?.logout ?? title;
       default: return title;
     }
@@ -2369,8 +2399,8 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
                     const SizedBox(height: 12),
                     Text(
                       _paymentFilter == 'PAID'
-                          ? 'No paid payments found'
-                          : 'No pending payments found',
+                          ? (Localizations.localeOf(context).languageCode == 'ta' ? 'செலுத்திய கட்டணங்கள் எதுவும் இல்லை' : 'No paid payments found')
+                          : (Localizations.localeOf(context).languageCode == 'ta' ? 'நிலுவைக் கட்டணங்கள் எதுவும் இல்லை' : 'No pending payments found'),
                       style: const TextStyle(
                         color: Colors.black54,
                         fontSize: 16,
