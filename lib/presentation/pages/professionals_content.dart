@@ -970,7 +970,7 @@ class _ProfessionalsContentState extends State<ProfessionalsContent> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Banner & Header with Kaadaikulam Logo Colors
-          _buildHeroHeader(isTamil, totalCount, doctorCount, lawyerCount),
+          _buildHeroHeader(isTamil, isMobile, totalCount, doctorCount, lawyerCount),
           const SizedBox(height: 20),
 
           // Filters & Search Bar
@@ -994,10 +994,74 @@ class _ProfessionalsContentState extends State<ProfessionalsContent> {
     );
   }
 
-  Widget _buildHeroHeader(bool isTamil, int total, int doctors, int lawyers) {
+  Widget _buildHeroHeader(bool isTamil, bool isMobile, int total, int doctors, int lawyers) {
+    final badge = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.25),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: logoGold.withValues(alpha: 0.4)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.workspace_premium, color: logoGold, size: 16),
+          const SizedBox(width: 8),
+          Text(
+            isTamil ? 'சமூக அறிஞர்கள் & வல்லுநர்கள்' : 'Community Professionals Network',
+            style: const TextStyle(
+              color: Color(0xFFFEF3C7),
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.3,
+            ),
+          ),
+        ],
+      ),
+    );
+
+    final titleWidget = Text(
+      isTamil
+          ? 'மருத்துவர்கள் மற்றும் வழக்கறிஞர்கள் பட்டியல்'
+          : 'Doctors & Lawyers Directory',
+      style: TextStyle(
+        fontSize: isMobile ? 22 : 26,
+        fontWeight: FontWeight.bold,
+        color: Colors.white,
+        letterSpacing: -0.5,
+      ),
+    );
+
+    final subtitleWidget = Text(
+      isTamil
+          ? 'நமது காடைக்குல சமூகத்தைச் சேர்ந்த மருத்துவர்கள் மற்றும் வழக்கறிஞர்களின் விவரங்கள் மற்றும் தொடர்பு பட்டியல்.'
+          : 'A dedicated directory honoring and connecting our community’s medical doctors and legal practitioners.',
+      style: const TextStyle(
+        fontSize: 14,
+        color: Colors.white70,
+        height: 1.4,
+      ),
+    );
+
+    final addButton = ElevatedButton.icon(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: logoGold,
+        foregroundColor: darkSidebarBrown,
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        elevation: 4,
+      ),
+      onPressed: () => _showAddEditDialog(),
+      icon: const Icon(Icons.add, size: 20, color: darkSidebarBrown),
+      label: Text(
+        isTamil ? 'புதிய பதிவு' : 'Add Professional',
+        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+      ),
+    );
+
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.all(isMobile ? 18 : 24),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           colors: [darkSidebarBrown, Color(0xFF4A1512), primaryMaroon],
@@ -1016,81 +1080,42 @@ class _ProfessionalsContentState extends State<ProfessionalsContent> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.25),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: logoGold.withValues(alpha: 0.4)),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.workspace_premium, color: logoGold, size: 16),
-                          const SizedBox(width: 8),
-                          Text(
-                            isTamil ? 'சமூக அறிஞர்கள் & வல்லுநர்கள்' : 'Community Professionals Network',
-                            style: const TextStyle(
-                              color: Color(0xFFFEF3C7),
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: 0.3,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    Text(
-                      isTamil
-                          ? 'மருத்துவர்கள் மற்றும் வழக்கறிஞர்கள் பட்டியல்'
-                          : 'Doctors & Lawyers Directory',
-                      style: const TextStyle(
-                        fontSize: 26,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                        letterSpacing: -0.5,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      isTamil
-                          ? 'நமது காடைக்குல சமூகத்தைச் சேர்ந்த மருத்துவர்கள் மற்றும் வழக்கறிஞர்களின் விவரங்கள் மற்றும் தொடர்பு பட்டியல்.'
-                          : 'A dedicated directory honoring and connecting our community’s medical doctors and legal practitioners.',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        color: Colors.white70,
-                        height: 1.4,
-                      ),
-                    ),
-                  ],
-                ),
+          if (isMobile) ...[
+            badge,
+            const SizedBox(height: 12),
+            titleWidget,
+            const SizedBox(height: 6),
+            subtitleWidget,
+            if (_canManage) ...[
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: addButton,
               ),
-              if (_canManage)
-                ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: logoGold,
-                    foregroundColor: darkSidebarBrown,
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    elevation: 4,
-                  ),
-                  onPressed: () => _showAddEditDialog(),
-                  icon: const Icon(Icons.add, size: 20, color: darkSidebarBrown),
-                  label: Text(
-                    isTamil ? 'புதிய பதிவு' : 'Add Professional',
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+            ],
+          ] else ...[
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      badge,
+                      const SizedBox(height: 14),
+                      titleWidget,
+                      const SizedBox(height: 6),
+                      subtitleWidget,
+                    ],
                   ),
                 ),
-            ],
-          ),
+                if (_canManage) ...[
+                  const SizedBox(width: 20),
+                  addButton,
+                ],
+              ],
+            ),
+          ],
           const SizedBox(height: 20),
           // Stat chips
           Wrap(
@@ -1354,12 +1379,13 @@ class _ProfessionalsContentState extends State<ProfessionalsContent> {
         }
 
         if (crossAxisCount == 1) {
-          return ListView.separated(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: _professionals.length,
-            separatorBuilder: (_, _) => const SizedBox(height: 16),
-            itemBuilder: (ctx, idx) => _buildProfessionalCard(_professionals[idx], isTamil),
+          return Column(
+            children: _professionals.map((p) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: _buildProfessionalCard(p, isTamil, isGrid: false),
+              );
+            }).toList(),
           );
         }
 
@@ -1373,13 +1399,13 @@ class _ProfessionalsContentState extends State<ProfessionalsContent> {
             mainAxisExtent: 380,
           ),
           itemCount: _professionals.length,
-          itemBuilder: (ctx, idx) => _buildProfessionalCard(_professionals[idx], isTamil),
+          itemBuilder: (ctx, idx) => _buildProfessionalCard(_professionals[idx], isTamil, isGrid: true),
         );
       },
     );
   }
 
-  Widget _buildProfessionalCard(Map<String, dynamic> item, bool isTamil) {
+  Widget _buildProfessionalCard(Map<String, dynamic> item, bool isTamil, {bool isGrid = false}) {
     final isDoctor = item['category'] == 'Doctor';
     final phone = item['phone'];
     final experience = item['experience_years'];
@@ -1387,6 +1413,112 @@ class _ProfessionalsContentState extends State<ProfessionalsContent> {
     // Header styling harmonized with Logo Maroon / Gold
     final headerBg = isDoctor ? const Color(0xFFFAF7F5) : const Color(0xFFFFFDF7);
     final headerBorder = isDoctor ? const Color(0xFFEADBCE) : const Color(0xFFF1E6D0);
+
+    final cardBody = Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Badges
+          Wrap(
+            spacing: 6,
+            runSpacing: 4,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: isDoctor ? const Color(0xFFECFDF5) : const Color(0xFFFFFBEB),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(
+                    color: isDoctor ? const Color(0xFFA7F3D0) : const Color(0xFFFDE68A),
+                  ),
+                ),
+                child: Text(
+                  isDoctor ? 'Doctor' : 'Lawyer',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: isDoctor ? const Color(0xFF047857) : const Color(0xFFB45309),
+                  ),
+                ),
+              ),
+              if (experience != null)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: lightGold,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: const Color(0xFFFDE68A)),
+                  ),
+                  child: Text(
+                    '$experience+ Yrs Exp',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFFB45309),
+                    ),
+                  ),
+                ),
+              if (item['current_location'] != null)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF5F5F4),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    item['current_location'].toString(),
+                    style: const TextStyle(fontSize: 11, color: Color(0xFF57534E)),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 10),
+
+          // Workplace
+          if (item['workplace'] != null) ...[
+            _buildCardInfoRow(
+              icon: Icons.business,
+              text: item['workplace'],
+              maxLines: 2,
+            ),
+            const SizedBox(height: 6),
+          ],
+
+          // Native Place
+          if (item['native_place'] != null) ...[
+            _buildCardInfoRow(
+              icon: Icons.home_filled,
+              text: '${isTamil ? "சொந்த ஊர்: " : "Native: "}${item["native_place"]}',
+              maxLines: 1,
+            ),
+            const SizedBox(height: 6),
+          ],
+
+          // Qualifications
+          if (item['qualifications'] != null) ...[
+            _buildCardInfoRow(
+              icon: Icons.school,
+              text: item['qualifications'],
+              maxLines: 2,
+            ),
+            const SizedBox(height: 6),
+          ],
+
+          // Phone
+          if (phone != null && phone.toString().isNotEmpty) ...[
+            _buildCardInfoRow(
+              icon: Icons.phone_android,
+              text: phone.toString(),
+              maxLines: 1,
+              isBold: true,
+            ),
+          ],
+        ],
+      ),
+    );
 
     return Container(
       decoration: BoxDecoration(
@@ -1508,114 +1640,8 @@ class _ProfessionalsContentState extends State<ProfessionalsContent> {
             ),
           ),
 
-          // Card Body
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Badges
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 4,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: isDoctor ? const Color(0xFFECFDF5) : const Color(0xFFFFFBEB),
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(
-                            color: isDoctor ? const Color(0xFFA7F3D0) : const Color(0xFFFDE68A),
-                          ),
-                        ),
-                        child: Text(
-                          isDoctor ? 'Doctor' : 'Lawyer',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: isDoctor ? const Color(0xFF047857) : const Color(0xFFB45309),
-                          ),
-                        ),
-                      ),
-                      if (experience != null)
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: lightGold,
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: const Color(0xFFFDE68A)),
-                          ),
-                          child: Text(
-                            '$experience+ Yrs Exp',
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFFB45309),
-                            ),
-                          ),
-                        ),
-                      if (item['current_location'] != null)
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF5F5F4),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            item['current_location'].toString(),
-                            style: const TextStyle(fontSize: 11, color: Color(0xFF57534E)),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-
-                  // Workplace
-                  if (item['workplace'] != null) ...[
-                    _buildCardInfoRow(
-                      icon: Icons.business,
-                      text: item['workplace'],
-                      maxLines: 2,
-                    ),
-                    const SizedBox(height: 6),
-                  ],
-
-                  // Native Place
-                  if (item['native_place'] != null) ...[
-                    _buildCardInfoRow(
-                      icon: Icons.home_filled,
-                      text: '${isTamil ? "சொந்த ஊர்: " : "Native: "}${item["native_place"]}',
-                      maxLines: 1,
-                    ),
-                    const SizedBox(height: 6),
-                  ],
-
-                  // Qualifications
-                  if (item['qualifications'] != null) ...[
-                    _buildCardInfoRow(
-                      icon: Icons.school,
-                      text: item['qualifications'],
-                      maxLines: 2,
-                    ),
-                    const SizedBox(height: 6),
-                  ],
-
-                  // Phone
-                  if (phone != null && phone.toString().isNotEmpty) ...[
-                    _buildCardInfoRow(
-                      icon: Icons.phone_android,
-                      text: phone.toString(),
-                      maxLines: 1,
-                      isBold: true,
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ),
+          // Card Body: expanded only in fixed-height GridView, natural height on mobile
+          if (isGrid) Expanded(child: cardBody) else cardBody,
 
           // Card Footer Actions
           Container(
