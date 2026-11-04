@@ -1,4 +1,4 @@
-import 'dart:io';
+﻿import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart' show rootBundle, FilteringTextInputFormatter;
@@ -18,7 +18,8 @@ import '../../l10n/app_localizations.dart';
 
 class RegistrationForm extends StatefulWidget {
   final int? submitterRole;
-  const RegistrationForm({super.key, this.submitterRole});
+  final bool isPrivilege;
+  const RegistrationForm({super.key, this.submitterRole, this.isPrivilege = false});
 
   @override
   State<RegistrationForm> createState() => _RegistrationFormState();
@@ -82,6 +83,22 @@ class _RegistrationFormState extends State<RegistrationForm> {
   final _thottamController = TextEditingController();
   final _educationController = TextEditingController();
   final _professionController = TextEditingController();
+  
+  // Membership Type State
+
+  late bool _isPrivilege;
+
+
+
+  // Professional Details (Doctors & Lawyers Directory)
+  bool _isProfilePublished = false;
+  String? _publishOption; // 'Yes' or 'No'
+  final _specializationController = TextEditingController();
+  final _qualificationsController = TextEditingController();
+  final _workplaceController = TextEditingController();
+  final _experienceController = TextEditingController();
+  final _bioSummaryController = TextEditingController();
+  final _publishCommentsController = TextEditingController();
   
   // Address Controllers
   final _streetController = TextEditingController();
@@ -165,10 +182,47 @@ class _RegistrationFormState extends State<RegistrationForm> {
   bool _phoneExists = false;
   bool _showMandatoryErrors = false;
 
+  static const List<String> _educations = [
+    'SSLC', 'HSC', 'Diploma', 'ITI', 'B.A', 'B.Sc', 'B.Com', 'BBA', 'BCA', 'B.E', 'B.Tech',
+    'MBBS', 'BDS', 'B.Pharm', 'B.Ed', 'LLB', 'B.Arch', 'M.A', 'M.Sc', 'M.Com', 'MBA', 'MCA',
+    'M.E', 'M.Tech', 'MD', 'MS', 'MDS', 'M.Pharm', 'M.Ed', 'LLM', 'M.Phil', 'Ph.D', 'Others'
+  ];
+
+  static const List<String> _professions = [
+    'Doctor', 'Lawyer', 'Police', 'Teacher / Lecturer', 'Engineer', 'Government Employee',
+    'Private Employee', 'Student', 'Farmer', 'Textile Mill Worker', 'Garment Factory Worker',
+    'Tailor', 'Pattern Master', 'Textile Machinery Technician', 'Loom Operator', 'Truck Driver',
+    'Dairy Farmer', 'Poultry Farmer', 'Animal Husbandry', 'Pump Technician', 'Electrical Technician',
+    'Grocery Shop Staff', 'IT / Software Employee', 'Home Maker', 'Retired', 'Others'
+  ];
+
+  String? _getProfessionForEducation(String? edu) {
+    if (edu == null) return null;
+    final e = edu.trim();
+    if (['MBBS', 'BDS', 'MD', 'MS', 'MDS'].contains(e)) return 'Doctor';
+    if (['LLB', 'LLM'].contains(e)) return 'Lawyer';
+    if (['B.Ed', 'M.Ed'].contains(e)) return 'Teacher / Lecturer';
+    if (['B.E', 'B.Tech', 'M.E', 'M.Tech', 'B.Arch'].contains(e)) return 'Engineer';
+    return null;
+  }
+
+  List<String> _getFilteredProfessions(String? education) {
+    final edu = education?.trim() ?? '';
+    final isMedical = ['MBBS', 'BDS', 'MD', 'MS', 'MDS'].contains(edu);
+    final isLaw = ['LLB', 'LLM'].contains(edu);
+    
+    return _professions.where((p) {
+      if (p == 'Doctor' && !isMedical) return false;
+      if (p == 'Lawyer' && !isLaw) return false;
+      return true;
+    }).toList();
+  }
+
 
   @override
   void initState() {
     super.initState();
+    _isPrivilege = widget.isPrivilege;
     _fetchDistricts();
     _loadGeoData();
     
@@ -613,6 +667,31 @@ class _RegistrationFormState extends State<RegistrationForm> {
       return;
     }
 
+    final bool canPublish = _selectedProfession == 'Doctor' || _selectedProfession == 'Lawyer';
+    if (canPublish && _publishOption == null) {
+      showStatusDialog(
+        context,
+        title: 'Mandatory Fields',
+        message: Localizations.localeOf(context).languageCode == 'ta'
+            ? 'à®¤à®¯à®µà¯à®šà¯†à®¯à¯à®¤à¯ à®šà¯à®¯à®µà®¿à®µà®°à®¤à¯à®¤à¯ˆ à®…à®Ÿà¯ˆà®µà®¿à®²à¯ à®µà¯†à®³à®¿à®¯à®¿à®Ÿ à®µà®¿à®°à¯à®®à¯à®ªà¯à®•à®¿à®±à¯€à®°à¯à®•à®³à®¾ (Yes à®…à®²à¯à®²à®¤à¯ No) à®Žà®©à¯à®ªà®¤à¯ˆà®¤à¯ à®¤à¯‡à®°à¯à®¨à¯à®¤à¯†à®Ÿà¯à®•à¯à®•à®µà¯à®®à¯.'
+            : 'Please select whether to publish profile in directory (Yes or No).',
+        type: DialogType.warning,
+      );
+      return;
+    }
+    final bool isPub = canPublish && _publishOption == 'Yes';
+    if (isPub && _specializationController.text.trim().isEmpty) {
+      showStatusDialog(
+        context,
+        title: 'Mandatory Fields',
+        message: _selectedProfession == 'Doctor'
+            ? (Localizations.localeOf(context).languageCode == 'ta' ? 'à®¤à®¯à®µà¯à®šà¯†à®¯à¯à®¤à¯ à®šà®¿à®±à®ªà¯à®ªà¯ à®®à®°à¯à®¤à¯à®¤à¯à®µà®¤à¯ à®¤à¯à®±à¯ˆà®¯à¯ˆ à®¨à®¿à®°à®ªà¯à®ªà®µà¯à®®à¯.' : 'Please enter Medical Specialization.')
+            : (Localizations.localeOf(context).languageCode == 'ta' ? 'à®¤à®¯à®µà¯à®šà¯†à®¯à¯à®¤à¯ à®šà®Ÿà¯à®Ÿà®ªà¯ à®ªà®¯à®¿à®±à¯à®šà®¿à®¤à¯ à®¤à¯à®±à¯ˆà®¯à¯ˆ à®¨à®¿à®°à®ªà¯à®ªà®µà¯à®®à¯.' : 'Please enter Legal Practice Area.'),
+        type: DialogType.warning,
+      );
+      return;
+    }
+
     _submitRegistration();
   }
 
@@ -635,6 +714,19 @@ class _RegistrationFormState extends State<RegistrationForm> {
       request.fields['thottam'] = _thottamController.text;
       request.fields['education'] = _selectedEducation == 'Others' ? _educationController.text : (_selectedEducation ?? '');
       request.fields['profession'] = _selectedProfession == 'Others' ? _professionController.text : (_selectedProfession ?? '');
+      final bool canPublish = _selectedProfession == 'Doctor' || _selectedProfession == 'Lawyer';
+      final bool isPub = canPublish && _publishOption == 'Yes';
+      request.fields['is_profile_published'] = isPub.toString();
+      request.fields['profile_publish_comments'] = (!isPub && _publishOption == 'No') ? _publishCommentsController.text.trim() : '';
+      if (isPub) {
+        request.fields['specialization'] = _specializationController.text.trim();
+        request.fields['qualifications'] = _qualificationsController.text.trim().isNotEmpty
+            ? _qualificationsController.text.trim()
+            : (_selectedEducation == 'Others' ? _educationController.text : (_selectedEducation ?? ''));
+        request.fields['workplace'] = _workplaceController.text.trim();
+        request.fields['experience_years'] = _experienceController.text.trim();
+        request.fields['bio_summary'] = _bioSummaryController.text.trim();
+      }
       request.fields['state_id'] = '31';
       request.fields['state'] = 'Tamil Nadu';
       request.fields['district'] = _selectedDistrict == 'Others' ? _manualDistrictController.text : (_selectedDistrict ?? '');
@@ -678,6 +770,7 @@ class _RegistrationFormState extends State<RegistrationForm> {
       request.fields['nri_zip'] = _currZipController.text;
       request.fields['nri_full_address'] = _currFullAddressController.text;
       request.fields['submitter_role'] = (widget.submitterRole ?? 3).toString();
+      request.fields['is_privilege'] = _isPrivilege ? 'true' : 'false';
 
       // Add files
       if (_memberImage != null) {
@@ -765,6 +858,7 @@ class _RegistrationFormState extends State<RegistrationForm> {
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
     final isMobile = size.width < 800;
+    final isTa = Localizations.localeOf(context).languageCode == 'ta';
 
     return Dialog(
       backgroundColor: Colors.transparent,
@@ -799,14 +893,34 @@ class _RegistrationFormState extends State<RegistrationForm> {
               child: Row(
                 children: [
                   Expanded(
-                    child: Text(
-                      AppLocalizations.of(context)?.registrationFormTitle ?? 'Poondurai Kaadaikulam.org / Registration Form',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w700,
-                        color: primaryBrown,
-                        letterSpacing: -0.5,
-                      ),
+                    child: Row(
+                      children: [
+                        if (_isPrivilege) ...[
+                          Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFFF8E1),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: const Color(0xFFC49A3C)),
+                            ),
+                            child: const Icon(Icons.workspace_premium, color: Color(0xFFC49A3C), size: 22),
+                          ),
+                          const SizedBox(width: 10),
+                        ],
+                        Flexible(
+                          child: Text(
+                            _isPrivilege
+                                ? (isTa ? 'à®ªà¯‚à®¨à¯à®¤à¯à®±à¯ˆ à®•à®¾à®Ÿà¯ˆà®•à¯à®²à®®à¯ / à®šà®¿à®±à®ªà¯à®ªà¯ à®‰à®±à¯à®ªà¯à®ªà®¿à®©à®°à¯ à®ªà®¤à®¿à®µà¯' : 'Poondurai Kaadaikulam.org / Privilege Member Registration')
+                                : (AppLocalizations.of(context)?.registrationFormTitle ?? 'Poondurai Kaadaikulam.org / Registration Form'),
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w700,
+                              color: _isPrivilege ? const Color(0xFF8D6E18) : primaryBrown,
+                              letterSpacing: -0.5,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   _buildExitButton(),
@@ -830,7 +944,13 @@ class _RegistrationFormState extends State<RegistrationForm> {
                         AppLocalizations.of(context)?.indicatesMandatory ?? 'Note: * Indicates Mandatory.',
                         style: const TextStyle(color: Colors.red, fontSize: 13, fontStyle: FontStyle.italic),
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 16),
+                      if (widget.submitterRole == 1) ...[
+                        _buildMembershipTypeSelector(isTa),
+                        const SizedBox(height: 16),
+                      ] else ...[
+                        const SizedBox(height: 8),
+                      ],
                       
                       // Section: Basic Details
                       _buildSectionTitle(Icons.person_outline, 'Basic Details'),
@@ -871,30 +991,192 @@ class _RegistrationFormState extends State<RegistrationForm> {
                       _buildResponsiveRow(isMobile, [
                         Column(
                           children: [
-                            _buildDropdownField('Education', [
-                              'SSLC', 'HSC', 'Diploma', 'ITI', 'B.A', 'B.Sc', 'B.Com', 'BBA', 'BCA', 'B.E', 'B.Tech',
-                              'MBBS', 'BDS', 'B.Pharm', 'B.Ed', 'LLB', 'B.Arch', 'M.A', 'M.Sc', 'M.Com', 'MBA', 'MCA',
-                              'M.E', 'M.Tech', 'MD', 'MS', 'MDS', 'M.Pharm', 'M.Ed', 'LLM', 'M.Phil', 'Ph.D', 'Others'
-                            ], isMobile, value: _selectedEducation, onChanged: (v) => setState(() => _selectedEducation = v), focusNode: _focusNodes['Education']),
+                            _buildDropdownField('Education', _educations, isMobile, value: _selectedEducation, onChanged: (v) {
+                              setState(() {
+                                _selectedEducation = v;
+                                final mapped = _getProfessionForEducation(v);
+                                if (mapped != null) {
+                                  _selectedProfession = mapped;
+                                  if (_selectedProfession == 'Doctor' || _selectedProfession == 'Lawyer') {
+                                    _publishOption = null;
+                                    _isProfilePublished = false;
+                                  } else {
+                                    _isProfilePublished = false;
+                                    _publishOption = null;
+                                  }
+                                } else {
+                                  final isMedical = ['MBBS', 'BDS', 'MD', 'MS', 'MDS'].contains(v?.trim());
+                                  final isLaw = ['LLB', 'LLM'].contains(v?.trim());
+                                  if (_selectedProfession == 'Doctor' && !isMedical) {
+                                    _selectedProfession = null;
+                                    _isProfilePublished = false;
+                                    _publishOption = null;
+                                  } else if (_selectedProfession == 'Lawyer' && !isLaw) {
+                                    _selectedProfession = null;
+                                    _isProfilePublished = false;
+                                    _publishOption = null;
+                                  }
+                                }
+                                if (v != null) {
+                                  if (_qualificationsController.text.trim().isEmpty || _educations.contains(_qualificationsController.text.trim())) {
+                                    _qualificationsController.text = v;
+                                  }
+                                }
+                              });
+                            }, focusNode: _focusNodes['Education']),
                             if (_selectedEducation == 'Others')
                               _buildInputField('Enter Education', _educationController, isMobile, maxLength: 254),
                           ],
                         ),
                         Column(
                           children: [
-                            _buildDropdownField('Profession', [
-                              'Doctor', 'Lawyer', 'Police', 'Teacher / Lecturer', 'Engineer', 'Government Employee',
-                              'Private Employee', 'Student', 'Farmer', 'Textile Mill Worker', 'Garment Factory Worker',
-                              'Tailor', 'Pattern Master', 'Textile Machinery Technician', 'Loom Operator', 'Truck Driver',
-                              'Dairy Farmer', 'Poultry Farmer', 'Animal Husbandry', 'Pump Technician', 'Electrical Technician',
-                              'Grocery Shop Staff', 'IT / Software Employee', 'Home Maker', 'Retired', 'Others'
-                            ], isMobile, value: _selectedProfession, onChanged: (v) => setState(() => _selectedProfession = v), focusNode: _focusNodes['Profession']),
+                            _buildDropdownField('Profession', _getFilteredProfessions(_selectedEducation), isMobile, value: _selectedProfession, onChanged: (v) {
+                              setState(() {
+                                _selectedProfession = v;
+                                if (_selectedProfession == 'Doctor' || _selectedProfession == 'Lawyer') {
+                                  _publishOption = null;
+                                  _isProfilePublished = false;
+                                } else {
+                                  _isProfilePublished = false;
+                                  _publishOption = null;
+                                }
+                              });
+                            }, focusNode: _focusNodes['Profession']),
                             if (_selectedProfession == 'Others')
                               _buildInputField('Enter Profession', _professionController, isMobile, maxLength: 254),
                           ],
                         ),
                         if (!isMobile) const SizedBox.shrink(),
                       ]),
+
+                      if (_selectedProfession == 'Doctor' || _selectedProfession == 'Lawyer') ...[
+                        const SizedBox(height: 20),
+                        // 1. Directory Publish Dropdown (Yes / No)
+                        _buildResponsiveRow(isMobile, [
+                          _buildDropdownField(
+                            Localizations.localeOf(context).languageCode == 'ta'
+                                ? 'à®šà¯à®¯à®µà®¿à®µà®°à®¤à¯à®¤à¯ˆ à®šà®®à¯‚à®• à®…à®Ÿà¯ˆà®µà®¿à®²à¯ à®µà¯†à®³à®¿à®¯à®¿à®Ÿà®µà®¾? *'
+                                : 'Publish Profile in Directory? *',
+                            ['Yes', 'No'],
+                            isMobile,
+                            value: _publishOption,
+                            onChanged: (v) {
+                              setState(() {
+                                _publishOption = v;
+                                _isProfilePublished = (v == 'Yes');
+                              });
+                            },
+                          ),
+                          if (!isMobile) const SizedBox.shrink(),
+                        ]),
+                        const SizedBox(height: 16),
+
+                        // 2. When YES: Show detailed Doctor / Lawyer form
+                        if (_publishOption == 'Yes') ...[
+                          Container(
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFEF3C7).withValues(alpha: 0.3),
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: const Color(0xFFC49A3C).withValues(alpha: 0.55), width: 1.2),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF5D1712).withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Icon(
+                                        _selectedProfession == 'Doctor' ? Icons.medical_services_outlined : Icons.gavel_outlined,
+                                        size: 22,
+                                        color: const Color(0xFF5D1712),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            _selectedProfession == 'Doctor'
+                                                ? (Localizations.localeOf(context).languageCode == 'ta'
+                                                    ? 'à®®à®°à¯à®¤à¯à®¤à¯à®µà®°à¯ à®…à®Ÿà¯ˆà®µà¯ à®µà®¿à®µà®°à®™à¯à®•à®³à¯ ("à®‰à®¯à®¿à®°à¯ à®•à®¾à®•à¯à®•à¯à®®à¯ à®•à®°à®™à¯à®•à®³à¯")'
+                                                    : 'Doctor Directory Profile Details ("Uyir Kaakkum Karangal")')
+                                                : (Localizations.localeOf(context).languageCode == 'ta'
+                                                    ? 'à®µà®´à®•à¯à®•à®±à®¿à®žà®°à¯ à®…à®Ÿà¯ˆà®µà¯ à®µà®¿à®µà®°à®™à¯à®•à®³à¯ ("à®¨à¯€à®¤à®¿à®¯à®¿à®©à¯ à®•à¯à®°à®²à¯")'
+                                                    : 'Lawyer Directory Profile Details ("Neethiyin Kural")'),
+                                            style: const TextStyle(
+                                              fontSize: 15,
+                                              fontWeight: FontWeight.bold,
+                                              color: Color(0xFF5D1712),
+                                            ),
+                                          ),
+                                          const SizedBox(height: 3),
+                                          Text(
+                                            Localizations.localeOf(context).languageCode == 'ta'
+                                                ? 'à®•à¯€à®´à¯‡ à®‰à®³à¯à®³ à®µà®¿à®µà®°à®™à¯à®•à®³à¯ˆ à®¨à®¿à®°à®ªà¯à®ªà®¿à®©à®¾à®²à¯ à®šà®®à¯‚à®• à®®à®•à¯à®•à®³à¯ à®‰à®™à¯à®•à®³à¯ˆ à®Žà®³à®¿à®¤à®¿à®²à¯ à®¤à¯Šà®Ÿà®°à¯à®ªà¯à®•à¯Šà®³à¯à®³ à®®à¯à®Ÿà®¿à®¯à¯à®®à¯.'
+                                                : 'Please provide professional details so community members can connect with you.',
+                                            style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 20),
+                                // Row 1: Specialization & Experience
+                                _buildResponsiveRow(isMobile, [
+                                  _buildInputField(
+                                    _selectedProfession == 'Doctor'
+                                        ? (Localizations.localeOf(context).languageCode == 'ta' ? 'à®šà®¿à®±à®ªà¯à®ªà¯ à®®à®°à¯à®¤à¯à®¤à¯à®µà®¤à¯ à®¤à¯à®±à¯ˆ (Specialization) *' : 'Medical Specialization *')
+                                        : (Localizations.localeOf(context).languageCode == 'ta' ? 'à®šà®Ÿà¯à®Ÿà®ªà¯ à®ªà®¯à®¿à®±à¯à®šà®¿à®¤à¯ à®¤à¯à®±à¯ˆ (Specialization) *' : 'Legal Practice Area *'),
+                                    _specializationController,
+                                    isMobile,
+                                    maxLength: 150,
+                                  ),
+                                  _buildInputField(
+                                    Localizations.localeOf(context).languageCode == 'ta' ? 'à®…à®©à¯à®ªà®µà®®à¯ (à®†à®£à¯à®Ÿà¯à®•à®³à¯)' : 'Experience (Years)',
+                                    _experienceController,
+                                    isMobile,
+                                    keyboardType: TextInputType.number,
+                                    maxLength: 2,
+                                  ),
+                                ]),
+                                const SizedBox(height: 18),
+                                // Row 2: Qualifications & Workplace
+                                _buildResponsiveRow(isMobile, [
+                                  _buildInputField(
+                                    Localizations.localeOf(context).languageCode == 'ta' ? 'à®•à®²à¯à®µà®¿à®¤à¯ à®¤à®•à¯à®¤à®¿à®•à®³à¯ (Qualifications) *' : 'Education & Qualifications *',
+                                    _qualificationsController,
+                                    isMobile,
+                                    maxLength: 150,
+                                  ),
+                                  _buildInputField(
+                                    _selectedProfession == 'Doctor'
+                                        ? (Localizations.localeOf(context).languageCode == 'ta' ? 'à®ªà®£à®¿à®ªà¯à®°à®¿à®¯à¯à®®à¯ à®®à®°à¯à®¤à¯à®¤à¯à®µà®®à®©à¯ˆ / à®•à®¿à®³à®¿à®©à®¿à®•à¯' : 'Current Hospital / Clinic Workplace')
+                                        : (Localizations.localeOf(context).languageCode == 'ta' ? 'à®ªà®£à®¿à®ªà¯à®°à®¿à®¯à¯à®®à¯ à®…à®²à¯à®µà®²à®•à®®à¯ / à®¨à¯€à®¤à®¿à®®à®©à¯à®±à®®à¯' : 'Current Chambers / Court / Law Firm'),
+                                    _workplaceController,
+                                    isMobile,
+                                    maxLength: 200,
+                                  ),
+                                ]),
+                                const SizedBox(height: 18),
+                                // Row 3: Bio / Summary
+                                _buildTextArea(
+                                  Localizations.localeOf(context).languageCode == 'ta' ? 'à®šà¯à®°à¯à®•à¯à®•à®®à®¾à®© à®…à®±à®¿à®®à¯à®•à®®à¯ / à®µà®¿à®µà®°à®®à¯ (Bio Summary)' : 'Brief Bio / Professional Summary',
+                                  _bioSummaryController,
+                                  isMobile,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ],
 
                       const SizedBox(height: 32),
                       
@@ -1271,6 +1553,370 @@ class _RegistrationFormState extends State<RegistrationForm> {
       Navigator.pop(context);
     }
   }
+
+
+
+  Widget _buildMembershipTypeSelector(bool isTa) {
+
+    return Container(
+
+      padding: const EdgeInsets.all(16),
+
+      decoration: BoxDecoration(
+
+        color: _isPrivilege ? const Color(0xFFFFFDF5) : Colors.white,
+
+        borderRadius: BorderRadius.circular(14),
+
+        border: Border.all(
+
+          color: _isPrivilege ? const Color(0xFFC49A3C) : Colors.grey.shade300,
+
+          width: _isPrivilege ? 1.5 : 1.0,
+
+        ),
+
+        boxShadow: [
+
+          BoxShadow(
+
+            color: Colors.black.withValues(alpha: 0.04),
+
+            blurRadius: 8,
+
+            offset: const Offset(0, 2),
+
+          ),
+
+        ],
+
+      ),
+
+      child: Column(
+
+        crossAxisAlignment: CrossAxisAlignment.start,
+
+        children: [
+
+          Row(
+
+            children: [
+
+              Container(
+
+                padding: const EdgeInsets.all(8),
+
+                decoration: BoxDecoration(
+
+                  color: _isPrivilege ? const Color(0xFFFFF8E1) : const Color(0xFF5D1712).withValues(alpha: 0.1),
+
+                  borderRadius: BorderRadius.circular(8),
+
+                ),
+
+                child: Icon(
+
+                  _isPrivilege ? Icons.workspace_premium : Icons.person_outline,
+
+                  size: 22,
+
+                  color: _isPrivilege ? const Color(0xFFC49A3C) : const Color(0xFF5D1712),
+
+                ),
+
+              ),
+
+              const SizedBox(width: 12),
+
+              Expanded(
+
+                child: Column(
+
+                  crossAxisAlignment: CrossAxisAlignment.start,
+
+                  children: [
+
+                    Text(
+
+                      isTa ? 'à®‰à®±à¯à®ªà¯à®ªà®¿à®©à®°à¯ à®µà®•à¯ˆ à®¤à¯‡à®°à¯à®µà¯ (Membership Type)' : 'Membership Type Selection',
+
+                      style: const TextStyle(
+
+                        fontSize: 15,
+
+                        fontWeight: FontWeight.bold,
+
+                        color: primaryBrown,
+
+                      ),
+
+                    ),
+
+                    Text(
+
+                      isTa
+
+                          ? 'à®…à®©à¯ˆà®¤à¯à®¤à¯ à®‰à®±à¯à®ªà¯à®ªà®¿à®©à®°à¯à®•à®³à¯à®®à¯ à®šà®¿à®±à®ªà¯à®ªà¯ à®‰à®±à¯à®ªà¯à®ªà®¿à®©à®°à¯à®•à®³à¯ à®…à®²à¯à®². à®ªà¯Šà®°à¯à®¤à¯à®¤à®®à®¾à®© à®µà®•à¯ˆà®¯à¯ˆà®¤à¯ à®¤à¯‡à®°à¯à®¨à¯à®¤à¯†à®Ÿà¯à®•à¯à®•à®µà¯à®®à¯.'
+
+                          : 'Not all members are privilege members. Choose the appropriate membership type.',
+
+                      style: const TextStyle(fontSize: 12, color: Colors.black54),
+
+                    ),
+
+                  ],
+
+                ),
+
+              ),
+
+            ],
+
+          ),
+
+          const SizedBox(height: 16),
+
+          Row(
+
+            children: [
+
+              Expanded(
+
+                child: InkWell(
+
+                  onTap: () => setState(() => _isPrivilege = false),
+
+                  borderRadius: BorderRadius.circular(10),
+
+                  child: Container(
+
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+
+                    decoration: BoxDecoration(
+
+                      color: !_isPrivilege ? const Color(0xFF5D1712).withValues(alpha: 0.08) : Colors.grey.shade50,
+
+                      borderRadius: BorderRadius.circular(10),
+
+                      border: Border.all(
+
+                        color: !_isPrivilege ? const Color(0xFF5D1712) : Colors.grey.shade300,
+
+                        width: !_isPrivilege ? 1.8 : 1.0,
+
+                      ),
+
+                    ),
+
+                    child: Row(
+
+                      children: [
+
+                        Icon(
+
+                          !_isPrivilege ? Icons.radio_button_checked : Icons.radio_button_off,
+
+                          color: !_isPrivilege ? const Color(0xFF5D1712) : Colors.grey,
+
+                          size: 20,
+
+                        ),
+
+                        const SizedBox(width: 10),
+
+                        Expanded(
+
+                          child: Column(
+
+                            crossAxisAlignment: CrossAxisAlignment.start,
+
+                            children: [
+
+                              Text(
+
+                                isTa ? 'à®µà®´à®•à¯à®•à®®à®¾à®© à®‰à®±à¯à®ªà¯à®ªà®¿à®©à®°à¯' : 'Standard Member',
+
+                                style: TextStyle(
+
+                                  fontWeight: FontWeight.bold,
+
+                                  fontSize: 13.5,
+
+                                  color: !_isPrivilege ? const Color(0xFF5D1712) : Colors.black87,
+
+                                ),
+
+                              ),
+
+                              Text(
+
+                                isTa ? 'à®¨à®¿à®°à®¨à¯à®¤à®° à®Žà®£à¯ à®®à®Ÿà¯à®Ÿà¯à®®à¯‡ (Non-Privilege)' : 'Permanent Member ID only',
+
+                                style: const TextStyle(fontSize: 11, color: Colors.black54),
+
+                              ),
+
+                            ],
+
+                          ),
+
+                        ),
+
+                      ],
+
+                    ),
+
+                  ),
+
+                ),
+
+              ),
+
+              const SizedBox(width: 12),
+
+              Expanded(
+
+                child: InkWell(
+
+                  onTap: () => setState(() => _isPrivilege = true),
+
+                  borderRadius: BorderRadius.circular(10),
+
+                  child: Container(
+
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+
+                    decoration: BoxDecoration(
+
+                      color: _isPrivilege ? const Color(0xFFFFF8E1) : Colors.grey.shade50,
+
+                      borderRadius: BorderRadius.circular(10),
+
+                      border: Border.all(
+
+                        color: _isPrivilege ? const Color(0xFFC49A3C) : Colors.grey.shade300,
+
+                        width: _isPrivilege ? 1.8 : 1.0,
+
+                      ),
+
+                    ),
+
+                    child: Row(
+
+                      children: [
+
+                        Icon(
+
+                          _isPrivilege ? Icons.radio_button_checked : Icons.radio_button_off,
+
+                          color: _isPrivilege ? const Color(0xFFC49A3C) : Colors.grey,
+
+                          size: 20,
+
+                        ),
+
+                        const SizedBox(width: 10),
+
+                        Expanded(
+
+                          child: Column(
+
+                            crossAxisAlignment: CrossAxisAlignment.start,
+
+                            children: [
+
+                              Row(
+
+                                children: [
+
+                                  Text(
+
+                                    isTa ? 'à®šà®¿à®±à®ªà¯à®ªà¯ à®‰à®±à¯à®ªà¯à®ªà®¿à®©à®°à¯' : 'Privilege Member',
+
+                                    style: TextStyle(
+
+                                      fontWeight: FontWeight.bold,
+
+                                      fontSize: 13.5,
+
+                                      color: _isPrivilege ? const Color(0xFF8D6E18) : Colors.black87,
+
+                                    ),
+
+                                  ),
+
+                                  const SizedBox(width: 6),
+
+                                  Container(
+
+                                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+
+                                    decoration: BoxDecoration(
+
+                                      color: const Color(0xFFC49A3C),
+
+                                      borderRadius: BorderRadius.circular(4),
+
+                                    ),
+
+                                    child: const Text(
+
+                                      'PRV ID',
+
+                                      style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, color: Colors.white),
+
+                                    ),
+
+                                  ),
+
+                                ],
+
+                              ),
+
+                              Text(
+
+                                isTa ? 'à®¨à®¿à®°à®¨à¯à®¤à®° à®Žà®£à¯ + à®šà®¿à®±à®ªà¯à®ªà¯ à®Žà®£à¯ (Dual ID)' : 'Dual ID: Permanent + Sequential PRV ID',
+
+                                style: TextStyle(
+
+                                  fontSize: 11,
+
+                                  color: _isPrivilege ? const Color(0xFF8D6E18) : Colors.black54,
+
+                                ),
+
+                              ),
+
+                            ],
+
+                          ),
+
+                        ),
+
+                      ],
+
+                    ),
+
+                  ),
+
+                ),
+
+              ),
+
+            ],
+
+          ),
+
+        ],
+
+      ),
+
+    );
+
+  }
+
+
 
   Widget _buildExitButton() {
     return MouseRegion(
@@ -1949,6 +2595,12 @@ class _RegistrationFormState extends State<RegistrationForm> {
     _currZipController.dispose();
     _currStateController.dispose();
     _currFullAddressController.dispose();
+    _specializationController.dispose();
+    _qualificationsController.dispose();
+    _workplaceController.dispose();
+    _experienceController.dispose();
+    _bioSummaryController.dispose();
+    _publishCommentsController.dispose();
     super.dispose();
   }
 

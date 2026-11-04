@@ -357,8 +357,6 @@ class _IdCardBenefitsContentState extends State<IdCardBenefitsContent> {
               // Hero Section (Text + Flip Card)
               LayoutBuilder(
                 builder: (context, constraints) {
-                  bool isDesktop = constraints.maxWidth > 900;
-                  
                   Widget textSection = Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -676,20 +674,28 @@ class _FlipCardState extends State<_FlipCard> {
             ),
             // Member ID Box (below photo)
             Positioned(
-              left: w * 0.1233,
-              top: h * 0.743,
-              width: w * 0.1897,
+              left: w * 0.1175,
+              top: h * 0.7400,
+              width: w * 0.1950,
+              height: h * 0.0880,
               child: Center(
-                child: Text(
-                  widget.userData?['Familymembershipid']?.toString() ?? '',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: w * 0.0347,
-                    fontWeight: FontWeight.bold,
-                    height: 1.0,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(horizontal: w * 0.01),
+                    child: Text(
+                      widget.userData?['Familymembershipid']?.toString() ?? '',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: w * 0.035,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.5,
+                        height: 1.0,
+                      ),
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                    ),
                   ),
-                  textAlign: TextAlign.center,
-                  maxLines: 1,
                 ),
               ),
             ),

@@ -226,8 +226,8 @@ class _CoordinatorResponsibilitiesContentState extends State<CoordinatorResponsi
                   interactive: true,
                   thickness: 8,
                   radius: const Radius.circular(8),
-                  thumbColor: const Color(0xFFC49A3C).withValues(alpha: 0.7),
-                  trackColor: Colors.grey.shade200,
+                  thumbColor: const Color(0xFF5D1712),
+                  trackColor: const Color(0x225D1712),
                   padding: const EdgeInsets.only(bottom: 2),
                   child: SingleChildScrollView(
                     controller: _horizontalScrollController,

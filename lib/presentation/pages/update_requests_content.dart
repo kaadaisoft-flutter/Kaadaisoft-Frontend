@@ -130,13 +130,13 @@ class _UpdateRequestsContentState extends State<UpdateRequestsContent> {
                                 children: [
                                   _buildHeaderCell(AppLocalizations.of(context)?.sNo.toUpperCase() ?? 'S.NO', 60),
                                   _buildHeaderCell(AppLocalizations.of(context)?.memberNameHeader ?? 'MEMBER NAME', 180),
+                                   _buildHeaderCell(AppLocalizations.of(context)?.actionHeader.toUpperCase() ?? 'ACTION', 180),
                                   _buildHeaderCell(AppLocalizations.of(context)?.familyHeadHeader ?? 'FAMILY HEAD', 180),
                                   _buildHeaderCell(AppLocalizations.of(context)?.memberIdHeader ?? 'MEMBER ID', 140),
                                   _buildHeaderCell(AppLocalizations.of(context)?.districtHeader ?? 'DISTRICT', 130),
                                   _buildHeaderCell(AppLocalizations.of(context)?.talukHeader ?? 'TALUK', 130),
                                   _buildHeaderCell(AppLocalizations.of(context)?.panchayatHeader ?? 'PANCHAYAT', 130),
-                                  _buildHeaderCell(AppLocalizations.of(context)?.villageUpperHeader ?? 'VILLAGE', 130),
-                                  _buildHeaderCell(AppLocalizations.of(context)?.actionHeader.toUpperCase() ?? 'ACTION', 180, hasDivider: false),
+                                   _buildHeaderCell(AppLocalizations.of(context)?.villageUpperHeader ?? 'VILLAGE', 130, hasDivider: false),
                                 ],
                               ),
                             ),
@@ -217,13 +217,7 @@ class _UpdateRequestsContentState extends State<UpdateRequestsContent> {
         children: [
           _buildDataCell((startIndex + index + 1).toString(), 60),
           _buildDataCell(req['Name'] ?? '-', 180, isBold: true),
-          _buildDataCell(req['head_name'] ?? '-', 180),
-          _buildDataCell(req['Familymembershipid'] ?? '-', 140, isBlue: true),
-          _buildDataCell(req['District'] ?? '-', 130),
-          _buildDataCell(req['Taluk'] ?? '-', 130),
-          _buildDataCell(req['Panchayat'] ?? '-', 130),
-          _buildDataCell(req['Village'] ?? '-', 130),
-          _buildDataCell('', 180, hasDivider: false, child: Row(
+          _buildDataCell('', 180, child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -259,6 +253,12 @@ class _UpdateRequestsContentState extends State<UpdateRequestsContent> {
               ),
             ],
           )),
+          _buildDataCell(req['head_name'] ?? '-', 180),
+          _buildDataCell(req['Familymembershipid'] ?? '-', 140, isBlue: true),
+          _buildDataCell(req['District'] ?? '-', 130),
+          _buildDataCell(req['Taluk'] ?? '-', 130),
+          _buildDataCell(req['Panchayat'] ?? '-', 130),
+          _buildDataCell(req['Village'] ?? '-', 130, hasDivider: false),
         ],
       ),
     );
@@ -477,7 +477,12 @@ class _UpdateRequestsContentState extends State<UpdateRequestsContent> {
           'id', 'request_id', 'status', 'familymembershipid', 'existfamilyid',
           'memberrole', 'role', 'approvedstatus', 'isshow', 'created_at',
           'password', 'coordinator_id', 'coordinator_two_id', 'aadharnumber',
-          'aadhar_hash', 'assigned_areas_count', 'state_id', 'updated_at'
+          'aadhar_hash', 'assigned_areas_count', 'state_id', 'updated_at',
+          'fcm_token', 'last_login', 'is_disabled', 'disabled_reason',
+          'can_scan_attendance', 'is_privilege', 'temple_id',
+          'mobile_country_code', 'whatsapp_country_code', 'user_id',
+          'blood_group_donor', 'from_date', 'to_date', 'image',
+          'is_profile_published', 'profile_publish_comments',
         ];
 
         // Remove empty, very large base64 strings, and system fields
@@ -526,7 +531,15 @@ class _UpdateRequestsContentState extends State<UpdateRequestsContent> {
                         const Text('Member Info', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF5D1712))),
                         const SizedBox(height: 16),
                         ...data.entries.map((e) {
-                          final formattedKey = e.key.replaceAll(RegExp(r'(?<=[a-z])[A-Z]'), r' $0').toUpperCase();
+                          final key = e.key.toLowerCase();
+                          final Map<String, String> memberInfoLabels = {
+                            'specialization': 'SPECIALIZATION',
+                            'qualifications': 'QUALIFICATIONS',
+                            'workplace': 'CURRENT WORKPLACE',
+                            'experience_years': 'EXPERIENCE (YEARS)',
+                            'bio_summary': 'BIO / SUMMARY',
+                          };
+                          final formattedKey = memberInfoLabels[key] ?? e.key.replaceAll(RegExp(r'(?<=[a-z])[A-Z]'), r' $0').replaceAll('_', ' ').toUpperCase();
                           return Padding(
                             padding: const EdgeInsets.only(bottom: 12),
                             child: Row(
@@ -560,15 +573,33 @@ class _UpdateRequestsContentState extends State<UpdateRequestsContent> {
                           const Text('Requested Updates', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.orange)),
                           const SizedBox(height: 16),
                           ...updatedDataMap.entries.map((e) {
-                            // Skip base64 or very large values
-                            if (e.value.toString().length > 150) {
+                            final key = e.key.toLowerCase();
+                            if (key == 'user_id' || key == 'role' || key == 'mobile_country_code' || key == 'whatsapp_country_code') {
                               return const SizedBox.shrink();
                             }
-                            final key = e.key.toLowerCase();
+                            // Skip base64 or excessively large dumps
+                            if (e.value.toString().startsWith('data:image') || e.value.toString().length > 3000) {
+                              return const SizedBox.shrink();
+                            }
                             final isImageField = key == 'member_image' || key == 'community_cert';
-                            final formattedKey = e.key.replaceAll(RegExp(r'(?<=[a-z])[A-Z]'), r' $0').toUpperCase();
-                            final labelText = key == 'member_image' ? 'PASSPORT PHOTO' : key == 'community_cert' ? 'COMMUNITY CERTIFICATE' : formattedKey;
+                            final Map<String, String> friendlyLabels = {
+                              'member_image': 'PASSPORT PHOTO',
+                              'community_cert': 'COMMUNITY CERTIFICATE',
+                              'specialization': 'MEDICAL SPECIALIZATION',
+                              'qualifications': 'EDUCATION & QUALIFICATIONS',
+                              'workplace': 'CURRENT WORKPLACE',
+                              'experience_years': 'EXPERIENCE (YEARS)',
+                              'bio_summary': 'BIO / SUMMARY',
+                              'is_profile_published': 'PUBLISH IN DIRECTORY',
+                              'profile_publish_comments': 'COMMENTS / REASON',
+                            };
+                            final formattedKey = e.key.replaceAll(RegExp(r'(?<=[a-z])[A-Z]'), r' $0').replaceAll('_', ' ').toUpperCase();
+                            final labelText = friendlyLabels[key] ?? formattedKey;
 
+                            String displayVal = e.value.toString();
+                            if (key == 'is_profile_published') {
+                              displayVal = (displayVal.toLowerCase() == 'true' || displayVal == '1') ? 'Yes' : 'No';
+                            }
                             if (isImageField && e.value.toString().isNotEmpty) {
                               final imageUrl = '${ApiConfig.baseUrl}/assets/uploads/${e.value}';
                               return Padding(
@@ -651,7 +682,7 @@ class _UpdateRequestsContentState extends State<UpdateRequestsContent> {
                                   Expanded(
                                     flex: 2,
                                     child: Text(
-                                      formattedKey,
+                                      labelText,
                                       style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.black54, fontSize: 13),
                                     ),
                                   ),
@@ -660,7 +691,7 @@ class _UpdateRequestsContentState extends State<UpdateRequestsContent> {
                                   Expanded(
                                     flex: 3,
                                     child: Text(
-                                      e.value.toString(),
+                                      displayVal,
                                       style: const TextStyle(
                                         color: Colors.orange,
                                         fontSize: 14,

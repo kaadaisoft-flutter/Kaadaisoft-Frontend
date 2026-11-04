@@ -107,7 +107,7 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
            r == 'daughter in law';
   }
 
-  final List<String> _kulams = ['Poondurai Kaadai', 'Aanthuvan Kulam', 'Azhagu Kulam', 'Aathe Kulam', 'Aanthai Kulam', 'Aadar Kulam', 'Aavan Kulam', 'Eenjan Kulam', 'Ozukkar Kulam', 'Oothaalar Kulam', 'Kannakkan Kulam', 'Kannan Kulam', 'Kannaanthai Kulam', 'Kaadai Kulam', 'Kaari Kulam', 'Keeran Kulam', 'Kuzhlaayan Kulam', 'Koorai Kulam', 'Koovendhar Kulam', 'Saathanthai Kulam', 'Sellan Kulam', 'Semban Kulam', 'Sengkannan Kulam', 'Sembuthan Kulam', 'Senkunnier Kulam', 'Sevvaayar Kulam', 'Cheran Kulam', 'Chedan Kulam', 'Dananjayan Kulam', 'Thazhinji Kulam', 'Thooran Kulam', 'Devendran Kulam', 'Thoodar Kulam', 'Neerunniyar Kulam', 'Pavazhalar Kulam', 'Panayan Kulam', 'Pathuman Kulam', 'Payiran Kulam', 'Panagkaadar Kulam', 'Pathariar Kulam', 'Pandiyan Kulam', 'Pillar Kulam', 'Poosan Kulam', 'Poochanthai Kulam', 'Periyan Kulam', 'Perunkudiyaan Kulam', 'Porulaanthai Kulam', 'Ponnar Kulam', 'Maniyan Kulam', 'Mayilar Kulam', 'Maadar Kulam', 'Mutthan Kulam', 'Muzhukathan Kulam', 'Medhi Kulam', 'Vannakkan Kulam', 'Villiyar Kulam', 'Vilayan Kulam', 'Vizhiyar Kulam', 'Venduvan Kulam', 'Vennag Kulam', 'Vellampar Kulam', 'Others'];
+  final List<String> _kulams = ['Poondurai Kaadai', 'Aanthuvan Kulam', 'Azhagu Kulam', 'Aathe Kulam', 'Aanthai Kulam', 'Aadar Kulam', 'Aavan Kulam', 'Eenjan Kulam', 'Ozukkar Kulam', 'Oothaalar Kulam', 'Kannakkan Kulam', 'Kannan Kulam', 'Kannaanthai Kulam', 'Kaadai Kulam', 'Kaari Kulam', 'Keeran Kulam', 'Kuzhlaayan Kulam', 'Koorai Kulam', 'Koovendhar Kulam', 'Saathanthai Kulam', 'Sellan Kulam', 'Semban Kulam', 'Sembuthan Kulam', 'Senkannan Kulam', 'Senkannier Kulam', 'Sevvaayar Kulam', 'Cheran Kulam', 'Chedan Kulam', 'Dananjayan Kulam', 'Thazhinji Kulam', 'Thooran Kulam', 'Devendran Kulam', 'Thoodar Kulam', 'Neerunniyar Kulam', 'Pavazhalar Kulam', 'Panayan Kulam', 'Pathuman Kulam', 'Payiran Kulam', 'Panagkaadar Kulam', 'Pathariar Kulam', 'Pandiyan Kulam', 'Pillar Kulam', 'Poosan Kulam', 'Poochanthai Kulam', 'Periyan Kulam', 'Perunkudiyaan Kulam', 'Porulaanthai Kulam', 'Ponnar Kulam', 'Maniyan Kulam', 'Mayilar Kulam', 'Maadar Kulam', 'Mutthan Kulam', 'Muzhukathan Kulam', 'Medhi Kulam', 'Vannakkan Kulam', 'Villiyar Kulam', 'Vilayan Kulam', 'Vizhiyar Kulam', 'Venduvan Kulam', 'Vennag Kulam', 'Vellampar Kulam', 'Others'];
 
   bool _whatsappSameAsPhone = false;
   String _phoneCountryCode = 'IN';
@@ -139,6 +139,28 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
   final List<String> _bloodGroups = ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'];
   final List<String> _educations = ['SSLC', 'HSC', 'Diploma', 'ITI', 'B.A', 'B.Sc', 'B.Com', 'BBA', 'BCA', 'B.E', 'B.Tech', 'MBBS', 'BDS', 'B.Pharm', 'B.Ed', 'LLB', 'B.Arch', 'M.A', 'M.Sc', 'M.Com', 'MBA', 'MCA', 'M.E', 'M.Tech', 'MD', 'MS', 'MDS', 'M.Pharm', 'M.Ed', 'LLM', 'M.Phil', 'Ph.D', 'Others'];
   final List<String> _professions = ['Doctor', 'Lawyer', 'Police', 'Teacher / Lecturer', 'Engineer', 'Government Employee', 'Private Employee', 'Student', 'Farmer', 'Textile Mill Worker', 'Garment Factory Worker', 'Tailor', 'Pattern Master', 'Textile Machinery Technician', 'Loom Operator', 'Truck Driver', 'Dairy Farmer', 'Poultry Farmer', 'Animal Husbandry', 'Pump Technician', 'Electrical Technician', 'Grocery Shop Staff', 'IT / Software Employee', 'Home Maker', 'Retired', 'Others'];
+
+  String? _getProfessionForEducation(String? edu) {
+    if (edu == null) return null;
+    final e = edu.trim();
+    if (['MBBS', 'BDS', 'MD', 'MS', 'MDS'].contains(e)) return 'Doctor';
+    if (['LLB', 'LLM'].contains(e)) return 'Lawyer';
+    if (['B.Ed', 'M.Ed'].contains(e)) return 'Teacher / Lecturer';
+    if (['B.E', 'B.Tech', 'M.E', 'M.Tech', 'B.Arch'].contains(e)) return 'Engineer';
+    return null;
+  }
+
+  List<String> _getFilteredProfessions(String? education) {
+    final edu = education?.trim() ?? '';
+    final isMedical = ['MBBS', 'BDS', 'MD', 'MS', 'MDS'].contains(edu);
+    final isLaw = ['LLB', 'LLM'].contains(edu);
+    
+    return _professions.where((p) {
+      if (p == 'Doctor' && !isMedical) return false;
+      if (p == 'Lawyer' && !isLaw) return false;
+      return true;
+    }).toList();
+  }
 
   // Documents
   XFile? _memberImage;
@@ -618,8 +640,24 @@ class _AddFamilyMemberFormState extends State<AddFamilyMemberForm> {
                         _buildSectionTitle(Icons.work_outline, 'Education & Career Details'),
                         const SizedBox(height: 16),
                         _buildResponsiveRow(isMobile, [
-                          _buildDropdownField('Education', _educations, isMobile, value: _selectedEducation, onChanged: (v) => setState(() => _selectedEducation = v)),
-                          _buildDropdownField('Profession', _professions, isMobile, value: _selectedProfession, onChanged: (v) => setState(() => _selectedProfession = v)),
+                          _buildDropdownField('Education', _educations, isMobile, value: _selectedEducation, onChanged: (v) {
+                            setState(() {
+                              _selectedEducation = v;
+                              final mapped = _getProfessionForEducation(v);
+                              if (mapped != null) {
+                                _selectedProfession = mapped;
+                              } else {
+                                final isMedical = ['MBBS', 'BDS', 'MD', 'MS', 'MDS'].contains(v?.trim());
+                                final isLaw = ['LLB', 'LLM'].contains(v?.trim());
+                                if (_selectedProfession == 'Doctor' && !isMedical) {
+                                  _selectedProfession = null;
+                                } else if (_selectedProfession == 'Lawyer' && !isLaw) {
+                                  _selectedProfession = null;
+                                }
+                              }
+                            });
+                          }),
+                          _buildDropdownField('Profession', _getFilteredProfessions(_selectedEducation), isMobile, value: _selectedProfession, onChanged: (v) => setState(() => _selectedProfession = v)),
                           if (!isMobile) const SizedBox(),
                         ]),
 

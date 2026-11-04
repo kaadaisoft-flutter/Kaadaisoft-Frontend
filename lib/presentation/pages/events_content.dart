@@ -991,8 +991,11 @@ class _EventsContentState extends State<EventsContent> {
                 ],
               )
             else
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              Wrap(
+                spacing: 16,
+                runSpacing: 12,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                alignment: WrapAlignment.start,
                 children: [
                   Text(AppLocalizations.of(context)?.eventsManagement ?? 'Events Management', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF2D1B18))),
                   if (widget.role == 1)
@@ -1090,11 +1093,11 @@ class _EventsContentState extends State<EventsContent> {
                                   children: [
                                     _buildHeaderCell(AppLocalizations.of(context)?.sNo ?? 'S.NO', 60, alignment: Alignment.center),
                                     Expanded(flex: 2, child: _buildHeaderCell(AppLocalizations.of(context)?.eventNameHeader ?? 'EVENT NAME', 150)),
+                                      if (widget.role == 1)
+                                        _buildHeaderCell('ACTIONS', 120, alignment: Alignment.center),
                                     _buildHeaderCell(AppLocalizations.of(context)?.bannerHeader ?? 'BANNER', 120, alignment: Alignment.center),
                                     Expanded(flex: 2, child: _buildHeaderCell(AppLocalizations.of(context)?.durationHeader ?? 'DURATION', 150)),
                                     _buildHeaderCell(AppLocalizations.of(context)?.taxAmount ?? 'TAX AMOUNT', 120, alignment: Alignment.center),
-                                    if (widget.role == 1)
-                                      _buildHeaderCell('ACTIONS', 120, alignment: Alignment.center),
                                   ],
                                 ),
                               ),
@@ -1118,6 +1121,15 @@ class _EventsContentState extends State<EventsContent> {
                                           children: [
                                             _buildDataCell('${index + 1}', 60, alignment: Alignment.center),
                                             Expanded(flex: 2, child: _buildDataCell(event['EventName'] ?? 'N/A', 150, isBold: true)),
+                                            if (widget.role == 1)
+                                              _buildDataCell('', 120, child: Row(
+                                                mainAxisAlignment: MainAxisAlignment.center,
+                                                children: [
+                                                  _buildIconButton(Icons.edit_outlined, const Color(0xFF5D1712), () => _showUpdateEventDialog(event), tooltip: 'Edit'),
+                                                  const SizedBox(width: 8),
+                                                  _buildIconButton(Icons.delete_outline, Colors.red, () => _showDeleteConfirmationDialog(event), tooltip: 'Delete'),
+                                                ],
+                                              )),
                                             // Banner Column
                                             _buildDataCell('', 120, child: Align(
                                               alignment: Alignment.center,
@@ -1203,43 +1215,33 @@ class _EventsContentState extends State<EventsContent> {
                                                 ),
                                               ),
                                             )),
-                                            // Actions Column
-                                            if (widget.role == 1)
-                                              _buildDataCell('', 120, child: Row(
-                                                mainAxisAlignment: MainAxisAlignment.center,
-                                                children: [
-                                                  _buildIconButton(Icons.edit_outlined, const Color(0xFF5D1712), () => _showUpdateEventDialog(event), tooltip: 'Edit'),
-                                                  const SizedBox(width: 8),
-                                                  _buildIconButton(Icons.delete_outline, Colors.red, () => _showDeleteConfirmationDialog(event), tooltip: 'Delete'),
-                                                ],
-                                              )),
                                           ],
                                         ),
                                       );
-                                    },
-                                  ),
-                            ],
-                          ),
-                    // Footer
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: const BoxDecoration(border: Border(top: BorderSide(color: Colors.black12))),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(child: Text(_isLoading ? '' : '${AppLocalizations.of(context)?.totalEvents ?? "Total Events:"} ${_filteredEvents.length}', style: const TextStyle(color: Colors.black54, fontWeight: FontWeight.w500), overflow: TextOverflow.ellipsis)),
-                          const Row(
-                            children: [
-                              Icon(Icons.chevron_left, color: Colors.black26),
-                              SizedBox(width: 16),
-                              CircleAvatar(radius: 14, backgroundColor: const Color(0xFF5D1712), child: Text('1', style: TextStyle(color: Colors.white, fontSize: 12))),
-                              SizedBox(width: 16),
-                              Icon(Icons.chevron_right, color: Colors.black26),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
+                                     },
+                                   ),
+                             ],
+                           ),
+                     // Footer
+                     Container(
+                       padding: const EdgeInsets.all(16),
+                       decoration: const BoxDecoration(border: Border(top: BorderSide(color: Colors.black12))),
+                       child: Row(
+                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                         children: [
+                           Expanded(child: Text(_isLoading ? '' : '${AppLocalizations.of(context)?.totalEvents ?? "Total Events:"} ${_filteredEvents.length}', style: const TextStyle(color: Colors.black54, fontWeight: FontWeight.w500), overflow: TextOverflow.ellipsis)),
+                           const Row(
+                             children: [
+                               Icon(Icons.chevron_left, color: Colors.black26),
+                               SizedBox(width: 16),
+                               CircleAvatar(radius: 14, backgroundColor: const Color(0xFF5D1712), child: Text('1', style: TextStyle(color: Colors.white, fontSize: 12))),
+                               SizedBox(width: 16),
+                               Icon(Icons.chevron_right, color: Colors.black26),
+                             ],
+                           ),
+                         ],
+                       ),
+                     ),
                   ],
                 ),
               ),

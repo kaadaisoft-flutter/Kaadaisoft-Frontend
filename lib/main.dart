@@ -12,6 +12,7 @@ import 'providers/locale_provider.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:firebase_core/firebase_core.dart';
 import 'services/fcm_service.dart';
+import 'utils/web_utils.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -51,6 +52,9 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      notifyFirstFrame();
+    });
     _checkLoginStatus();
   }
 
@@ -63,6 +67,9 @@ class _MyAppState extends State<MyApp> {
         _userName = prefs.getString('userName');
         _userRole = prefs.getInt('userRole');
       }
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      notifyFirstFrame();
     });
   }
 

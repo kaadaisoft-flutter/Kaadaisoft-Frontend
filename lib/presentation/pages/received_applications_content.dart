@@ -181,12 +181,12 @@ class _ReceivedApplicationsContentState extends State<ReceivedApplicationsConten
                                       children: [
                                         _buildHeaderCell(AppLocalizations.of(context)?.sNo.toUpperCase() ?? 'S.NO', 60, alignment: Alignment.center),
                                         _buildHeaderCell(AppLocalizations.of(context)?.memberNameHeader ?? 'MEMBER NAME', 170),
+                                        _buildHeaderCell(AppLocalizations.of(context)?.actionHeader.toUpperCase() ?? 'ACTIONS', 170),
                                         _buildHeaderCell(AppLocalizations.of(context)?.mobileNumber.toUpperCase() ?? 'MOBILE NUMBER', 140),
                                         _buildHeaderCell(AppLocalizations.of(context)?.districtHeader ?? 'DISTRICT', 140),
                                         _buildHeaderCell(AppLocalizations.of(context)?.talukHeader ?? 'TALUK', 140),
                                         _buildHeaderCell(AppLocalizations.of(context)?.panchayatHeader ?? 'PANCHAYAT', 150),
-                                        _buildHeaderCell(AppLocalizations.of(context)?.villageUpperHeader ?? 'VILLAGE', 140),
-                                        _buildHeaderCell(AppLocalizations.of(context)?.actionHeader.toUpperCase() ?? 'ACTIONS', 170, hasDivider: false),
+                                        _buildHeaderCell(AppLocalizations.of(context)?.villageUpperHeader ?? 'VILLAGE', 140, hasDivider: false),
                                       ],
                                     ),
                                   ),
@@ -749,6 +749,24 @@ class _ReceivedApplicationsContentState extends State<ReceivedApplicationsConten
               style: const TextStyle(color: Color(0xFF5D1712), fontWeight: FontWeight.w600, fontSize: 13),
             ),
             _buildDataCell(
+              170,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  GestureDetector(
+                    onTap: () => _confirmStatusUpdate(app['Id'], 'Verified'),
+                    child: _buildBadge('Approve', Colors.green),
+                  ),
+                  const SizedBox(width: 8),
+                  GestureDetector(
+                    onTap: () => _confirmStatusUpdate(app['Id'], 'Rejected'),
+                    child: _buildBadge('Reject', Colors.red),
+                  ),
+                ],
+              ),
+            ),
+            _buildDataCell(
               140,
               text: app['Phonenumber']?.toString() ?? '',
               style: const TextStyle(color: Colors.black54, fontSize: 13),
@@ -772,27 +790,9 @@ class _ReceivedApplicationsContentState extends State<ReceivedApplicationsConten
             ),
             _buildDataCell(
               140,
+              hasDivider: false,
               text: app['Village']?.toString() ?? '',
               style: const TextStyle(color: Colors.black54, fontSize: 13),
-            ),
-            _buildDataCell(
-              170,
-              hasDivider: false,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.start,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  GestureDetector(
-                    onTap: () => _confirmStatusUpdate(app['Id'], 'Verified'),
-                    child: _buildBadge('Approve', Colors.green),
-                  ),
-                  const SizedBox(width: 8),
-                  GestureDetector(
-                    onTap: () => _confirmStatusUpdate(app['Id'], 'Rejected'),
-                    child: _buildBadge('Reject', Colors.red),
-                  ),
-                ],
-              ),
             ),
           ],
         ),

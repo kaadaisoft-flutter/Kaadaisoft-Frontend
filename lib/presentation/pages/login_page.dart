@@ -1,10 +1,8 @@
-import 'dart:ui';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:intl_phone_field/countries.dart';
 import 'package:provider/provider.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/locale_provider.dart';
@@ -389,32 +387,36 @@ class _LoginPageState extends State<LoginPage> {
     final localeProvider = Provider.of<LocaleProvider>(context);
     final isEnglish = localeProvider.locale.languageCode == 'en';
 
-    return InkWell(
-      onTap: () {
-        localeProvider.setLocale(Locale(isEnglish ? 'ta' : 'en'));
-      },
-      borderRadius: BorderRadius.circular(20),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: Colors.black45,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.white30),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              isEnglish ? 'English' : 'தமிழ்',
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {
+          localeProvider.setLocale(Locale(isEnglish ? 'ta' : 'en'));
+        },
+        borderRadius: BorderRadius.circular(20),
+        mouseCursor: SystemMouseCursors.click,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            color: Colors.black.withOpacity(0.45),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.white.withOpacity(0.3)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                isEnglish ? 'English' : 'தமிழ்',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
               ),
-            ),
-            const SizedBox(width: 8),
-            const Icon(Icons.language, color: Colors.white, size: 20),
-          ],
+              const SizedBox(width: 8),
+              const Icon(Icons.language, color: Colors.white, size: 20),
+            ],
+          ),
         ),
       ),
     );
@@ -446,14 +448,6 @@ class _LoginPageState extends State<LoginPage> {
             width: double.infinity,
             height: double.infinity,
             color: Colors.black.withOpacity(0.25),
-          ),
-          // Language Switcher
-          Positioned(
-            top: 20,
-            right: 20,
-            child: SafeArea(
-              child: _buildLanguageSwitcher(context),
-            ),
           ),
           // Main Content
           SafeArea(
@@ -679,6 +673,14 @@ class _LoginPageState extends State<LoginPage> {
                 _buildFooter(localizations),
                 const SizedBox(height: 16),
               ],
+            ),
+          ),
+          // Language Switcher (placed on top of main content to receive click/touch events)
+          Positioned(
+            top: 20,
+            right: 20,
+            child: SafeArea(
+              child: _buildLanguageSwitcher(context),
             ),
           ),
         ],

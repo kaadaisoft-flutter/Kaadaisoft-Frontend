@@ -144,8 +144,8 @@ class _MemberDetailsContentState extends State<MemberDetailsContent> {
                       interactive: true,
                       thickness: 8,
                       radius: const Radius.circular(8),
-                      thumbColor: const Color(0xFFC49A3C).withValues(alpha: 0.7),
-                      trackColor: Colors.grey.shade200,
+                      thumbColor: const Color(0xFF5D1712),
+                      trackColor: const Color(0x225D1712),
                       padding: const EdgeInsets.only(bottom: 2),
                       child: SingleChildScrollView(
                         controller: horizontalScrollController,
@@ -546,7 +546,20 @@ class _MemberDetailsContentState extends State<MemberDetailsContent> {
       children: [
         _detailItem(isTamil ? 'பெயர்:' : 'Name:', _userData!['Name'] ?? 'N/A', isBlue: true, isBold: true),
         const SizedBox(height: 24),
-        _detailItem(isTamil ? 'குடும்ப உறுப்பினர் எண்:' : 'Family Membership ID:', _userData!['Familymembershipid'] ?? 'N/A', isPill: true),
+        _detailItem(isTamil ? 'குடும்ப உறுப்பினர் எண் (Permanent ID):' : 'Member ID (Permanent):', _userData!['Familymembershipid'] ?? 'N/A', isPill: true),
+        if ((_userData!['is_privilege'] == true || _userData!['is_privilege'] == 1 || _userData!['is_privilege']?.toString().toLowerCase() == 'true')
+            && (_userData!['is_disabled'] != true && _userData!['is_disabled'] != 1 && _userData!['is_disabled']?.toString().toLowerCase() != 'true')
+            && ((_userData!['Approvedstatus'] ?? _userData!['approvedstatus'] ?? 'Verified').toString().trim().toLowerCase() == 'verified' || (_userData!['Approvedstatus'] ?? _userData!['approvedstatus'] ?? 'Verified').toString().trim().toLowerCase() == 'approved')
+            && (_userData!['privilege_id'] != null && _userData!['privilege_id'].toString().isNotEmpty)) ...[
+          const SizedBox(height: 24),
+          _detailItem(
+            isTamil ? 'சிறப்பு உறுப்பினர் எண் (Privilege ID):' : 'Privilege Member ID:',
+            _userData!['privilege_id'].toString(),
+            isPill: true,
+            pillColor: const Color(0xFFC49A3C),
+            isGoldBadge: true,
+          ),
+        ],
         const SizedBox(height: 24),
         _detailItem(isTamil ? 'மொபைல் எண்:' : 'Phone Number:', _userData!['Phonenumber']?.toString() ?? 'N/A'),
         const SizedBox(height: 24),
@@ -557,7 +570,7 @@ class _MemberDetailsContentState extends State<MemberDetailsContent> {
     );
   }
 
-  Widget _detailItem(String label, String value, {bool isBlue = false, bool isBold = false, bool isPill = false}) {
+  Widget _detailItem(String label, String value, {bool isBlue = false, bool isBold = false, bool isPill = false, Color? pillColor, bool isGoldBadge = false}) {
     bool isMobile = MediaQuery.of(context).size.width < 800;
     
     final labelWidget = SizedBox(
@@ -572,9 +585,18 @@ class _MemberDetailsContentState extends State<MemberDetailsContent> {
         ? Align(
             alignment: Alignment.centerLeft,
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-              decoration: BoxDecoration(color: const Color(0xFF5D1712), borderRadius: BorderRadius.circular(20)),
-              child: Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+              decoration: BoxDecoration(color: pillColor ?? const Color(0xFF5D1712), borderRadius: BorderRadius.circular(20)),
+              child: isGoldBadge
+                  ? Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.workspace_premium, color: Colors.white, size: 16),
+                        const SizedBox(width: 6),
+                        Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+                      ],
+                    )
+                  : Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
             ),
           )
         : Text(

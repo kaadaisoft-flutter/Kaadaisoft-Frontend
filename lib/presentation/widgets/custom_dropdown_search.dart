@@ -49,6 +49,7 @@ class CustomDropdownSearch extends StatefulWidget {
   final bool isLoading;
   final String? errorText;
   final List<TextInputFormatter>? inputFormatters;
+  final bool? showSearch;
 
   const CustomDropdownSearch({
     super.key,
@@ -72,6 +73,7 @@ class CustomDropdownSearch extends StatefulWidget {
     this.isLoading = false,
     this.errorText,
     this.inputFormatters,
+    this.showSearch,
   });
 
   static bool get isOpen => _CustomDropdownSearchState._closeActiveDropdown != null;
@@ -88,8 +90,8 @@ class _CustomDropdownSearchState extends State<CustomDropdownSearch> with Widget
   final _layerLink = LayerLink();
   final _fieldKey = GlobalKey<FormFieldState<String>>();
 
-  /// Controller for inline search typing in the main input field.
-  late TextEditingController _textEditingController;
+  /// Controller for the search input field inside the dropdown popup.
+  final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
   final FocusNode _mainFocusNode = FocusNode();
   final ScrollController _scrollController = ScrollController();
@@ -110,6 +112,8 @@ class _CustomDropdownSearchState extends State<CustomDropdownSearch> with Widget
     return {};
   }
 
+  bool get _shouldShowSearch => widget.showSearch ?? (_allEntries.length > 5);
+
   @override
   void initState() {
     super.initState();
@@ -117,11 +121,6 @@ class _CustomDropdownSearchState extends State<CustomDropdownSearch> with Widget
 
     _filteredItems = _allEntries.entries.toList();
 
-    final displayValue = _allEntries[widget.value] ?? (widget.dropdownMap != null ? '' : widget.value ?? '');
-    _textEditingController = TextEditingController(text: displayValue);
-
-    // Track scroll activity so we can suppress accidental selection
-    // during a touch scroll.
     _scrollController.addListener(() {
       if (_scrollController.position.isScrollingNotifier.value) {
         _isScrolling = true;
@@ -131,9 +130,11 @@ class _CustomDropdownSearchState extends State<CustomDropdownSearch> with Widget
     _searchFocusNode.onKeyEvent = (node, event) => _handleKey(event);
     _mainFocusNode.onKeyEvent = (node, event) => _handleKey(event);
     _searchFocusNode.addListener(_onFocusChange);
+    _mainFocusNode.addListener(_onFocusChange);
+
     SchedulerBinding.instance.addPostFrameCallback((_) {
       if (mounted && widget.autofocus) {
-        _searchFocusNode.requestFocus();
+        _mainFocusNode.requestFocus();
       }
     });
   }
@@ -144,19 +145,30 @@ class _CustomDropdownSearchState extends State<CustomDropdownSearch> with Widget
     }
   }
 
-  /// Called by the framework when window metrics change (e.g. keyboard
-  /// opens or closes). Rebuilds the overlay so it can reposition.
   @override
   void didChangeMetrics() {
-    // Rebuild overlay so it can reposition when keyboard opens/closes.
     _overlayEntry?.markNeedsBuild();
   }
 
   KeyEventResult _handleKey(KeyEvent event) {
-    if (_overlayEntry == null) return KeyEventResult.ignored;
+    if (_overlayEntry == null) {
+      if (event is KeyDownEvent &&
+          (event.logicalKey == LogicalKeyboardKey.enter ||
+              event.logicalKey == LogicalKeyboardKey.space ||
+              event.logicalKey == LogicalKeyboardKey.arrowDown)) {
+        if (_fieldKey.currentState != null) {
+          _showDropdown(_fieldKey.currentState!);
+          return KeyEventResult.handled;
+        }
+      }
+      return KeyEventResult.ignored;
+    }
 
     if (event is KeyDownEvent || event is KeyRepeatEvent) {
-      if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+      if (event.logicalKey == LogicalKeyboardKey.escape) {
+        _hideDropdown();
+        return KeyEventResult.handled;
+      } else if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
         if (_highlightedIndex < _filteredItems.length - 1) {
           _highlightedIndex++;
           _scrollToHighlight();
@@ -208,13 +220,11 @@ class _CustomDropdownSearchState extends State<CustomDropdownSearch> with Widget
   void _selectItem(FormFieldState<String> field, MapEntry<String, String> entry) {
     if (widget.clearOnSelect) {
       field.didChange(null);
-      _textEditingController.clear();
     } else {
       field.didChange(entry.key);
-      _textEditingController.text = entry.value;
     }
-    // Reset the filtered list to full so the next open shows all items.
     _filteredItems = _allEntries.entries.toList();
+    _searchController.clear();
     widget.onChanged?.call(entry.key);
     _searchFocusNode.unfocus();
     _mainFocusNode.unfocus();
@@ -230,17 +240,14 @@ class _CustomDropdownSearchState extends State<CustomDropdownSearch> with Widget
           if (_fieldKey.currentState != null && _fieldKey.currentState!.value != widget.value) {
             _fieldKey.currentState!.didChange(widget.value);
           }
-          final displayValue = _allEntries[widget.value] ?? (widget.dropdownMap != null ? '' : widget.value ?? '');
-          if (_overlayEntry == null && displayValue != _textEditingController.text) {
-            _textEditingController.text = displayValue;
-          }
+          setState(() {});
         }
       });
     }
     if (widget.autofocus && !oldWidget.autofocus) {
       SchedulerBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
-          _searchFocusNode.requestFocus();
+          _mainFocusNode.requestFocus();
         }
       });
     }
@@ -257,14 +264,13 @@ class _CustomDropdownSearchState extends State<CustomDropdownSearch> with Widget
   }
 
   void _filterItems(String query) {
-    setState(() {
-      _highlightedIndex = 0;
-      if (query.isEmpty) {
-        _filteredItems = _allEntries.entries.toList();
-      } else {
-        _filteredItems = _allEntries.entries.where((entry) => entry.value.toLowerCase().contains(query.toLowerCase())).toList();
-      }
-    });
+    _highlightedIndex = 0;
+    if (query.isEmpty) {
+      _filteredItems = _allEntries.entries.toList();
+    } else {
+      final q = query.toLowerCase().trim();
+      _filteredItems = _allEntries.entries.where((entry) => entry.value.toLowerCase().contains(q)).toList();
+    }
     _overlayEntry?.markNeedsBuild();
   }
 
@@ -276,8 +282,6 @@ class _CustomDropdownSearchState extends State<CustomDropdownSearch> with Widget
     }
   }
 
-  /// Intercepts trackpad/mouse-wheel scroll signals and forwards them directly
-  /// to the [ScrollController], bypassing the TextField focus absorption.
   void _handlePointerScroll(PointerScrollEvent event) {
     if (!_scrollController.hasClients) return;
     final double scrollDelta = event.scrollDelta.dy;
@@ -298,32 +302,13 @@ class _CustomDropdownSearchState extends State<CustomDropdownSearch> with Widget
     final RenderBox renderBox = context.findRenderObject() as RenderBox;
     final size = renderBox.size;
 
-    // Always reset to full list when opening so previous search/selection
-    // does not leave a filtered list visible on next open.
     _filteredItems = _allEntries.entries.toList();
     _highlightedIndex = 0;
-
-    // Clear the text field so user can type a fresh search.
-    // Only clear when there is no committed value so hint text is shown.
-    if (widget.value == null || widget.value!.isEmpty) {
-      _textEditingController.clear();
-    } else {
-      // Show the display label of the selected value so user can see
-      // the current selection and type to filter from there.
-      final displayValue = _allEntries[widget.value] ?? (widget.dropdownMap != null ? '' : widget.value ?? '');
-      if (_textEditingController.text != displayValue) {
-        _textEditingController.text = displayValue;
-      }
-    }
-
-    if (!_searchFocusNode.hasFocus) {
-      _searchFocusNode.requestFocus();
-    }
+    _searchController.clear();
 
     _overlayEntry = OverlayEntry(
       builder: (context) {
-        // Compute available space below and above the field, accounting for keyboard.
-        const double kDropdownMaxHeight = 300;
+        const double kDropdownMaxHeight = 320;
         final fieldGlobal = renderBox.localToGlobal(Offset.zero);
         final view = WidgetsBinding.instance.platformDispatcher.views.first;
         final double screenHeight = view.physicalSize.height / view.devicePixelRatio;
@@ -332,19 +317,17 @@ class _CustomDropdownSearchState extends State<CustomDropdownSearch> with Widget
         final spaceBelow = screenHeight - fieldGlobal.dy - size.height - keyboardHeight - 12;
         final spaceAbove = fieldGlobal.dy - 12;
 
-        // Flexible placement: show above if space below is tight and there is more space above
         final showAbove = spaceBelow < kDropdownMaxHeight && spaceAbove > spaceBelow;
 
-        // Calculate dynamic max height to prevent extending off-screen or behind keyboard
         final double availableSpace = showAbove ? spaceAbove : spaceBelow;
-        final double finalMaxHeight = availableSpace < kDropdownMaxHeight 
-            ? (availableSpace < 120 ? 120 : availableSpace) // Ensure at least a small dropdown
+        final double finalMaxHeight = availableSpace < kDropdownMaxHeight
+            ? (availableSpace < 160 ? 160 : availableSpace)
             : kDropdownMaxHeight;
 
-        // When opening upward, anchor the follower's bottom to the target's top.
         final Offset offset = showAbove ? const Offset(0, -6) : Offset(0, size.height + 6);
         final Alignment tAnchor = showAbove ? Alignment.topLeft : Alignment.topLeft;
         final Alignment fAnchor = showAbove ? Alignment.bottomLeft : Alignment.topLeft;
+        final bool isTa = Localizations.localeOf(context).languageCode == 'ta';
 
         return Positioned(
           width: size.width,
@@ -354,9 +337,6 @@ class _CustomDropdownSearchState extends State<CustomDropdownSearch> with Widget
             targetAnchor: tAnchor,
             followerAnchor: fAnchor,
             offset: offset,
-            // Wrap overlay in TapRegion with the same groupId so
-            // touches inside the dropdown are NOT treated as
-            // "tap outside" the TextField, preventing focus loss.
             child: TapRegion(
               groupId: _groupId,
               child: Material(
@@ -366,7 +346,7 @@ class _CustomDropdownSearchState extends State<CustomDropdownSearch> with Widget
                 color: Colors.white,
                 child: GestureDetector(
                   behavior: HitTestBehavior.translucent,
-                  onTap: () {}, // absorb taps inside overlay
+                  onTap: () {},
                   child: Container(
                     decoration: BoxDecoration(
                       color: Colors.white,
@@ -387,6 +367,73 @@ class _CustomDropdownSearchState extends State<CustomDropdownSearch> with Widget
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
+                        if (_shouldShowSearch) ...[
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(10, 10, 10, 8),
+                            child: Container(
+                              height: 38,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF9FAFB),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: Colors.grey.shade300,
+                                  width: 1,
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                                    child: Icon(
+                                      Icons.search,
+                                      size: 18,
+                                      color: AppColors.primary.withValues(alpha: 0.6),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: TextField(
+                                      controller: _searchController,
+                                      focusNode: _searchFocusNode,
+                                      textInputAction: TextInputAction.search,
+                                      decoration: InputDecoration(
+                                        hintText: isTa ? 'தேடுக...' : 'Search...',
+                                        hintStyle: AppTypography.inter(
+                                          color: Colors.grey.shade400,
+                                          fontSize: 13,
+                                        ),
+                                        border: InputBorder.none,
+                                        enabledBorder: InputBorder.none,
+                                        focusedBorder: InputBorder.none,
+                                        isDense: true,
+                                        contentPadding: const EdgeInsets.symmetric(vertical: 9),
+                                      ),
+                                      style: AppTypography.inter(
+                                        color: Colors.black87,
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                      onChanged: (val) {
+                                        _filterItems(val);
+                                      },
+                                    ),
+                                  ),
+                                  if (_searchController.text.isNotEmpty)
+                                    GestureDetector(
+                                      onTap: () {
+                                        _searchController.clear();
+                                        _filterItems('');
+                                      },
+                                      child: const Padding(
+                                        padding: EdgeInsets.symmetric(horizontal: 8),
+                                        child: Icon(Icons.clear, size: 16, color: Colors.grey),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const Divider(height: 1, thickness: 1, color: Color(0xFFF0F0F0)),
+                        ],
                         Flexible(
                           child: widget.isLoading
                               ? Padding(
@@ -395,7 +442,7 @@ class _CustomDropdownSearchState extends State<CustomDropdownSearch> with Widget
                                     child: Row(
                                       mainAxisAlignment: MainAxisAlignment.center,
                                       children: [
-                                        SizedBox(
+                                        const SizedBox(
                                           width: 16,
                                           height: 16,
                                           child: CircularProgressIndicator(
@@ -407,7 +454,7 @@ class _CustomDropdownSearchState extends State<CustomDropdownSearch> with Widget
                                         ),
                                         const SizedBox(width: 12),
                                         Text(
-                                          'Loading...',
+                                          isTa ? 'ஏற்றுகிறது...' : 'Loading...',
                                           style: AppTypography.inter(
                                             color: Colors.grey.shade500,
                                             fontSize: 14,
@@ -421,7 +468,7 @@ class _CustomDropdownSearchState extends State<CustomDropdownSearch> with Widget
                                   ? Padding(
                                       padding: const EdgeInsets.all(20.0),
                                       child: Text(
-                                        'No results found',
+                                        isTa ? 'முடிவுகள் எதுவும் இல்லை' : 'No results found',
                                         style: AppTypography.inter(
                                           color: Colors.grey.shade500,
                                           fontSize: 14,
@@ -434,8 +481,6 @@ class _CustomDropdownSearchState extends State<CustomDropdownSearch> with Widget
                                         if (notification is ScrollStartNotification) {
                                           _isScrolling = true;
                                         } else if (notification is ScrollEndNotification) {
-                                          // Small delay before clearing so tap-up at end
-                                          // of scroll doesn't accidentally select.
                                           Future.delayed(
                                             const Duration(milliseconds: 150),
                                             () => _isScrolling = false,
@@ -444,24 +489,20 @@ class _CustomDropdownSearchState extends State<CustomDropdownSearch> with Widget
                                         return false;
                                       },
                                       child: Listener(
-                                        // Intercept pointer scroll signals (trackpad / mouse wheel)
-                                        // so they reach the ScrollController even when the
-                                        // TextField inside the field holds focus.
                                         onPointerSignal: (event) {
                                           if (event is PointerScrollEvent) {
                                             _handlePointerScroll(event);
                                           }
                                         },
                                         child: ScrollConfiguration(
-                                          // Allow trackpad pan gestures to scroll the list.
                                           behavior: _TrackpadAwareScrollBehavior(),
                                           child: ListView.builder(
                                             controller: _scrollController,
                                             shrinkWrap: true,
                                             physics: const ClampingScrollPhysics(),
                                             padding: const EdgeInsets.symmetric(
-                                              horizontal: 12,
-                                              vertical: 8,
+                                              horizontal: 10,
+                                              vertical: 6,
                                             ),
                                             itemCount: _filteredItems.length,
                                             itemBuilder: (context, index) {
@@ -474,7 +515,6 @@ class _CustomDropdownSearchState extends State<CustomDropdownSearch> with Widget
                                                 child: InkWell(
                                                   splashFactory: NoSplash.splashFactory,
                                                   onTap: () {
-                                                    // Guard: don't select during/after scroll.
                                                     if (_isScrolling) return;
                                                     if (_fieldKey.currentState != null) {
                                                       _selectItem(
@@ -487,12 +527,12 @@ class _CustomDropdownSearchState extends State<CustomDropdownSearch> with Widget
                                                     width: double.infinity,
                                                     padding: const EdgeInsets.symmetric(
                                                       vertical: 10,
-                                                      horizontal: 8,
+                                                      horizontal: 10,
                                                     ),
                                                     decoration: BoxDecoration(
                                                       borderRadius: BorderRadius.circular(6),
                                                       color: isSelected
-                                                          ? AppColors.primary.withValues(alpha: 0.06)
+                                                          ? AppColors.primary.withValues(alpha: 0.08)
                                                           : (isHighlighted ? Colors.grey.shade100 : Colors.transparent),
                                                     ),
                                                     child: Row(
@@ -508,7 +548,7 @@ class _CustomDropdownSearchState extends State<CustomDropdownSearch> with Widget
                                                           ),
                                                         ),
                                                         if (isSelected)
-                                                          Icon(
+                                                          const Icon(
                                                             Icons.check,
                                                             size: 16,
                                                             color: AppColors.primary,
@@ -537,6 +577,14 @@ class _CustomDropdownSearchState extends State<CustomDropdownSearch> with Widget
 
     Overlay.of(context).insert(_overlayEntry!);
     if (mounted) setState(() {});
+
+    if (_shouldShowSearch) {
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _overlayEntry != null) {
+          _searchFocusNode.requestFocus();
+        }
+      });
+    }
   }
 
   void _hideDropdown() {
@@ -549,6 +597,9 @@ class _CustomDropdownSearchState extends State<CustomDropdownSearch> with Widget
     }
     _highlightedIndex = 0;
     _isScrolling = false;
+    _searchController.clear();
+    _searchFocusNode.unfocus();
+    _filteredItems = _allEntries.entries.toList();
     if (mounted) setState(() {});
   }
 
@@ -556,6 +607,7 @@ class _CustomDropdownSearchState extends State<CustomDropdownSearch> with Widget
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _searchFocusNode.removeListener(_onFocusChange);
+    _mainFocusNode.removeListener(_onFocusChange);
     if (_closeActiveDropdown == _hideDropdown) {
       _closeActiveDropdown = null;
     }
@@ -563,7 +615,7 @@ class _CustomDropdownSearchState extends State<CustomDropdownSearch> with Widget
       _overlayEntry!.remove();
     }
     _overlayEntry = null;
-    _textEditingController.dispose();
+    _searchController.dispose();
     _searchFocusNode.dispose();
     _mainFocusNode.dispose();
     _scrollController.dispose();
@@ -585,7 +637,7 @@ class _CustomDropdownSearchState extends State<CustomDropdownSearch> with Widget
                   TextSpan(
                     text: '${widget.label.replaceAll('*', '').trim()} ',
                     style: AppTypography.manrope(
-                      color: _searchFocusNode.hasFocus ? AppColors.primary : Colors.grey.shade800,
+                      color: (_overlayEntry != null || _mainFocusNode.hasFocus) ? AppColors.primary : Colors.grey.shade800,
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
                     ),
@@ -612,6 +664,11 @@ class _CustomDropdownSearchState extends State<CustomDropdownSearch> with Widget
               autovalidateMode: AutovalidateMode.onUserInteraction,
               validator: widget.validator,
               builder: (field) {
+                final currentValue = field.value ?? widget.value;
+                final displayValue = _allEntries[currentValue] ?? (widget.dropdownMap != null ? '' : currentValue ?? '');
+                final hasValue = displayValue.trim().isNotEmpty;
+                final isOpen = _overlayEntry != null;
+
                 return Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -620,110 +677,86 @@ class _CustomDropdownSearchState extends State<CustomDropdownSearch> with Widget
                       groupId: _groupId,
                       onTapOutside: (_) {
                         _hideDropdown();
-                        _searchFocusNode.unfocus();
-                        _mainFocusNode.unfocus();
                       },
-                      child: Container(
-                        width: double.infinity,
-                        height: widget.height,
-                        clipBehavior: Clip.none,
-                        decoration: BoxDecoration(
-                          color: widget.isEnabled ? Colors.white : const Color(0xFFF9FAFB),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                            width: (field.hasError || widget.errorText != null)
-                                ? 1.5
-                                : _searchFocusNode.hasFocus
-                                    ? (widget.focusedBorderWidth ?? 1.5)
-                                    : (widget.borderWidth ?? 1.0),
-                            color: (field.hasError || widget.errorText != null)
-                                ? AppColors.error
-                                : _searchFocusNode.hasFocus
-                                    ? (widget.focusedBorderColor ?? AppColors.primary)
-                                    : widget.isEnabled
-                                        ? (widget.borderColor ?? AppColors.primary.withValues(alpha: 0.15))
-                                        : const Color(0xFFE5E7EB),
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: TextField(
-                                controller: _textEditingController,
-                                focusNode: _searchFocusNode,
-                                enabled: widget.isEnabled,
-                                textInputAction: TextInputAction.done,
-                                onTapOutside: (_) {},
-                                inputFormatters: widget.inputFormatters,
-                                decoration: InputDecoration(
-                                  isDense: true,
-                                  filled: false,
-                                  fillColor: Colors.transparent,
-                                  hintText: widget.hint ?? (Localizations.localeOf(context).languageCode == 'ta' ? '${widget.label.replaceAll('*', '').trim()} தேர்ந்தெடு' : 'Select ${widget.label.replaceAll('*', '').trim()}'),
-                                  hintStyle: AppTypography.inter(
-                                    color: Colors.grey.shade400,
-                                    fontSize: 13,
-                                  ),
-                                  border: InputBorder.none,
-                                  enabledBorder: InputBorder.none,
-                                  focusedBorder: InputBorder.none,
-                                  disabledBorder: InputBorder.none,
-                                  errorBorder: InputBorder.none,
-                                  focusedErrorBorder: InputBorder.none,
-                                  contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 14,
-                                    vertical: 12,
-                                  ),
-                                ),
-                                style: AppTypography.inter(
-                                  color: widget.isEnabled ? Colors.black87 : Colors.grey.shade500,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                                onChanged: (val) {
-                                  field.didChange(val);
-                                  _filterItems(val);
-                                  if (_overlayEntry == null) {
-                                    _showDropdown(field);
-                                  }
-                                },
-                                onTap: () {
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: widget.isEnabled && !widget.isLoading
+                              ? () {
                                   widget.onTap?.call();
                                   _toggleDropdown(field);
-                                },
+                                }
+                              : null,
+                          borderRadius: BorderRadius.circular(10),
+                          child: Container(
+                            width: double.infinity,
+                            height: widget.height,
+                            padding: const EdgeInsets.symmetric(horizontal: 14),
+                            clipBehavior: Clip.none,
+                            decoration: BoxDecoration(
+                              color: widget.isEnabled ? Colors.white : const Color(0xFFF9FAFB),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                width: (field.hasError || widget.errorText != null)
+                                    ? 1.5
+                                    : (isOpen || _mainFocusNode.hasFocus)
+                                        ? (widget.focusedBorderWidth ?? 1.5)
+                                        : (widget.borderWidth ?? 1.0),
+                                color: (field.hasError || widget.errorText != null)
+                                    ? AppColors.error
+                                    : (isOpen || _mainFocusNode.hasFocus)
+                                        ? (widget.focusedBorderColor ?? AppColors.primary)
+                                        : widget.isEnabled
+                                            ? (widget.borderColor ?? AppColors.primary.withValues(alpha: 0.15))
+                                            : const Color(0xFFE5E7EB),
                               ),
                             ),
-                            if (widget.isLoading)
-                              Padding(
-                                padding: const EdgeInsets.only(right: 8),
-                                child: SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                      AppColors.primary,
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    hasValue
+                                        ? displayValue
+                                        : (widget.hint ??
+                                            (Localizations.localeOf(context).languageCode == 'ta'
+                                                ? '${widget.label.replaceAll('*', '').trim()} தேர்ந்தெடு'
+                                                : 'Select ${widget.label.replaceAll('*', '').trim()}')),
+                                    style: AppTypography.inter(
+                                      color: hasValue
+                                          ? (widget.isEnabled ? Colors.black87 : Colors.grey.shade500)
+                                          : Colors.grey.shade400,
+                                      fontSize: 14,
+                                      fontWeight: hasValue ? FontWeight.w500 : FontWeight.w400,
                                     ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
-                              ),
-                            GestureDetector(
-                              onTap: widget.isEnabled && !widget.isLoading
-                                  ? () {
-                                      widget.onTap?.call();
-                                      _toggleDropdown(field);
-                                    }
-                                  : null,
-                              child: Padding(
-                                padding: const EdgeInsets.only(right: 12),
-                                child: Icon(
-                                  _overlayEntry != null ? Icons.arrow_drop_up : Icons.arrow_drop_down,
-                                  size: 20,
-                                  color: widget.isEnabled ? AppColors.primary : Colors.grey.shade400,
+                                if (widget.isLoading)
+                                  const Padding(
+                                    padding: EdgeInsets.only(left: 8),
+                                    child: SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        valueColor: AlwaysStoppedAnimation<Color>(
+                                          AppColors.primary,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                Padding(
+                                  padding: const EdgeInsets.only(left: 8),
+                                  child: Icon(
+                                    isOpen ? Icons.arrow_drop_up : Icons.arrow_drop_down,
+                                    size: 20,
+                                    color: widget.isEnabled ? AppColors.primary : Colors.grey.shade400,
+                                  ),
                                 ),
-                              ),
+                              ],
                             ),
-                          ],
+                          ),
                         ),
                       ),
                     ),

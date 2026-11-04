@@ -72,6 +72,14 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
   String? _selectedMarried;
   String? _selectedEducation;
   String? _selectedProfession;
+  bool _isProfilePublished = false;
+  String? _publishOption; // 'Yes' or 'No'
+  final _specializationController = TextEditingController();
+  final _qualificationsController = TextEditingController();
+  final _workplaceController = TextEditingController();
+  final _experienceController = TextEditingController();
+  final _bioSummaryController = TextEditingController();
+  final _publishCommentsController = TextEditingController();
   String? _selectedDistrict;
   String? _selectedTaluk;
   String? _selectedPanchayat;
@@ -127,7 +135,30 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
   final List<String> _bloodGroups = ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'];
   final List<String> _educations = ['SSLC', 'HSC', 'Diploma', 'ITI', 'B.A', 'B.Sc', 'B.Com', 'BBA', 'BCA', 'B.E', 'B.Tech', 'MBBS', 'BDS', 'B.Pharm', 'B.Ed', 'LLB', 'B.Arch', 'M.A', 'M.Sc', 'M.Com', 'MBA', 'MCA', 'M.E', 'M.Tech', 'MD', 'MS', 'MDS', 'M.Pharm', 'M.Ed', 'LLM', 'M.Phil', 'Ph.D', 'Others'];
   final List<String> _professions = ['Doctor', 'Lawyer', 'Police', 'Teacher / Lecturer', 'Engineer', 'Government Employee', 'Private Employee', 'Student', 'Farmer – Agriculture', 'Textile Mill Worker (Spinning / Weaving)', 'Garment Factory Worker', 'Tailor / Apparel Stitching', 'Garment Pattern Master / Designer', 'Textile Machinery Technician / Mechanic', 'Textile Machinery Sales & Service', 'Powerloom / Auto‑Loom Operator', 'Knitting Machine Operator', 'Truck / Lorry Driver', 'Truck / Lorry Owner‑cum‑Driver', 'Logistics / Transport Staff', 'Fleet Manager', 'Dairy Farmer', 'Poultry Farmer', 'Goat / Sheep Rearing', 'Pump / Motor Technician', 'Pump / Motor Manufacturing Worker', 'Motor Rewinding Technician', 'Machinist / Turner', 'Welder / Fabricator', 'Steel / Aluminium Foundry Worker', 'Mixer‑Grinder Assembly / Service Technician', 'Plastic / Net / Packaging Unit Worker', 'Windmill Maintenance Technician', 'Electrical Line / Maintenance Technician', 'Grocery Shop Staff', 'Medical Shop / Pharmacy Staff', 'Retail Shop / Sales Staff', 'Office Admin / Computer Operator', 'Accountant / Finance Staff', 'Bank / NBFC Staff', 'Hospital Nurse / Lab Tech / Pharmacist', 'Medical Representative', 'IT / Software Employee', 'Home Maker', 'Retired', 'Others'];
-  final List<String> _kulams = ['Poondurai Kaadai', 'Aanthuvan Kulam', 'Azhagu Kulam', 'Aathe Kulam', 'Aanthai Kulam', 'Aadar Kulam', 'Aavan Kulam', 'Eenjan Kulam', 'Ozukkar Kulam', 'Oothaalar Kulam', 'Kannakkan Kulam', 'Kannan Kulam', 'Kannaanthai Kulam', 'Kaadai Kulam', 'Kaari Kulam', 'Keeran Kulam', 'Kuzhlaayan Kulam', 'Koorai Kulam', 'Koovendhar Kulam', 'Saathanthai Kulam', 'Sellan Kulam', 'Semban Kulam', 'Sengkannan Kulam', 'Sembuthan Kulam', 'Senkunnier Kulam', 'Sevvaayar Kulam', 'Cheran Kulam', 'Chedan Kulam', 'Dananjayan Kulam', 'Thazhinji Kulam', 'Thooran Kulam', 'Devendran Kulam', 'Thoodar Kulam', 'Neerunniyar Kulam', 'Pavazhalar Kulam', 'Panayan Kulam', 'Pathuman Kulam', 'Payiran Kulam', 'Panagkaadar Kulam', 'Pathariar Kulam', 'Pandiyan Kulam', 'Pillar Kulam', 'Poosan Kulam', 'Poochanthai Kulam', 'Periyan Kulam', 'Perunkudiyaan Kulam', 'Porulaanthai Kulam', 'Ponnar Kulam', 'Maniyan Kulam', 'Mayilar Kulam', 'Maadar Kulam', 'Mutthan Kulam', 'Muzhukathan Kulam', 'Medhi Kulam', 'Vannakkan Kulam', 'Villiyar Kulam', 'Vilayan Kulam', 'Vizhiyar Kulam', 'Venduvan Kulam', 'Vennag Kulam', 'Vellampar Kulam', 'Others'];
+  final List<String> _kulams = ['Poondurai Kaadai', 'Aanthuvan Kulam', 'Azhagu Kulam', 'Aathe Kulam', 'Aanthai Kulam', 'Aadar Kulam', 'Aavan Kulam', 'Eenjan Kulam', 'Ozukkar Kulam', 'Oothaalar Kulam', 'Kannakkan Kulam', 'Kannan Kulam', 'Kannaanthai Kulam', 'Kaadai Kulam', 'Kaari Kulam', 'Keeran Kulam', 'Kuzhlaayan Kulam', 'Koorai Kulam', 'Koovendhar Kulam', 'Saathanthai Kulam', 'Sellan Kulam', 'Semban Kulam', 'Sembuthan Kulam', 'Senkannan Kulam', 'Senkannier Kulam', 'Sevvaayar Kulam', 'Cheran Kulam', 'Chedan Kulam', 'Dananjayan Kulam', 'Thazhinji Kulam', 'Thooran Kulam', 'Devendran Kulam', 'Thoodar Kulam', 'Neerunniyar Kulam', 'Pavazhalar Kulam', 'Panayan Kulam', 'Pathuman Kulam', 'Payiran Kulam', 'Panagkaadar Kulam', 'Pathariar Kulam', 'Pandiyan Kulam', 'Pillar Kulam', 'Poosan Kulam', 'Poochanthai Kulam', 'Periyan Kulam', 'Perunkudiyaan Kulam', 'Porulaanthai Kulam', 'Ponnar Kulam', 'Maniyan Kulam', 'Mayilar Kulam', 'Maadar Kulam', 'Mutthan Kulam', 'Muzhukathan Kulam', 'Medhi Kulam', 'Vannakkan Kulam', 'Villiyar Kulam', 'Vilayan Kulam', 'Vizhiyar Kulam', 'Venduvan Kulam', 'Vennag Kulam', 'Vellampar Kulam', 'Others'];
+
+  String? _getProfessionForEducation(String? edu) {
+    if (edu == null) return null;
+    final e = edu.trim();
+    if (['MBBS', 'BDS', 'MD', 'MS', 'MDS'].contains(e)) return 'Doctor';
+    if (['LLB', 'LLM'].contains(e)) return 'Lawyer';
+    if (['B.Ed', 'M.Ed'].contains(e)) return 'Teacher / Lecturer';
+    if (['B.E', 'B.Tech', 'M.E', 'M.Tech', 'B.Arch'].contains(e)) return 'Engineer';
+    if (['B.Pharm', 'M.Pharm'].contains(e)) return 'Hospital Nurse / Lab Tech / Pharmacist';
+    return null;
+  }
+
+  List<String> _getFilteredProfessions(String? education) {
+    final edu = education?.trim() ?? '';
+    final isMedical = ['MBBS', 'BDS', 'MD', 'MS', 'MDS'].contains(edu);
+    final isLaw = ['LLB', 'LLM'].contains(edu);
+    
+    return _professions.where((p) {
+      if (p == 'Doctor' && !isMedical) return false;
+      if (p == 'Lawyer' && !isLaw) return false;
+      return true;
+    }).toList();
+  }
 
   @override
   void initState() {
@@ -205,7 +236,10 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
     final hk = (d['husband_kulam']?.toString() ?? '').trim();
     _selectedMarried = (d['Married'] == 'Yes' || d['Married'] == 'yes') ? 'Yes' : (d['Married']?.toString().isNotEmpty == true ? 'No' : null);
     _selectedAliveStatus = (d['is_dead'] == 0 || d['is_dead'] == '0' || d['is_dead'] == null || d['is_dead'].toString().toLowerCase() == 'alive') ? 'Alive' : 'Dead';
-    _selectedHusbandKulam = _kulams.contains(hk) ? hk : null;
+    String normalizedHk = hk;
+    if (normalizedHk == 'Sengkannan Kulam') normalizedHk = 'Senkannan Kulam';
+    if (normalizedHk == 'Senkunnier Kulam') normalizedHk = 'Senkannier Kulam';
+    _selectedHusbandKulam = _kulams.contains(normalizedHk) ? normalizedHk : null;
     
     final rawRole = (d['MemberRole']?.toString() ?? '').trim();
     // Normalize common variations
@@ -249,10 +283,25 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
     }
 
     final rawKulam = (d['Kulam']?.toString() ?? '').trim();
-    _selectedKulam = _kulams.contains(rawKulam) ? rawKulam : (_isKulamSelectable ? null : 'Poondurai Kaadai');
+    String normalizedKulam = rawKulam;
+    if (normalizedKulam == 'Sengkannan Kulam') normalizedKulam = 'Senkannan Kulam';
+    if (normalizedKulam == 'Senkunnier Kulam') normalizedKulam = 'Senkannier Kulam';
+    _selectedKulam = _kulams.contains(normalizedKulam) ? normalizedKulam : (_isKulamSelectable ? null : 'Poondurai Kaadai');
     
     _selectedEducation = d['Education'];
     _selectedProfession = d['Profession'];
+    if ((_selectedProfession == null || _selectedProfession!.isEmpty) && _selectedEducation != null) {
+      _selectedProfession = _getProfessionForEducation(_selectedEducation);
+    }
+    final rawPub = d['is_profile_published'] ?? d['profile_published'] ?? d['IsProfilePublished'] ?? d['ProfilePublished'];
+    _isProfilePublished = (rawPub == true || rawPub == 1 || rawPub == '1' || rawPub.toString().toLowerCase() == 'true');
+    _publishOption = _isProfilePublished ? 'Yes' : 'No';
+    _publishCommentsController.text = (d['profile_publish_comments'] ?? d['ProfilePublishComments'] ?? '').toString();
+    _specializationController.text = (d['specialization'] ?? d['Specialization'] ?? '').toString();
+    _workplaceController.text = (d['workplace'] ?? d['Workplace'] ?? '').toString();
+    _experienceController.text = (d['experience_years'] ?? d['ExperienceYears'] ?? '').toString();
+    _bioSummaryController.text = (d['bio_summary'] ?? d['BioSummary'] ?? '').toString();
+    _qualificationsController.text = (d['qualifications'] ?? d['Qualifications'] ?? d['Education'] ?? '').toString();
     
     // Native Address
     _selectedDistrict = (d['District']?.toString().trim().isEmpty ?? true) ? null : d['District'];
@@ -618,10 +667,169 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
                       _buildSectionTitle(Icons.work_outline, 'Education & Career'),
                       const SizedBox(height: 16),
                       _buildResponsiveRow(isMobile, [
-                        _buildDropdownField('Education *', _educations, _selectedEducation, (v) => setState(() => _selectedEducation = v)),
-                        _buildDropdownField('Profession *', _professions, _selectedProfession, (v) => setState(() => _selectedProfession = v)),
+                        _buildDropdownField('Education *', _educations, _selectedEducation, (v) {
+                          setState(() {
+                            _selectedEducation = v;
+                            final mapped = _getProfessionForEducation(v);
+                            if (mapped != null) {
+                              _selectedProfession = mapped;
+                              if (_selectedProfession != 'Doctor' && _selectedProfession != 'Lawyer') {
+                                _isProfilePublished = false;
+                                _publishOption = 'No';
+                              }
+                            } else {
+                              final isMedical = ['MBBS', 'BDS', 'MD', 'MS', 'MDS'].contains(v?.trim());
+                              final isLaw = ['LLB', 'LLM'].contains(v?.trim());
+                              if (_selectedProfession == 'Doctor' && !isMedical) {
+                                _selectedProfession = null;
+                                _isProfilePublished = false;
+                                _publishOption = 'No';
+                              } else if (_selectedProfession == 'Lawyer' && !isLaw) {
+                                _selectedProfession = null;
+                                _isProfilePublished = false;
+                                _publishOption = 'No';
+                              }
+                            }
+                            if (v != null) {
+                              if (_qualificationsController.text.trim().isEmpty || _educations.contains(_qualificationsController.text.trim())) {
+                                _qualificationsController.text = v;
+                              }
+                            }
+                          });
+                        }),
+                        _buildDropdownField('Profession *', _getFilteredProfessions(_selectedEducation), _selectedProfession, (v) {
+                          setState(() {
+                            _selectedProfession = v;
+                            if (_selectedProfession != 'Doctor' && _selectedProfession != 'Lawyer') {
+                              _isProfilePublished = false;
+                              _publishOption = 'No';
+                            }
+                          });
+                        }),
                         if (!isMobile) const SizedBox(),
                       ]),
+                      if (_selectedProfession == 'Doctor' || _selectedProfession == 'Lawyer') ...[
+                        const SizedBox(height: 20),
+                        // 1. Directory Publish Dropdown (Yes / No)
+                        _buildResponsiveRow(isMobile, [
+                          _buildDropdownField(
+                            Localizations.localeOf(context).languageCode == 'ta'
+                                ? 'சுயவிவரத்தை சமூக அடைவில் வெளியிடவா? *'
+                                : 'Publish Profile in Directory? *',
+                            ['Yes', 'No'],
+                            _publishOption,
+                            (v) {
+                              setState(() {
+                                _publishOption = v;
+                                _isProfilePublished = (v == 'Yes');
+                              });
+                            },
+                          ),
+                          if (!isMobile) const SizedBox(),
+                        ]),
+                        const SizedBox(height: 16),
+
+                        // 2. When YES: Show detailed Doctor / Lawyer form
+                        if (_publishOption == 'Yes') ...[
+                          Container(
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFEF3C7).withValues(alpha: 0.3),
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: const Color(0xFFC49A3C).withValues(alpha: 0.55), width: 1.2),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF5D1712).withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Icon(
+                                        _selectedProfession == 'Doctor' ? Icons.medical_services_outlined : Icons.gavel_outlined,
+                                        size: 22,
+                                        color: const Color(0xFF5D1712),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            _selectedProfession == 'Doctor'
+                                                ? (Localizations.localeOf(context).languageCode == 'ta'
+                                                    ? 'மருத்துவர் அடைவு விவரங்கள் ("உயிர் காக்கும் கரங்கள்")'
+                                                    : 'Doctor Directory Profile Details ("Uyir Kaakkum Karangal")')
+                                                : (Localizations.localeOf(context).languageCode == 'ta'
+                                                    ? 'வழக்கறிஞர் அடைவு விவரங்கள் ("நீதியின் குரல்")'
+                                                    : 'Lawyer Directory Profile Details ("Neethiyin Kural")'),
+                                            style: const TextStyle(
+                                              fontSize: 15,
+                                              fontWeight: FontWeight.bold,
+                                              color: Color(0xFF5D1712),
+                                            ),
+                                          ),
+                                          const SizedBox(height: 3),
+                                          Text(
+                                            Localizations.localeOf(context).languageCode == 'ta'
+                                                ? 'கீழே உள்ள விவரங்களை நிரப்பினால் சமூக மக்கள் உங்களை எளிதில் தொடர்புகொள்ள முடியும்.'
+                                                : 'Please provide professional details so community members can connect with you.',
+                                            style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 20),
+                                // Row 1: Specialization & Experience
+                                _buildResponsiveRow(isMobile, [
+                                  _buildInputField(
+                                    _selectedProfession == 'Doctor'
+                                        ? (Localizations.localeOf(context).languageCode == 'ta' ? 'சிறப்பு மருத்துவத் துறை (Specialization) *' : 'Medical Specialization *')
+                                        : (Localizations.localeOf(context).languageCode == 'ta' ? 'சட்டப் பயிற்சித் துறை (Specialization) *' : 'Legal Practice Area *'),
+                                    _specializationController,
+                                    maxLength: 150,
+                                  ),
+                                  _buildInputField(
+                                    Localizations.localeOf(context).languageCode == 'ta' ? 'அனுபவம் (ஆண்டுகள்)' : 'Experience (Years)',
+                                    _experienceController,
+                                    keyboardType: TextInputType.number,
+                                    maxLength: 2,
+                                  ),
+                                ]),
+                                const SizedBox(height: 18),
+                                // Row 2: Qualifications & Workplace
+                                _buildResponsiveRow(isMobile, [
+                                  _buildInputField(
+                                    Localizations.localeOf(context).languageCode == 'ta' ? 'கல்வித் தகுதிகள் (Qualifications) *' : 'Education & Qualifications *',
+                                    _qualificationsController,
+                                    maxLength: 150,
+                                  ),
+                                  _buildInputField(
+                                    _selectedProfession == 'Doctor'
+                                        ? (Localizations.localeOf(context).languageCode == 'ta' ? 'பணிபுரியும் மருத்துவமனை / கிளினிக்' : 'Current Hospital / Clinic Workplace')
+                                        : (Localizations.localeOf(context).languageCode == 'ta' ? 'பணிபுரியும் அலுவலகம் / நீதிமன்றம்' : 'Current Chambers / Court / Law Firm'),
+                                    _workplaceController,
+                                    maxLength: 200,
+                                  ),
+                                ]),
+                                const SizedBox(height: 18),
+                                // Row 3: Bio / Summary
+                                _buildTextArea(
+                                  Localizations.localeOf(context).languageCode == 'ta' ? 'சுருக்கமான அறிமுகம் / விவரம் (Bio Summary)' : 'Brief Bio / Professional Summary',
+                                  _bioSummaryController,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ],
                       const SizedBox(height: 32),
                       _buildSectionTitle(Icons.location_on_outlined, 'Native Address'),
                       const SizedBox(height: 16),
@@ -1285,6 +1493,19 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
       request.fields['exist_family_id'] = widget.memberData['Existfamilyid']?.toString() ?? '';
       request.fields['education'] = _selectedEducation ?? '';
       request.fields['profession'] = _selectedProfession ?? '';
+      final bool canPublish = _selectedProfession == 'Doctor' || _selectedProfession == 'Lawyer';
+      final bool isPub = canPublish && _publishOption == 'Yes';
+      request.fields['is_profile_published'] = isPub.toString();
+      request.fields['profile_publish_comments'] = (!isPub) ? _publishCommentsController.text.trim() : '';
+      if (isPub) {
+        request.fields['specialization'] = _specializationController.text.trim();
+        request.fields['qualifications'] = _qualificationsController.text.trim().isNotEmpty 
+            ? _qualificationsController.text.trim() 
+            : (_selectedEducation ?? '');
+        request.fields['workplace'] = _workplaceController.text.trim();
+        request.fields['experience_years'] = _experienceController.text.trim();
+        request.fields['bio_summary'] = _bioSummaryController.text.trim();
+      }
       request.fields['relationship'] = _selectedRelationship ?? '';
       
       if (_selectedRelationship == 'Daughter' && _selectedMarried == 'Yes') {
@@ -1443,5 +1664,16 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
       );
     }
     return Text(translatedLabel, style: TextStyle(fontSize: fontSize, fontWeight: FontWeight.bold, color: Colors.black87));
+  }
+
+  @override
+  void dispose() {
+    _specializationController.dispose();
+    _qualificationsController.dispose();
+    _workplaceController.dispose();
+    _experienceController.dispose();
+    _bioSummaryController.dispose();
+    _publishCommentsController.dispose();
+    super.dispose();
   }
 }

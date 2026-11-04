@@ -238,6 +238,7 @@ class _PaymentRequestsContentState extends State<PaymentRequestsContent> {
                           children: [
                             _buildHeaderCell(AppLocalizations.of(context)?.memberIdHeader ?? 'MEMBER ID', 140),
                             _buildHeaderCell(AppLocalizations.of(context)?.nameHeader?.toUpperCase() ?? 'NAME', 180),
+                            _buildHeaderCell(AppLocalizations.of(context)?.actionsHeader?.toUpperCase() ?? 'ACTIONS', 180),
                             _buildHeaderCell(AppLocalizations.of(context)?.eventLabel?.toUpperCase() ?? 'EVENT', 180),
                             _buildHeaderCell(AppLocalizations.of(context)?.totalAmountHeader?.toUpperCase() ?? 'TOTAL AMOUNT', 120),
                             _buildHeaderCell(AppLocalizations.of(context)?.paidAmountHeader?.toUpperCase() ?? 'PAID AMOUNT', 120),
@@ -247,8 +248,7 @@ class _PaymentRequestsContentState extends State<PaymentRequestsContent> {
                             _buildHeaderCell(AppLocalizations.of(context)?.dateHeader?.toUpperCase() ?? 'DATE', 120),
                             _buildHeaderCell('STATUS', 120),
                             _buildHeaderCell('RECEIVER NAME', 180),
-                            _buildHeaderCell('COLLECTED BY', 180),
-                            _buildHeaderCell(AppLocalizations.of(context)?.actionsHeader?.toUpperCase() ?? 'ACTIONS', 180, hasDivider: false),
+                            _buildHeaderCell('COLLECTED BY', 180, hasDivider: false),
                           ],
                         ),
                       ),
@@ -307,17 +307,7 @@ class _PaymentRequestsContentState extends State<PaymentRequestsContent> {
         children: [
           _buildDataCell(req['Familymembershipid']?.toString() ?? '-', 140, isBlue: true),
           _buildDataCell(req['membername'] ?? req['Membername'] ?? '-', 180, isBold: true),
-          _buildDataCell(req['EventName'] ?? req['eventname'] ?? '-', 180),
-          _buildDataCell('₹${req['TaxAmount'] ?? req['Taxamount'] ?? req['taxamount'] ?? 0}', 120),
-          _buildDataCell('₹${req['paidamount'] ?? 0}', 120),
-          _buildDataCell('₹${req['balanceamount'] ?? req['dues'] ?? 0}', 140),
-          _buildDataCell(req['paymenttype'] ?? '-', 120),
-          _buildDataCell(req['transactionid'] ?? req['checkqueno'] ?? req['upitransactionid'] ?? '-', 180),
-          _buildDataCell(req['paymentdate'] ?? req['receiptdate'] ?? '-', 120),
-          _buildDataCell(req['status'] ?? 'Pending', 120),
-          _buildDataCell(req['receivedby'] ?? '-', 180),
-          _buildDataCell(req['name'] ?? '-', 180),
-          _buildDataCell('', 180, hasDivider: false, child: Row(
+          _buildDataCell('', 180, child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -347,6 +337,16 @@ class _PaymentRequestsContentState extends State<PaymentRequestsContent> {
               ),
             ],
           )),
+          _buildDataCell(req['EventName'] ?? req['eventname'] ?? '-', 180),
+          _buildDataCell('₹${req['TaxAmount'] ?? req['Taxamount'] ?? req['taxamount'] ?? 0}', 120),
+          _buildDataCell('₹${req['paidamount'] ?? 0}', 120),
+          _buildDataCell('₹${req['balanceamount'] ?? req['dues'] ?? 0}', 140),
+          _buildDataCell(req['paymenttype'] ?? '-', 120),
+          _buildDataCell(req['transactionid'] ?? req['checkqueno'] ?? req['upitransactionid'] ?? '-', 180),
+          _buildDataCell(req['paymentdate'] ?? req['receiptdate'] ?? '-', 120),
+          _buildDataCell(req['status'] ?? 'Pending', 120),
+          _buildDataCell(req['receivedby'] ?? '-', 180),
+          _buildDataCell(req['name'] ?? '-', 180, hasDivider: false),
         ],
       ),
     );

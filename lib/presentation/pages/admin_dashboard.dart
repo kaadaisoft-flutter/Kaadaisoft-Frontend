@@ -57,6 +57,42 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
   final List<String> _navigationHistory = [];
   AnimationController? _blinkController;
 
+  static const List<Map<String, dynamic>> _sidebarSections = [
+    {
+      'id': 'community',
+      'titleEn': 'Community & Directory',
+      'titleTa': 'சமூக அடைவு',
+      'icon': Icons.people_alt_outlined,
+      'items': ['Doctors', 'Lawyers', 'Coordinators', 'Members'],
+    },
+    {
+      'id': 'finance',
+      'titleEn': 'Events & Finance',
+      'titleTa': 'நிகழ்வுகள் & நிதி',
+      'icon': Icons.account_balance_wallet_outlined,
+      'items': ['Events', 'Payments', 'Payment Requests', 'Attendance'],
+    },
+    {
+      'id': 'reports',
+      'titleEn': 'Reports & Requests',
+      'titleTa': 'அறிக்கைகள் & கோரிக்கைகள்',
+      'icon': Icons.assignment_outlined,
+      'items': ['Reports', 'Update Requests'],
+    },
+  ];
+
+  final Set<String> _expandedSections = {};
+
+  String? _getSectionIdForTitle(String title) {
+    for (var sec in _sidebarSections) {
+      final items = sec['items'] as List<String>;
+      if (items.contains(title)) {
+        return sec['id'] as String;
+      }
+    }
+    return null;
+  }
+
   int _membersCount = 0;
   int _coordinatorsCount = 3;
   int _approvalsCount = 0;
@@ -119,11 +155,16 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
       );
       return;
     }
+    final secId = _getSectionIdForTitle(item);
     setState(() {
       if (_activeItem != '') {
         _navigationHistory.add(_activeItem);
       }
       _activeItem = item;
+      if (secId != null) {
+        _expandedSections.clear();
+        _expandedSections.add(secId);
+      }
     });
     _saveActiveItem(item);
   }
@@ -186,9 +227,15 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
         'received applications', 'applications', 'new applications', 'pending applications',
         'பெறப்பட்ட விண்ணப்பங்கள்', 'விண்ணப்பங்கள்'
       ],
-      'Doctors & Lawyers': [
-        'doctors & lawyers', 'doctors', 'lawyers', 'advocates', 'doctor', 'lawyer', 'advocate',
-        'medical', 'legal', 'மருத்துவர்கள்', 'வழக்கறிஞர்கள்', 'மருத்துவர்', 'வழக்கறிஞர்', 'வழக்கறிஞர் பட்டியல்'
+      'Doctors': [
+        'doctors', 'doctor', 'medical', 'physician', 'hospital', 'clinic', 'mbbs', 'dr',
+        'மருத்துவர்கள்', 'மருத்துவர்', 'மருத்துவம்', 'டாக்டர்',
+        'உயிர் காக்கும் கரங்கள்', 'uyir kaakkum karangal', 'lifesaving hands'
+      ],
+      'Lawyers': [
+        'lawyers', 'lawyer', 'advocates', 'advocate', 'legal', 'law', 'court', 'bar', 'llb', 'adv',
+        'வழக்கறிஞர்கள்', 'வழக்கறிஞர்', 'சட்டம்', 'வழக்குரைஞர்',
+        'நீதியின் குரல்', 'nethiyin kural', 'voice of justice'
       ],
       'Attendance': [
         'attendance', 'attendance scanner', 'scan attendance', 'roll call', 'present',
@@ -261,14 +308,21 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
 
   Future<bool> _handleBackNavigation() async {
     if (_navigationHistory.isNotEmpty) {
+      final prevItem = _navigationHistory.removeLast();
+      final secId = _getSectionIdForTitle(prevItem);
       setState(() {
-        _activeItem = _navigationHistory.removeLast();
+        _activeItem = prevItem;
+        if (secId != null) {
+          _expandedSections.clear();
+          _expandedSections.add(secId);
+        }
       });
       _saveActiveItem(_activeItem);
       return false; // Prevent system pop
     } else if (_activeItem != 'Dashboard') {
       setState(() {
         _activeItem = 'Dashboard';
+        _expandedSections.clear();
       });
       _saveActiveItem('Dashboard');
       return false; // Prevent system pop
@@ -291,6 +345,11 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
       if (isAllowed) {
         setState(() {
           _activeItem = savedPage;
+          final secId = _getSectionIdForTitle(savedPage);
+          if (secId != null) {
+            _expandedSections.clear();
+            _expandedSections.add(secId);
+          }
         });
       }
     }
@@ -693,11 +752,12 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
   }
 
   List<Map<String, dynamic>> get _menuItems {
-    final allItems = [
+    final allItems = <Map<String, dynamic>>[
       {'title': 'Dashboard', 'icon': Icons.bar_chart, 'color': const Color(0xFF0EA5E9)},
       {'title': 'ID Card Benefits', 'icon': Icons.card_membership, 'color': const Color(0xFFC49A3C)},
       {'title': 'My Details', 'icon': Icons.person_outline, 'color': const Color(0xFF10B981)},
-      {'title': 'Doctors & Lawyers', 'icon': Icons.medical_services_outlined, 'color': const Color(0xFFC49A3C)},
+      {'title': 'Doctors', 'icon': Icons.medical_services_outlined, 'color': const Color(0xFF047857)},
+      {'title': 'Lawyers', 'icon': Icons.gavel_outlined, 'color': const Color(0xFFB45309)},
       {'title': 'Coordinators', 'icon': Icons.shopping_cart_checkout, 'color': const Color(0xFFF59E0B)}, 
       {'title': 'Members', 'icon': Icons.group_outlined, 'color': const Color(0xFF8B5CF6)},
       {'title': 'Events', 'icon': Icons.list_alt, 'color': const Color(0xFFEC4899)},
@@ -714,7 +774,8 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
       return allItems.where((item) => 
         item['title'] == 'Dashboard' || 
         item['title'] == 'My Details' || 
-        item['title'] == 'Doctors & Lawyers' || 
+        item['title'] == 'Doctors' || 
+        item['title'] == 'Lawyers' || 
         item['title'] == 'Events' || 
         item['title'] == 'Payments' || 
         item['title'] == 'ID Card Benefits' ||
@@ -1076,10 +1137,29 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
       );
     }
 
+    if (_activeItem == 'Doctors') {
+      return ProfessionalsContent(
+        key: const ValueKey('Doctors'),
+        userRole: widget.userRole,
+        initialCategory: 'Doctor',
+        globalSearchQuery: _globalSearchController.text,
+      );
+    }
+
+    if (_activeItem == 'Lawyers') {
+      return ProfessionalsContent(
+        key: const ValueKey('Lawyers'),
+        userRole: widget.userRole,
+        initialCategory: 'Lawyer',
+        globalSearchQuery: _globalSearchController.text,
+      );
+    }
+
     if (_activeItem == 'Doctors & Lawyers') {
       return ProfessionalsContent(
         key: const ValueKey('Doctors & Lawyers'),
         userRole: widget.userRole,
+        initialCategory: 'ALL',
         globalSearchQuery: _globalSearchController.text,
       );
     }
@@ -1192,20 +1272,51 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
 
   Widget _buildSidebar() {
     final isDesktop = MediaQuery.of(context).size.width >= 900;
+    final isTa = Provider.of<LocaleProvider>(context, listen: false).locale.languageCode == 'ta';
+
+    Map<String, dynamic>? dashboardItem;
+    Map<String, dynamic>? idCardItem;
+    Map<String, dynamic>? myDetailsItem;
+    Map<String, dynamic>? logoutItem;
+
+    for (var it in _menuItems) {
+      if (it['title'] == 'Dashboard') dashboardItem = it;
+      if (it['title'] == 'ID Card Benefits') idCardItem = it;
+      if (it['title'] == 'My Details') myDetailsItem = it;
+      if (it['title'] == 'Logout') logoutItem = it;
+    }
+
+    final standaloneTitles = {'Dashboard', 'ID Card Benefits', 'My Details', 'Logout'};
+    final sectionItemTitles = _sidebarSections.expand((s) => s['items'] as List<String>).toSet();
+    final otherItems = _menuItems.where((it) => !standaloneTitles.contains(it['title']) && !sectionItemTitles.contains(it['title'])).toList();
 
     return Container(
       color: const Color(0xFF2D1B18), // Dark sidebar color matching splash screen
       child: SafeArea(
         child: Column(
           children: [
-            // Sidebar Header
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 12),
+            // Sidebar Header (height: 72 on desktop, matching top header)
+            Container(
+              height: isDesktop ? 72 : null,
+              padding: EdgeInsets.symmetric(
+                vertical: isDesktop ? 0 : 20,
+                horizontal: 16,
+              ),
+              decoration: BoxDecoration(
+                border: isDesktop
+                    ? const Border(
+                        bottom: BorderSide(
+                          color: Colors.white24,
+                          width: 1,
+                        ),
+                      )
+                    : null,
+              ),
               child: Row(
                 children: [
                   Container(
-                    width: 44,
-                    height: 44,
+                    width: isDesktop ? 40 : 44,
+                    height: isDesktop ? 40 : 44,
                     decoration: const BoxDecoration(
                       shape: BoxShape.circle,
                       image: DecorationImage(
@@ -1221,9 +1332,9 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
                       alignment: Alignment.centerLeft,
                       child: Text(
                         AppLocalizations.of(context)?.appTitle ?? 'Poondurai Kaadai Kulam',
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: Colors.white,
-                          fontSize: 18,
+                          fontSize: isDesktop ? 16 : 18,
                           fontWeight: FontWeight.bold,
                           letterSpacing: 0.5,
                         ),
@@ -1243,32 +1354,260 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
                 child: _buildLanguageSwitcher(context, inDrawer: true),
               ),
               const SizedBox(height: 8),
+              const Divider(color: Colors.white24, height: 1),
             ],
-            const Divider(color: Colors.white24, height: 1),
-            // Menu Items
+            // Menu Items List
             Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                itemCount: _menuItems.length,
-                itemBuilder: (context, index) {
-                  final item = _menuItems[index];
-                  final isLogout = item['title'] == 'Logout';
-                  if (isLogout) {
-                    return Column(
-                      children: [
-                        const SizedBox(height: 32),
-                        const Divider(color: Colors.white24, height: 1),
-                        const SizedBox(height: 8),
-                        _buildMenuItem(item),
-                      ],
-                    );
-                  }
-                  return _buildMenuItem(item);
-                },
+              child: SingleChildScrollView(
+                physics: const ClampingScrollPhysics(),
+                padding: EdgeInsets.symmetric(vertical: isDesktop ? 10 : 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (dashboardItem != null) _buildMenuItem(dashboardItem),
+                    if (idCardItem != null) _buildMenuItem(idCardItem),
+
+                    // Collapsible Categorized Sections
+                    ..._sidebarSections.map((sec) => _buildCollapsibleSection(sec, isTa, isDesktop)),
+
+                    // Any unmapped items (fallback)
+                    ...otherItems.map((it) => _buildMenuItem(it)),
+
+                    if (myDetailsItem != null) _buildMenuItem(myDetailsItem),
+
+                    if (logoutItem != null) ...[
+                      SizedBox(height: isDesktop ? 16 : 24),
+                      const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 16),
+                        child: Divider(color: Colors.white24, height: 1),
+                      ),
+                      SizedBox(height: isDesktop ? 8 : 12),
+                      _buildMenuItem(logoutItem),
+                    ],
+                  ],
+                ),
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildCollapsibleSection(Map<String, dynamic> sec, bool isTa, bool isDesktop) {
+    final List<String> itemTitles = List<String>.from(sec['items']);
+    final visibleItems = _menuItems.where((it) => itemTitles.contains(it['title'])).toList();
+    if (visibleItems.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final secId = sec['id'] as String;
+    final isExpanded = _expandedSections.contains(secId);
+    final hasActiveChild = visibleItems.any((it) => it['title'] == _activeItem);
+    final title = isTa ? sec['titleTa'] : sec['titleEn'];
+    final icon = sec['icon'] as IconData;
+    bool isHovered = false;
+
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: isDesktop ? 8 : 12, vertical: isDesktop ? 4.5 : 6.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          StatefulBuilder(
+            builder: (context, setHeaderState) {
+              return MouseRegion(
+                cursor: SystemMouseCursors.click,
+                child: InkWell(
+                  onHover: (hovering) {
+                    setHeaderState(() => isHovered = hovering);
+                  },
+                  onTap: () {
+                    setState(() {
+                      if (_expandedSections.contains(secId)) {
+                        _expandedSections.remove(secId);
+                      } else {
+                        _expandedSections.clear(); // Accordion mode keeps sidebar compact without scrolling
+                        _expandedSections.add(secId);
+                      }
+                    });
+                  },
+                  borderRadius: BorderRadius.circular(8),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 150),
+                    decoration: BoxDecoration(
+                      color: hasActiveChild 
+                          ? Colors.white.withOpacity(0.06) 
+                          : (isHovered ? Colors.white.withOpacity(0.04) : Colors.transparent),
+                      borderRadius: BorderRadius.circular(8),
+                      border: hasActiveChild 
+                          ? Border.all(color: const Color(0xFFC49A3C).withOpacity(0.35)) 
+                          : null,
+                    ),
+                    padding: EdgeInsets.symmetric(horizontal: isDesktop ? 12 : 16, vertical: isDesktop ? 10.0 : 13.0),
+                    child: Row(
+                      children: [
+                        Icon(
+                          icon, 
+                          color: hasActiveChild ? const Color(0xFFC49A3C) : (isHovered ? Colors.white : Colors.white70), 
+                          size: isDesktop ? 18 : 22,
+                        ),
+                        SizedBox(width: isDesktop ? 10 : 12),
+                        Expanded(
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              title,
+                              style: TextStyle(
+                                color: hasActiveChild ? Colors.white : (isHovered ? Colors.white : Colors.white.withOpacity(0.85)),
+                                fontSize: isTa ? (isDesktop ? 12.5 : 14.0) : (isDesktop ? 13.0 : 14.5),
+                                fontWeight: hasActiveChild ? FontWeight.bold : FontWeight.w600,
+                                letterSpacing: 0.2,
+                              ),
+                            ),
+                          ),
+                        ),
+                        AnimatedRotation(
+                          turns: isExpanded ? 0.25 : 0.0,
+                          duration: const Duration(milliseconds: 200),
+                          child: Icon(
+                            Icons.chevron_right, 
+                            color: hasActiveChild ? const Color(0xFFC49A3C) : Colors.white54, 
+                            size: isDesktop ? 16 : 18,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+          if (isExpanded)
+            Padding(
+              padding: EdgeInsets.only(left: isDesktop ? 16 : 20, right: isDesktop ? 4 : 6, top: 2, bottom: 4),
+              child: Container(
+                decoration: const BoxDecoration(
+                  border: Border(
+                    left: BorderSide(
+                      color: Color(0x2EFFFFFF),
+                      width: 1.5,
+                    ),
+                  ),
+                ),
+                padding: const EdgeInsets.only(left: 6),
+                child: Column(
+                  children: visibleItems.map((item) => _buildSubMenuItem(item, isDesktop)).toList(),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSubMenuItem(Map<String, dynamic> item, bool isDesktop) {
+    final isActive = _activeItem == item['title'];
+    final isMemberDisabledMenu = widget.userRole == 3 && 
+        _isMemberDisabled && 
+        item['title'] != 'Dashboard' && 
+        item['title'] != 'Logout';
+    bool isHovered = false;
+
+    final double iconSize = isDesktop ? 16.0 : 18.0;
+    final double fontSize = isDesktop ? 13.0 : 14.0;
+    final isTa = Provider.of<LocaleProvider>(context, listen: false).locale.languageCode == 'ta';
+
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: isDesktop ? 3.0 : 4.0),
+      child: StatefulBuilder(
+        builder: (context, setSubItemState) {
+          final isHighlighted = (isActive || isHovered) && !isMemberDisabledMenu;
+          final iconColor = isMemberDisabledMenu
+              ? Colors.white30
+              : (isHighlighted ? const Color(0xFF38BDF8) : Colors.white70);
+          final textColor = isMemberDisabledMenu
+              ? Colors.white30
+              : (isHighlighted ? Colors.white : Colors.white.withOpacity(0.85));
+
+          return MouseRegion(
+            cursor: isMemberDisabledMenu ? SystemMouseCursors.forbidden : SystemMouseCursors.click,
+            child: InkWell(
+              onHover: (hovering) {
+                if (!isMemberDisabledMenu) {
+                  setSubItemState(() {
+                    isHovered = hovering;
+                  });
+                }
+              },
+              onTap: () {
+                if (isMemberDisabledMenu) {
+                  showStatusDialog(
+                    context,
+                    title: 'Account Disabled',
+                    message: 'Your account has been disabled by the administrator. Access to menu sections is restricted.',
+                    type: DialogType.warning,
+                  );
+                  return;
+                }
+                if (item['title'] == _activeItem) {
+                  _fetchStats();
+                  _fetchPaymentDetails();
+                  final currentItem = _activeItem;
+                  setState(() => _activeItem = '');
+                  Future.delayed(Duration.zero, () {
+                    if (mounted) setState(() => _activeItem = currentItem);
+                  });
+                } else {
+                  _navigateTo(item['title']);
+                }
+
+                if (!isDesktop && mounted) {
+                  Navigator.pop(context);
+                }
+              },
+              borderRadius: BorderRadius.circular(6),
+              child: Opacity(
+                opacity: isMemberDisabledMenu ? 0.45 : 1.0,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 150),
+                  decoration: BoxDecoration(
+                    color: isActive 
+                        ? const Color(0xFF0EA5E9).withOpacity(0.18)
+                        : (isHovered ? Colors.white.withOpacity(0.06) : Colors.transparent),
+                    borderRadius: BorderRadius.circular(6),
+                    border: isActive
+                        ? Border.all(color: const Color(0xFF0EA5E9).withOpacity(0.45), width: 1)
+                        : null,
+                  ),
+                  padding: EdgeInsets.symmetric(horizontal: isDesktop ? 10 : 12, vertical: isDesktop ? 8.5 : 11.0),
+                  child: Row(
+                    children: [
+                      Icon(item['icon'], color: iconColor, size: iconSize),
+                      SizedBox(width: isDesktop ? 8 : 10),
+                      Expanded(
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            _getTranslatedSidebarLabel(context, item['title']),
+                            style: TextStyle(
+                              color: textColor,
+                              fontSize: isTa ? (fontSize - 0.5) : fontSize,
+                              fontWeight: isActive ? FontWeight.bold : (isHovered ? FontWeight.w600 : FontWeight.w500),
+                            ),
+                          ),
+                        ),
+                      ),
+                      if (isActive)
+                        Icon(Icons.chevron_right, color: const Color(0xFF38BDF8), size: isDesktop ? 14 : 16),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -1286,6 +1625,12 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
       case 'Reports': return loc?.reports ?? title;
       case 'Update Requests': return loc?.updateRequests ?? title;
       case 'Payment Requests': return loc?.paymentRequests ?? title;
+      case 'Doctors':
+        final isTa = Provider.of<LocaleProvider>(context, listen: false).locale.languageCode == 'ta';
+        return isTa ? 'மருத்துவர்கள்' : 'Doctors';
+      case 'Lawyers':
+        final isTa = Provider.of<LocaleProvider>(context, listen: false).locale.languageCode == 'ta';
+        return isTa ? 'வழக்கறிஞர்கள்' : 'Lawyers';
       case 'Doctors & Lawyers':
         final isTa = Provider.of<LocaleProvider>(context, listen: false).locale.languageCode == 'ta';
         return isTa ? 'மருத்துவர்கள் & வழக்கறிஞர்கள்' : 'Doctors & Lawyers';
@@ -1298,6 +1643,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
   }
 
   Widget _buildMenuItem(Map<String, dynamic> item) {
+    final isDesktop = MediaQuery.of(context).size.width >= 900;
     final isActive = _activeItem == item['title'];
     final isLogout = item['title'] == 'Logout';
     final isMemberDisabledMenu = widget.userRole == 3 && 
@@ -1306,8 +1652,13 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
         item['title'] != 'Logout';
     bool isHovered = false;
 
+    final double outerVPad = isDesktop ? 4.5 : 6.0;
+    final double innerVPad = isDesktop ? 10.0 : 13.0;
+    final double iconSize = isDesktop ? 18.0 : 22.0;
+    final double fontSize = isDesktop ? 13.5 : 15.0;
+
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      padding: EdgeInsets.symmetric(horizontal: isDesktop ? 8 : 12, vertical: outerVPad),
       child: StatefulBuilder(
         builder: (context, setMenuItemState) {
           final isHighlighted = (isActive || isHovered) && !isMemberDisabledMenu;
@@ -1381,26 +1732,27 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
                             ? Border.all(color: (isLogout ? Colors.red : const Color(0xFF0EA5E9)).withOpacity(0.4)) 
                             : null,
                       ),
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      padding: EdgeInsets.symmetric(horizontal: isDesktop ? 12 : 16, vertical: innerVPad),
                       child: Row(
                         children: [
-                          Icon(item['icon'], color: iconColor, size: 22),
-                          const SizedBox(width: 12),
+                          Icon(item['icon'], color: iconColor, size: iconSize),
+                          SizedBox(width: isDesktop ? 10 : 12),
                           Expanded(
-                            child: Text(
-                              _getTranslatedSidebarLabel(context, item['title']),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                color: textColor,
-                                fontSize: Localizations.localeOf(context).languageCode == 'ta' ? 13 : 15,
-                                fontWeight: isHighlighted ? FontWeight.bold : FontWeight.w500,
-                                height: 1.2,
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                _getTranslatedSidebarLabel(context, item['title']),
+                                style: TextStyle(
+                                  color: textColor,
+                                  fontSize: Localizations.localeOf(context).languageCode == 'ta' ? (fontSize - 0.5) : fontSize,
+                                  fontWeight: isHighlighted ? FontWeight.bold : FontWeight.w500,
+                                ),
                               ),
                             ),
                           ),
                           if (isHighlighted)
-                            Icon(Icons.chevron_right, color: isLogout ? Colors.red : const Color(0xFF0EA5E9), size: 18),
+                            Icon(Icons.chevron_right, color: isLogout ? Colors.red : const Color(0xFF0EA5E9), size: isDesktop ? 16 : 18),
                         ],
                       ),
                     );
@@ -1542,11 +1894,11 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
           );
         }
 
-        // Desktop View
+        // Desktop View (height: 72, perfectly aligned with sidebar header)
         return Container(
-          height: 85, // Matches sidebar header (20 + 44 + 20 = 84) + Divider (1)
+          height: 72,
           decoration: const BoxDecoration(
-            color: const Color(0xFF2D1B18),
+            color: Color(0xFF2D1B18),
             border: Border(
               bottom: BorderSide(
                 color: Colors.white24,

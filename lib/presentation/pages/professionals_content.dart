@@ -1,20 +1,24 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import '../../providers/locale_provider.dart';
 import '../../utils/api_config.dart';
 import '../widgets/custom_dialog.dart';
-import '../widgets/custom_dropdown_search.dart';
+import 'doctor_profile_page.dart';
+import 'lawyer_profile_page.dart';
 
 class ProfessionalsContent extends StatefulWidget {
   final int userRole;
   final String? globalSearchQuery;
+  final String initialCategory; // 'Doctor', 'Lawyer', or 'ALL'
 
   const ProfessionalsContent({
     super.key,
     required this.userRole,
     this.globalSearchQuery,
+    this.initialCategory = 'ALL',
   });
 
   @override
@@ -27,10 +31,9 @@ class _ProfessionalsContentState extends State<ProfessionalsContent> {
   static const Color darkSidebarBrown = Color(0xFF2D1B18);
   static const Color logoGold = Color(0xFFC49A3C);
   static const Color lightGold = Color(0xFFFEF3C7);
-  static const Color softAmber = Color(0xFFD97706);
 
   bool _isLoading = true;
-  String _selectedCategory = 'ALL'; // 'ALL', 'Doctor', 'Lawyer'
+  late String _selectedCategory; // 'ALL', 'Doctor', 'Lawyer'
   String _searchQuery = '';
   List<dynamic> _professionals = [];
   final TextEditingController _searchController = TextEditingController();
@@ -40,6 +43,7 @@ class _ProfessionalsContentState extends State<ProfessionalsContent> {
   @override
   void initState() {
     super.initState();
+    _selectedCategory = widget.initialCategory;
     if (widget.globalSearchQuery != null && widget.globalSearchQuery!.isNotEmpty) {
       _searchQuery = widget.globalSearchQuery!;
       _searchController.text = widget.globalSearchQuery!;
@@ -50,13 +54,19 @@ class _ProfessionalsContentState extends State<ProfessionalsContent> {
   @override
   void didUpdateWidget(covariant ProfessionalsContent oldWidget) {
     super.didUpdateWidget(oldWidget);
+    bool shouldRefetch = false;
+    if (widget.initialCategory != oldWidget.initialCategory && widget.initialCategory != _selectedCategory) {
+      _selectedCategory = widget.initialCategory;
+      shouldRefetch = true;
+    }
     if (widget.globalSearchQuery != oldWidget.globalSearchQuery &&
         widget.globalSearchQuery != null &&
         widget.globalSearchQuery != _searchQuery) {
-      setState(() {
-        _searchQuery = widget.globalSearchQuery!;
-        _searchController.text = widget.globalSearchQuery!;
-      });
+      _searchQuery = widget.globalSearchQuery!;
+      _searchController.text = widget.globalSearchQuery!;
+      shouldRefetch = true;
+    }
+    if (shouldRefetch) {
       _fetchProfessionals();
     }
   }
@@ -147,9 +157,23 @@ class _ProfessionalsContentState extends State<ProfessionalsContent> {
   }
 
   void _showAddEditDialog({Map<String, dynamic>? item}) {
+    final isTamil = Provider.of<LocaleProvider>(context, listen: false).locale.languageCode == 'ta';
     final isEdit = item != null;
     final nameCtrl = TextEditingController(text: item?['name'] ?? '');
-    String category = item?['category'] ?? 'Doctor';
+
+    // Determine category based on current page context (Doctor page vs Lawyer page)
+    final isDoctorContext = widget.initialCategory == 'Doctor' || (!isEdit && _selectedCategory == 'Doctor');
+    final isLawyerContext = widget.initialCategory == 'Lawyer' || (!isEdit && _selectedCategory == 'Lawyer');
+
+    String defaultCategory = 'Doctor';
+    if (isDoctorContext) {
+      defaultCategory = 'Doctor';
+    } else if (isLawyerContext) {
+      defaultCategory = 'Lawyer';
+    } else if (_selectedCategory != 'ALL') {
+      defaultCategory = _selectedCategory;
+    }
+    String category = item?['category'] ?? defaultCategory;
     final specCtrl = TextEditingController(text: item?['specialization'] ?? '');
     final qualCtrl = TextEditingController(text: item?['qualifications'] ?? '');
     final expCtrl = TextEditingController(
@@ -162,301 +186,465 @@ class _ProfessionalsContentState extends State<ProfessionalsContent> {
     final phoneCtrl = TextEditingController(text: item?['phone'] ?? '');
     final emailCtrl = TextEditingController(text: item?['email'] ?? '');
     final bioCtrl = TextEditingController(text: item?['bio_summary'] ?? '');
+    final formKey = GlobalKey<FormState>();
+    final scrollCtrl = ScrollController();
+    bool autoValidate = false;
+    bool showScrollTop = false;
 
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          clipBehavior: Clip.antiAlias,
-          insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-          backgroundColor: Colors.transparent,
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              maxWidth: 620,
-              maxHeight: MediaQuery.of(ctx).size.height * 0.85,
-            ),
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.2),
-                    blurRadius: 20,
-                    offset: const Offset(0, 10),
-                  ),
-                ],
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // 1. Pinned Header
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-                      border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: primaryMaroon.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Icon(
-                            isEdit ? Icons.edit_note : Icons.person_add_alt_1,
-                            color: primaryMaroon,
-                            size: 20,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            isEdit ? 'Edit Professional Profile' : 'Add Community Professional',
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: darkSidebarBrown,
-                            ),
-                          ),
-                        ),
-                        IconButton(
-                          onPressed: () => Navigator.pop(ctx),
-                          icon: const Icon(Icons.close, color: Color(0xFF64748B)),
-                          tooltip: 'Close',
-                        ),
-                      ],
-                    ),
-                  ),
+        builder: (ctx, setDialogState) {
+          final isDoc = category == 'Doctor';
+          final dialogTitle = isEdit
+              ? (isTamil ? 'சுயவிவரத்தைத் திருத்துக' : 'Edit Professional Profile')
+              : (isDoc
+                  ? (isTamil ? 'புதிய மருத்துவர் விவரப் பதிவு' : 'Add Doctor Profile')
+                  : (isTamil ? 'புதிய வழக்கறிஞர் விவரப் பதிவு' : 'Add Lawyer Profile'));
 
-                  // 2. Scrollable Form with Right-Side Padding away from scrollbar
-                  Flexible(
-                    child: Scrollbar(
-                      thumbVisibility: true,
-                      child: SingleChildScrollView(
-                        padding: const EdgeInsets.fromLTRB(24, 20, 28, 20),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            CustomDropdownSearch(
-                              label: 'Category',
-                              requiredMark: true,
-                              dropdownMap: const {
-                                'Doctor': 'Doctor (மருத்துவர்)',
-                                'Lawyer': 'Lawyer / Advocate (வழக்கறிஞர்)',
-                              },
-                              value: category,
-                              height: 48,
-                              borderColor: const Color(0xFFCBD5E1),
-                              focusedBorderColor: primaryMaroon,
-                              onChanged: (val) {
-                                if (val != null) {
-                                  setDialogState(() => category = val);
-                                }
-                              },
+          return Dialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            clipBehavior: Clip.antiAlias,
+            insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+            backgroundColor: Colors.transparent,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: 620,
+                maxHeight: MediaQuery.of(ctx).size.height * 0.85,
+              ),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.2),
+                      blurRadius: 20,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // 1. Pinned Header
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: primaryMaroon.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(8),
                             ),
-                            const SizedBox(height: 14),
-                            TextField(
-                              controller: nameCtrl,
-                              decoration: InputDecoration(
-                                label: const Text.rich(
-                                  TextSpan(
-                                    text: 'Full Name with Title ',
-                                    children: [
-                                      TextSpan(
-                                        text: '*',
-                                        style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                hintText: 'e.g. Dr. Navin Ponnusamy / Adv. Chandrasekaran',
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                  borderSide: const BorderSide(color: primaryMaroon, width: 2),
-                                ),
+                            child: Icon(
+                              isEdit
+                                  ? Icons.edit_note
+                                  : (isDoc ? Icons.medical_services_rounded : Icons.gavel_rounded),
+                              color: primaryMaroon,
+                              size: 20,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              dialogTitle,
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: darkSidebarBrown,
                               ),
                             ),
-                            const SizedBox(height: 14),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: TextField(
-                                    controller: specCtrl,
-                                    decoration: InputDecoration(
-                                      labelText: 'Specialization',
-                                      hintText: 'e.g. Emergency Medicine / Corporate Law',
-                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                                      focusedBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(10),
-                                        borderSide: const BorderSide(color: primaryMaroon, width: 2),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                SizedBox(
-                                  width: 140,
-                                  child: TextField(
-                                    controller: expCtrl,
-                                    keyboardType: TextInputType.number,
-                                    decoration: InputDecoration(
-                                      labelText: 'Exp. (Years)',
-                                      hintText: 'e.g. 25',
-                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                                      focusedBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(10),
-                                        borderSide: const BorderSide(color: primaryMaroon, width: 2),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 14),
-                            TextField(
-                              controller: qualCtrl,
-                              decoration: InputDecoration(
-                                labelText: 'Education & Qualifications',
-                                hintText: 'e.g. MBBS, MD / B.A., B.L.',
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                  borderSide: const BorderSide(color: primaryMaroon, width: 2),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 14),
-                            TextField(
-                              controller: workplaceCtrl,
-                              decoration: InputDecoration(
-                                labelText: 'Current Workplace / Hospital / Chambers',
-                                hintText: 'e.g. Kongunadu Hospital, Coimbatore / Legal Practice',
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                  borderSide: const BorderSide(color: primaryMaroon, width: 2),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 14),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: TextField(
-                                    controller: nativeCtrl,
-                                    decoration: InputDecoration(
-                                      labelText: 'Native Place',
-                                      hintText: 'e.g. Odakkalpalayam / Avalpoondurai',
-                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                                      focusedBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(10),
-                                        borderSide: const BorderSide(color: primaryMaroon, width: 2),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: TextField(
-                                    controller: birthCtrl,
-                                    decoration: InputDecoration(
-                                      labelText: 'Birth Place',
-                                      hintText: 'e.g. Coimbatore / Erode',
-                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                                      focusedBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(10),
-                                        borderSide: const BorderSide(color: primaryMaroon, width: 2),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 14),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: TextField(
-                                    controller: locCtrl,
-                                    decoration: InputDecoration(
-                                      labelText: 'Current Residence / City',
-                                      hintText: 'e.g. Chennai / Coimbatore',
-                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                                      focusedBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(10),
-                                        borderSide: const BorderSide(color: primaryMaroon, width: 2),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: TextField(
-                                    controller: phoneCtrl,
-                                    keyboardType: TextInputType.phone,
-                                    decoration: InputDecoration(
-                                      labelText: 'Phone Number',
-                                      hintText: 'e.g. 9865707500',
-                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                                      focusedBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(10),
-                                        borderSide: const BorderSide(color: primaryMaroon, width: 2),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 14),
-                            TextField(
-                              controller: emailCtrl,
-                              keyboardType: TextInputType.emailAddress,
-                              decoration: InputDecoration(
-                                labelText: 'Email Address',
-                                hintText: 'e.g. advocate@example.com',
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                  borderSide: const BorderSide(color: primaryMaroon, width: 2),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 14),
-                            TextField(
-                              controller: bioCtrl,
-                              maxLines: 3,
-                              decoration: InputDecoration(
-                                labelText: 'Bio & Career Summary',
-                                hintText: 'Brief profile notes and accomplishments...',
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                                contentPadding: const EdgeInsets.all(12),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                  borderSide: const BorderSide(color: primaryMaroon, width: 2),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
+                          ),
+                          IconButton(
+                            onPressed: () => Navigator.pop(ctx),
+                            icon: const Icon(Icons.close, color: Color(0xFF64748B)),
+                            tooltip: isTamil ? 'மூடுக' : 'Close',
+                          ),
+                        ],
                       ),
                     ),
-                  ),
+
+                    // 2. Scrollable Form with Right-Side Padding away from scrollbar
+                    Flexible(
+                      child: Stack(
+                        children: [
+                          NotificationListener<ScrollNotification>(
+                            onNotification: (scrollNotif) {
+                              final shouldShow = scrollNotif.metrics.pixels > 60;
+                              if (shouldShow != showScrollTop) {
+                                setDialogState(() => showScrollTop = shouldShow);
+                              }
+                              return false;
+                            },
+                            child: Scrollbar(
+                              controller: scrollCtrl,
+                              thumbVisibility: true,
+                              child: SingleChildScrollView(
+                                controller: scrollCtrl,
+                                padding: const EdgeInsets.fromLTRB(24, 20, 28, 20),
+                                child: Form(
+                            key: formKey,
+                            autovalidateMode: autoValidate
+                                ? AutovalidateMode.onUserInteraction
+                                : AutovalidateMode.disabled,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                TextFormField(
+                                  controller: nameCtrl,
+                                  inputFormatters: [
+                                    FilteringTextInputFormatter.allow(RegExp(r"[a-zA-Z\u0B80-\u0BFF\s\.]")),
+                                  ],
+                                  validator: (val) {
+                                    final text = val?.trim() ?? '';
+                                    if (text.isEmpty) {
+                                      return isTamil ? 'பெயரை உள்ளிடவும்' : 'Please enter full name';
+                                    }
+                                    if (text.length < 3) {
+                                      return isTamil ? 'குறைந்தது 3 எழுத்துக்கள் தேவை' : 'Minimum 3 characters required';
+                                    }
+                                    if (!RegExp(r'^[a-zA-Z\u0B80-\u0BFF\s\.]+$').hasMatch(text)) {
+                                      return isTamil
+                                          ? 'எண்கள் மற்றும் சிறப்பு எழுத்துக்கள் அனுமதிக்கப்படவில்லை'
+                                          : 'Numbers and special characters are not allowed';
+                                    }
+                                    if (!RegExp(r'[a-zA-Z\u0B80-\u0BFF]').hasMatch(text)) {
+                                      return isTamil ? 'சரியான பெயரை உள்ளிடவும்' : 'Please enter a valid name';
+                                    }
+                                    return null;
+                                  },
+                                  decoration: InputDecoration(
+                                    label: Text.rich(
+                                      TextSpan(
+                                        text: isTamil ? 'முழுப் பெயர் (பட்டத்துடன்) ' : 'Full Name with Title ',
+                                        children: const [
+                                          TextSpan(
+                                            text: '*',
+                                            style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    hintText: isDoc
+                                        ? (isTamil ? 'எ.கா: Dr. நவீன் பொன்னுசாமி' : 'e.g. Dr. Navin Ponnusamy')
+                                        : (isTamil ? 'எ.கா: Adv. பி. சந்திரசேகரன்' : 'e.g. Adv. P. Chandrasekaran'),
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                      borderSide: const BorderSide(color: primaryMaroon, width: 2),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 14),
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Expanded(
+                                      child: TextFormField(
+                                        controller: specCtrl,
+                                        decoration: InputDecoration(
+                                          labelText: isDoc
+                                              ? (isTamil ? 'சிறப்பு மருத்துவத் துறை' : 'Specialization')
+                                              : (isTamil ? 'சட்டப் பயிற்சித் துறை' : 'Legal Practice Area'),
+                                          hintText: isDoc
+                                              ? (isTamil
+                                                  ? 'எ.கா: அவசர சிகிச்சை / பொது மருத்துவம்'
+                                                  : 'e.g. Emergency Medicine / Cardiology')
+                                              : (isTamil
+                                                  ? 'எ.கா: சிவில் சட்டம் / குற்றவியல் சட்டம்'
+                                                  : 'e.g. Civil Law / Corporate Law'),
+                                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                          focusedBorder: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(10),
+                                            borderSide: const BorderSide(color: primaryMaroon, width: 2),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    SizedBox(
+                                      width: 175,
+                                      child: TextFormField(
+                                        controller: expCtrl,
+                                        keyboardType: TextInputType.number,
+                                        inputFormatters: [
+                                          FilteringTextInputFormatter.digitsOnly,
+                                          LengthLimitingTextInputFormatter(2),
+                                        ],
+                                        validator: (val) {
+                                          if (val == null || val.trim().isEmpty) return null;
+                                          final n = int.tryParse(val.trim());
+                                          if (n == null) {
+                                            return isTamil ? 'எண்களை உள்ளிடவும்' : 'Digits only';
+                                          }
+                                          if (n > 75) {
+                                            return isTamil ? '0 - 75 வரை மட்டும்' : '0 - 75 years only';
+                                          }
+                                          return null;
+                                        },
+                                        decoration: InputDecoration(
+                                          labelText: isTamil ? 'அனுபவம் (ஆண்டுகள்)' : 'Exp. (Years)',
+                                          hintText: isTamil ? 'எ.கா: 15' : 'e.g. 15',
+                                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                          focusedBorder: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(10),
+                                            borderSide: const BorderSide(color: primaryMaroon, width: 2),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 14),
+                                TextFormField(
+                                  controller: qualCtrl,
+                                  validator: (val) {
+                                    final text = val?.trim() ?? '';
+                                    if (text.isEmpty) {
+                                      return isTamil ? 'கல்வித் தகுதியை உள்ளிடவும்' : 'Please enter education & qualifications';
+                                    }
+                                    return null;
+                                  },
+                                  decoration: InputDecoration(
+                                    label: Text.rich(
+                                      TextSpan(
+                                        text: isTamil ? 'கல்வித் தகுதிகள் ' : 'Education & Qualifications ',
+                                        children: const [
+                                          TextSpan(
+                                            text: '*',
+                                            style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    hintText: isDoc
+                                        ? (isTamil ? 'எ.கா: MBBS, MD, MS' : 'e.g. MBBS, MD, MS')
+                                        : (isTamil ? 'எ.கா: B.A., B.L. / LL.B., LL.M.' : 'e.g. B.A., B.L. / LL.B., LL.M.'),
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                      borderSide: const BorderSide(color: primaryMaroon, width: 2),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 14),
+                                TextFormField(
+                                  controller: workplaceCtrl,
+                                  decoration: InputDecoration(
+                                    labelText: isDoc
+                                        ? (isTamil ? 'பணிபுரியும் மருத்துவமனை / கிளினிக்' : 'Current Hospital / Clinic Workplace')
+                                        : (isTamil ? 'பணிபுரியும் அலுவலகம் / நீதிமன்றம்' : 'Current Chambers / Court / Law Firm'),
+                                    hintText: isDoc
+                                        ? (isTamil
+                                            ? 'எ.கா: கொங்குநாடு மருத்துவமனை, கோயம்புத்தூர்'
+                                            : 'e.g. Kongunadu Hospital, Coimbatore')
+                                        : (isTamil
+                                            ? 'எ.கா: மாவட்ட நீதிமன்றம், ஈரோடு / சென்னை உயர் நீதிமன்றம்'
+                                            : 'e.g. District Court, Erode / Madras High Court'),
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                      borderSide: const BorderSide(color: primaryMaroon, width: 2),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 14),
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Expanded(
+                                      child: TextFormField(
+                                        controller: nativeCtrl,
+                                        decoration: InputDecoration(
+                                          labelText: isTamil ? 'சொந்த ஊர் (Native Place)' : 'Native Place',
+                                          hintText: isTamil ? 'எ.கா: அவல்பூந்துறை / ஓடக்கல்பாளையம்' : 'e.g. Avalpoondurai / Odakkalpalayam',
+                                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                          focusedBorder: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(10),
+                                            borderSide: const BorderSide(color: primaryMaroon, width: 2),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: TextFormField(
+                                        controller: birthCtrl,
+                                        decoration: InputDecoration(
+                                          labelText: isTamil ? 'பிறந்த இடம்' : 'Birth Place',
+                                          hintText: isTamil ? 'எ.கா: கோயம்புத்தூர் / ஈரோடு' : 'e.g. Coimbatore / Erode',
+                                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                          focusedBorder: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(10),
+                                            borderSide: const BorderSide(color: primaryMaroon, width: 2),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 14),
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Expanded(
+                                      child: TextFormField(
+                                        controller: locCtrl,
+                                        decoration: InputDecoration(
+                                          labelText: isTamil ? 'தற்போதைய வசிப்பிடம் / நகரம்' : 'Current Residence / City',
+                                          hintText: isTamil ? 'எ.கா: சென்னை / கோயம்புத்தூர்' : 'e.g. Chennai / Coimbatore',
+                                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                          focusedBorder: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(10),
+                                            borderSide: const BorderSide(color: primaryMaroon, width: 2),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: TextFormField(
+                                        controller: phoneCtrl,
+                                        keyboardType: TextInputType.phone,
+                                        inputFormatters: [
+                                          FilteringTextInputFormatter.digitsOnly,
+                                          LengthLimitingTextInputFormatter(10),
+                                        ],
+                                        validator: (val) {
+                                          final text = val?.trim() ?? '';
+                                          if (text.isEmpty) {
+                                            return isTamil ? 'கைபேசி எண்ணை உள்ளிடவும்' : 'Please enter phone number';
+                                          }
+                                          if (text.length != 10) {
+                                            return isTamil ? '10 இலக்க எண் தேவை' : '10 digits required';
+                                          }
+                                          if (!RegExp(r'^[6-9]\d{9}$').hasMatch(text)) {
+                                            return isTamil ? 'சரியான கைபேசி எண் (6-9)' : 'Valid 10-digit mobile number';
+                                          }
+                                          return null;
+                                        },
+                                        decoration: InputDecoration(
+                                          label: Text.rich(
+                                            TextSpan(
+                                              text: isTamil ? 'தொலைபேசி எண் ' : 'Phone Number ',
+                                              children: const [
+                                                TextSpan(
+                                                  text: '*',
+                                                  style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          hintText: 'e.g. 9842990800',
+                                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                          focusedBorder: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(10),
+                                            borderSide: const BorderSide(color: primaryMaroon, width: 2),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 14),
+                                TextFormField(
+                                  controller: emailCtrl,
+                                  keyboardType: TextInputType.emailAddress,
+                                  validator: (val) {
+                                    if (val == null || val.trim().isEmpty) return null;
+                                    final text = val.trim();
+                                    final emailRegex = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
+                                    if (!emailRegex.hasMatch(text)) {
+                                      return isTamil ? 'சரியான மின்னஞ்சல் முகவரியை உள்ளிடவும்' : 'Enter a valid email address';
+                                    }
+                                    return null;
+                                  },
+                                  decoration: InputDecoration(
+                                    labelText: isTamil ? 'மின்னஞ்சல் முகவரி' : 'Email Address',
+                                    hintText: isDoc ? 'e.g. doctor@example.com' : 'e.g. advocate@example.com',
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                      borderSide: const BorderSide(color: primaryMaroon, width: 2),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 14),
+                                TextFormField(
+                                  controller: bioCtrl,
+                                  maxLines: 3,
+                                  decoration: InputDecoration(
+                                    labelText: isTamil ? 'சுயவிவரக் குறிப்பு & சாதனைகள்' : 'Bio & Career Summary',
+                                    hintText: isTamil
+                                        ? 'சுருக்கமான சுயவிவரக் குறிப்பு மற்றும் சாதனைகள்...'
+                                        : 'Brief profile notes and accomplishments...',
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                                    contentPadding: const EdgeInsets.all(12),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                      borderSide: const BorderSide(color: primaryMaroon, width: 2),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                              ),
+                            ),
+                          ),
+                          if (showScrollTop)
+                            Positioned(
+                              right: 20,
+                              bottom: 16,
+                              child: Material(
+                                color: primaryMaroon,
+                                shape: const CircleBorder(),
+                                elevation: 4,
+                                child: InkWell(
+                                  customBorder: const CircleBorder(),
+                                  onTap: () {
+                                    if (scrollCtrl.hasClients) {
+                                      scrollCtrl.animateTo(
+                                        0,
+                                        duration: const Duration(milliseconds: 300),
+                                        curve: Curves.easeInOut,
+                                      );
+                                    }
+                                  },
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(8.0),
+                                    child: Tooltip(
+                                      message: isTamil ? 'மேலே செல்க' : 'Scroll to top',
+                                      child: const Icon(
+                                        Icons.arrow_upward_rounded,
+                                        color: Colors.white,
+                                        size: 20,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
 
                   // 3. Pinned Footer Actions (Can never overlap text fields)
                   Container(
@@ -470,9 +658,9 @@ class _ProfessionalsContentState extends State<ProfessionalsContent> {
                       children: [
                         TextButton(
                           onPressed: () => Navigator.pop(ctx),
-                          child: const Text(
-                            'Cancel',
-                            style: TextStyle(color: Color(0xFF64748B), fontWeight: FontWeight.w600),
+                          child: Text(
+                            isTamil ? 'ரத்து செய்க' : 'Cancel',
+                            style: const TextStyle(color: Color(0xFF64748B), fontWeight: FontWeight.w600),
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -484,11 +672,27 @@ class _ProfessionalsContentState extends State<ProfessionalsContent> {
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                           ),
                           onPressed: () async {
+                            if (!formKey.currentState!.validate()) {
+                              setDialogState(() => autoValidate = true);
+                              if (scrollCtrl.hasClients) {
+                                scrollCtrl.animateTo(
+                                  0,
+                                  duration: const Duration(milliseconds: 350),
+                                  curve: Curves.easeInOut,
+                                );
+                              }
+                              return;
+                            }
+
                             final name = nameCtrl.text.trim();
                             if (name.isEmpty) {
-                              ScaffoldMessenger.of(ctx).showSnackBar(
-                                const SnackBar(content: Text('Please enter a name')),
-                              );
+                              if (scrollCtrl.hasClients) {
+                                scrollCtrl.animateTo(
+                                  0,
+                                  duration: const Duration(milliseconds: 350),
+                                  curve: Curves.easeInOut,
+                                );
+                              }
                               return;
                             }
 
@@ -528,10 +732,14 @@ class _ProfessionalsContentState extends State<ProfessionalsContent> {
                                 if (mounted) {
                                   showStatusDialog(
                                     context,
-                                    title: 'Success',
+                                    title: isTamil ? 'வெற்றி' : 'Success',
                                     message: isEdit
-                                        ? 'Profile updated successfully!'
-                                        : 'Professional added successfully!',
+                                        ? (isTamil
+                                            ? 'சுயவிவரம் வெற்றிகரமாக புதுப்பிக்கப்பட்டது!'
+                                            : 'Profile updated successfully!')
+                                        : (isTamil
+                                            ? 'விவரங்கள் வெற்றிகரமாக சேர்க்கப்பட்டன!'
+                                            : 'Professional added successfully!'),
                                     type: DialogType.success,
                                   );
                                 }
@@ -539,7 +747,13 @@ class _ProfessionalsContentState extends State<ProfessionalsContent> {
                               } else {
                                 if (ctx.mounted) {
                                   ScaffoldMessenger.of(ctx).showSnackBar(
-                                    SnackBar(content: Text('Error: ${res.body}')),
+                                    SnackBar(
+                                      content: Text(
+                                        isTamil
+                                            ? 'பிழை: சேமிக்க முடியவில்லை'
+                                            : 'Error: ${res.body}',
+                                      ),
+                                    ),
                                   );
                                 }
                               }
@@ -548,7 +762,11 @@ class _ProfessionalsContentState extends State<ProfessionalsContent> {
                             }
                           },
                           child: Text(
-                            isEdit ? 'Save Changes' : 'Add Professional',
+                            isEdit
+                                ? (isTamil ? 'சேமிக்க' : 'Save Changes')
+                                : (isDoc
+                                    ? (isTamil ? 'மருத்துவர் சேர்க்க' : 'Add Doctor')
+                                    : (isTamil ? 'வழக்கறிஞர் சேர்க்க' : 'Add Lawyer')),
                             style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
                         ),
@@ -559,395 +777,62 @@ class _ProfessionalsContentState extends State<ProfessionalsContent> {
               ),
             ),
           ),
-        ),
-      ),
-    );
-  }
+        );
+      },
+    ),
+  ).whenComplete(() => scrollCtrl.dispose());
+}
 
-  void _showDetailModal(Map<String, dynamic> item) {
-    final isTamil = Provider.of<LocaleProvider>(context, listen: false).locale.languageCode == 'ta';
+  void _openProfilePage(Map<String, dynamic> item) {
     final isDoctor = item['category'] == 'Doctor';
-    final phone = item['phone'];
-    final experience = item['experience_years'];
-
     showDialog(
       context: context,
-      builder: (ctx) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        clipBehavior: Clip.antiAlias,
-        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-        backgroundColor: Colors.transparent,
-        child: ConstrainedBox(
-          constraints: BoxConstraints(
-            maxWidth: 580,
-            maxHeight: MediaQuery.of(ctx).size.height * 0.85,
+      barrierDismissible: true,
+      builder: (ctx) {
+        final screenWidth = MediaQuery.of(ctx).size.width;
+        final screenHeight = MediaQuery.of(ctx).size.height;
+        final isMobile = screenWidth < 700;
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: EdgeInsets.symmetric(
+            horizontal: isMobile ? 12 : (screenWidth > 950 ? (screenWidth - 850) / 2 : 24),
+            vertical: isMobile ? 16 : 24,
           ),
+          clipBehavior: Clip.antiAlias,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           child: Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.2),
-                  blurRadius: 20,
-                  offset: const Offset(0, 10),
-                ),
-              ],
+            constraints: BoxConstraints(
+              maxHeight: screenHeight * (isMobile ? 0.95 : 0.88),
+              maxWidth: 850,
             ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // 1. Fixed Header (Pinned at top, never cut off)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [darkSidebarBrown, Color(0xFF4A1512), primaryMaroon],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: isDoctor
+                  ? DoctorProfilePage(
+                      doctor: item,
+                      canManage: _canManage,
+                      onBack: () => Navigator.pop(ctx),
+                      onEdit: () {
+                        Navigator.pop(ctx);
+                        _showAddEditDialog(item: item);
+                      },
+                    )
+                  : LawyerProfilePage(
+                      lawyer: item,
+                      canManage: _canManage,
+                      onBack: () => Navigator.pop(ctx),
+                      onEdit: () {
+                        Navigator.pop(ctx);
+                        _showAddEditDialog(item: item);
+                      },
                     ),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(2),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(color: logoGold, width: 2),
-                        ),
-                        child: CircleAvatar(
-                          radius: 26,
-                          backgroundColor: primaryMaroon,
-                          child: Icon(
-                            isDoctor ? Icons.medical_services_rounded : Icons.gavel_rounded,
-                            size: 26,
-                            color: logoGold,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              item['name'] ?? '',
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                            const SizedBox(height: 3),
-                            Text(
-                              item['specialization'] ??
-                                  (isDoctor ? 'Doctor / Physician' : 'Advocate / Legal Practitioner'),
-                              style: const TextStyle(
-                                fontSize: 13,
-                                color: Color(0xFFFEF3C7),
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: () => Navigator.pop(ctx),
-                        icon: const Icon(Icons.close, color: Colors.white70),
-                        tooltip: 'Close',
-                      ),
-                    ],
-                  ),
-                ),
-
-                // 2. Scrollable Body (Inside dialog boundaries with visible scrollbar)
-                Flexible(
-                  child: Scrollbar(
-                    thumbVisibility: true,
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Badges Row
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: isDoctor ? const Color(0xFFECFDF5) : const Color(0xFFFFFBEB),
-                                  border: Border.all(
-                                    color: isDoctor ? const Color(0xFFA7F3D0) : const Color(0xFFFDE68A),
-                                  ),
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      isDoctor ? Icons.health_and_safety : Icons.balance,
-                                      size: 14,
-                                      color: isDoctor ? const Color(0xFF047857) : const Color(0xFFB45309),
-                                    ),
-                                    const SizedBox(width: 5),
-                                    Text(
-                                      isDoctor
-                                          ? (isTamil ? 'மருத்துவர்' : 'Doctor')
-                                          : (isTamil ? 'வழக்கறிஞர்' : 'Lawyer / Advocate'),
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold,
-                                        color: isDoctor ? const Color(0xFF047857) : const Color(0xFFB45309),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              if (experience != null)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: lightGold,
-                                    border: Border.all(color: const Color(0xFFFDE68A)),
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      const Icon(Icons.workspace_premium, size: 14, color: softAmber),
-                                      const SizedBox(width: 5),
-                                      Text(
-                                        '$experience+ ${isTamil ? 'ஆண்டுகள் அனுபவம்' : 'Years Experience'}',
-                                        style: const TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.bold,
-                                          color: Color(0xFFB45309),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFFFFBEB),
-                                  border: Border.all(color: const Color(0xFFFDE68A)),
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: const Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(Icons.verified, size: 14, color: logoGold),
-                                    SizedBox(width: 5),
-                                    Text(
-                                      'Community Verified',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w600,
-                                        color: Color(0xFF92400E),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 18),
-
-                          // Information Rows
-                          _buildDetailRow(
-                            icon: Icons.school_outlined,
-                            label: isTamil ? 'கல்வித் தகுதிகள்' : 'Qualifications & Education',
-                            value: item['qualifications'],
-                            color: primaryMaroon,
-                          ),
-                          const SizedBox(height: 12),
-                          _buildDetailRow(
-                            icon: Icons.business_outlined,
-                            label: isTamil ? 'பணிபுரியும் இடம்' : 'Current Workplace / Organization',
-                            value: item['workplace'],
-                            color: primaryMaroon,
-                          ),
-                          const SizedBox(height: 12),
-                          _buildDetailRow(
-                            icon: Icons.home_work_outlined,
-                            label: isTamil ? 'சொந்த ஊர் (Native Place)' : 'Native Place',
-                            value: item['native_place'],
-                            color: primaryMaroon,
-                          ),
-                          const SizedBox(height: 12),
-                          _buildDetailRow(
-                            icon: Icons.location_on_outlined,
-                            label: isTamil ? 'பிறந்த இடம்' : 'Birth Place',
-                            value: item['birth_place'],
-                            color: primaryMaroon,
-                          ),
-                          const SizedBox(height: 12),
-                          _buildDetailRow(
-                            icon: Icons.my_location_outlined,
-                            label: isTamil ? 'தற்போதைய வசிப்பிடம்' : 'Current Residence / Location',
-                            value: item['current_location'],
-                            color: primaryMaroon,
-                          ),
-                          if (item['dob'] != null && item['dob'].toString().isNotEmpty) ...[
-                            const SizedBox(height: 12),
-                            _buildDetailRow(
-                              icon: Icons.cake_outlined,
-                              label: isTamil ? 'பிறந்த தேதி' : 'Date of Birth',
-                              value: item['dob'].toString().contains('-')
-                                  ? item['dob'].toString().split('-').reversed.join('/')
-                                  : item['dob'],
-                              color: primaryMaroon,
-                            ),
-                          ],
-                          if (phone != null && phone.toString().isNotEmpty) ...[
-                            const SizedBox(height: 12),
-                            _buildDetailRow(
-                              icon: Icons.phone_android_outlined,
-                              label: isTamil ? 'தொலைபேசி எண்' : 'Phone Number',
-                              value: phone,
-                              color: primaryMaroon,
-                            ),
-                          ],
-                          if (item['email'] != null && item['email'].toString().isNotEmpty) ...[
-                            const SizedBox(height: 12),
-                            _buildDetailRow(
-                              icon: Icons.email_outlined,
-                              label: isTamil ? 'மின்னஞ்சல்' : 'Email Address',
-                              value: item['email'],
-                              color: primaryMaroon,
-                            ),
-                          ],
-                          const SizedBox(height: 12),
-
-                          // Bio Summary
-                          if (item['bio_summary'] != null &&
-                              item['bio_summary'].toString().isNotEmpty) ...[
-                            const SizedBox(height: 4),
-                            Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.all(14),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFFFFDF7),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: const Color(0xFFF1E6D0)),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    isTamil ? 'சுயவிவர சுருக்கம்' : 'Profile Overview',
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
-                                      color: primaryMaroon,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    item['bio_summary'],
-                                    style: const TextStyle(
-                                      fontSize: 13,
-                                      height: 1.5,
-                                      color: Color(0xFF2D1B18),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-
-                // 3. Fixed Footer with Close Button
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFFAFAF9),
-                    border: Border(top: BorderSide(color: Color(0xFFE7E5E4))),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: primaryMaroon,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                        onPressed: () => Navigator.pop(ctx),
-                        child: Text(
-                          isTamil ? 'மூடுக' : 'Close',
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
             ),
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDetailRow({
-    required IconData icon,
-    required String label,
-    required dynamic value,
-    required Color color,
-  }) {
-    if (value == null || value.toString().trim().isEmpty) {
-      return const SizedBox.shrink();
-    }
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          padding: const EdgeInsets.all(6),
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(icon, size: 16, color: color),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: const TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF78716C),
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                value.toString(),
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                  color: darkSidebarBrown,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
+        );
+      },
+    ).then((_) {
+      if (mounted) _fetchProfessionals();
+    });
   }
 
   @override
@@ -995,8 +880,24 @@ class _ProfessionalsContentState extends State<ProfessionalsContent> {
   }
 
   Widget _buildHeroHeader(bool isTamil, bool isMobile, int total, int doctors, int lawyers) {
+    final isDoctorMode = _selectedCategory == 'Doctor';
+    final isLawyerMode = _selectedCategory == 'Lawyer';
+
+    final badgeText = isMobile
+        ? (isDoctorMode
+            ? (isTamil ? 'மருத்துவர்கள் வலையமைப்பு' : 'Doctors Network')
+            : (isLawyerMode
+                ? (isTamil ? 'வழக்கறிஞர்கள் வலையமைப்பு' : 'Lawyers Network')
+                : (isTamil ? 'வல்லுநர்கள் வலையமைப்பு' : 'Professionals Network')))
+        : (isDoctorMode
+            ? (isTamil ? 'உயிர் காக்கும் கரங்கள் • மருத்துவர்கள் வலையமைப்பு' : 'Lifesaving Hands • Doctors Network')
+            : (isLawyerMode
+                ? (isTamil ? 'நீதியின் குரல் • வழக்கறிஞர்கள் வலையமைப்பு' : 'Voice of Justice • Lawyers Network')
+                : (isTamil ? 'சமூக அறிஞர்கள் & வல்லுநர்கள்' : 'Community Professionals Network')));
+
     final badge = Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+      constraints: isMobile ? BoxConstraints(maxWidth: MediaQuery.of(context).size.width - 64) : null,
       decoration: BoxDecoration(
         color: Colors.black.withValues(alpha: 0.25),
         borderRadius: BorderRadius.circular(20),
@@ -1005,15 +906,25 @@ class _ProfessionalsContentState extends State<ProfessionalsContent> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.workspace_premium, color: logoGold, size: 16),
+          Icon(
+            isDoctorMode
+                ? Icons.health_and_safety_rounded
+                : (isLawyerMode ? Icons.balance_rounded : Icons.workspace_premium),
+            color: logoGold,
+            size: 16,
+          ),
           const SizedBox(width: 8),
-          Text(
-            isTamil ? 'சமூக அறிஞர்கள் & வல்லுநர்கள்' : 'Community Professionals Network',
-            style: const TextStyle(
-              color: Color(0xFFFEF3C7),
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0.3,
+          Flexible(
+            child: Text(
+              badgeText,
+              style: const TextStyle(
+                color: Color(0xFFFEF3C7),
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.3,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
@@ -1021,9 +932,11 @@ class _ProfessionalsContentState extends State<ProfessionalsContent> {
     );
 
     final titleWidget = Text(
-      isTamil
-          ? 'மருத்துவர்கள் மற்றும் வழக்கறிஞர்கள் பட்டியல்'
-          : 'Doctors & Lawyers Directory',
+      isDoctorMode
+          ? (isTamil ? 'உயிர் காக்கும் கரங்கள்' : 'Lifesaving Hands')
+          : (isLawyerMode
+              ? (isTamil ? 'நீதியின் குரல்' : 'Voice of Justice')
+              : (isTamil ? 'மருத்துவர்கள் மற்றும் வழக்கறிஞர்கள் பட்டியல்' : 'Doctors & Lawyers Directory')),
       style: TextStyle(
         fontSize: isMobile ? 22 : 26,
         fontWeight: FontWeight.bold,
@@ -1033,9 +946,17 @@ class _ProfessionalsContentState extends State<ProfessionalsContent> {
     );
 
     final subtitleWidget = Text(
-      isTamil
-          ? 'நமது காடைக்குல சமூகத்தைச் சேர்ந்த மருத்துவர்கள் மற்றும் வழக்கறிஞர்களின் விவரங்கள் மற்றும் தொடர்பு பட்டியல்.'
-          : 'A dedicated directory honoring and connecting our community’s medical doctors and legal practitioners.',
+      isDoctorMode
+          ? (isTamil
+              ? 'நமது காடைக்குல சமூகத்தைச் சேர்ந்த மருத்துவர்களின் விவரங்கள், பணிபுரியும் மருத்துவமனை மற்றும் தொடர்பு பட்டியல்.'
+              : 'Honoring and connecting our community’s medical doctors and healthcare professionals.')
+          : (isLawyerMode
+              ? (isTamil
+                  ? 'நமது காடைக்குல சமூகத்தைச் சேர்ந்த வழக்கறிஞர்களின் விவரங்கள், பயிற்சித் துறை மற்றும் தொடர்பு பட்டியல்.'
+                  : 'Honoring and connecting our community’s advocates and legal practitioners.')
+              : (isTamil
+                  ? 'நமது காடைக்குல சமூகத்தைச் சேர்ந்த மருத்துவர்கள் மற்றும் வழக்கறிஞர்களின் விவரங்கள் மற்றும் தொடர்பு பட்டியல்.'
+                  : 'A dedicated directory honoring and connecting our community’s medical doctors and legal practitioners.')),
       style: const TextStyle(
         fontSize: 14,
         color: Colors.white70,
@@ -1054,7 +975,11 @@ class _ProfessionalsContentState extends State<ProfessionalsContent> {
       onPressed: () => _showAddEditDialog(),
       icon: const Icon(Icons.add, size: 20, color: darkSidebarBrown),
       label: Text(
-        isTamil ? 'புதிய பதிவு' : 'Add Professional',
+        isDoctorMode
+            ? (isTamil ? 'புதிய மருத்துவர் பதிவு' : 'Add Doctor')
+            : (isLawyerMode
+                ? (isTamil ? 'புதிய வழக்கறிஞர் பதிவு' : 'Add Lawyer')
+                : (isTamil ? 'புதிய பதிவு' : 'Add Professional')),
         style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
       ),
     );
@@ -1122,24 +1047,52 @@ class _ProfessionalsContentState extends State<ProfessionalsContent> {
             spacing: 12,
             runSpacing: 10,
             children: [
-              _buildStatChip(
-                label: isTamil ? 'மொத்த வல்லுநர்கள்' : 'Total Registered',
-                count: total,
-                icon: Icons.people_alt,
-                color: logoGold,
-              ),
-              _buildStatChip(
-                label: isTamil ? 'மருத்துவர்கள்' : 'Doctors',
-                count: doctors,
-                icon: Icons.medical_services,
-                color: const Color(0xFF34D399),
-              ),
-              _buildStatChip(
-                label: isTamil ? 'வழக்கறிஞர்கள்' : 'Lawyers / Advocates',
-                count: lawyers,
-                icon: Icons.gavel,
-                color: const Color(0xFFFBBF24),
-              ),
+              if (isDoctorMode) ...[
+                _buildStatChip(
+                  label: isTamil ? 'மொத்த மருத்துவர்கள்' : 'Total Doctors',
+                  count: doctors,
+                  icon: Icons.medical_services,
+                  color: logoGold,
+                ),
+                _buildStatChip(
+                  label: isTamil ? 'முதுநிலை மருத்துவர்கள்' : 'Senior Doctors (10+ Yrs)',
+                  count: _professionals.where((p) => (p['experience_years'] ?? 0) >= 10).length,
+                  icon: Icons.verified_user,
+                  color: logoGold,
+                ),
+              ] else if (isLawyerMode) ...[
+                _buildStatChip(
+                  label: isTamil ? 'மொத்த வழக்கறிஞர்கள்' : 'Total Advocates',
+                  count: lawyers,
+                  icon: Icons.gavel,
+                  color: logoGold,
+                ),
+                _buildStatChip(
+                  label: isTamil ? 'முதுநிலை வழக்கறிஞர்கள்' : 'Senior Advocates (10+ Yrs)',
+                  count: _professionals.where((p) => (p['experience_years'] ?? 0) >= 10).length,
+                  icon: Icons.balance,
+                  color: logoGold,
+                ),
+              ] else ...[
+                _buildStatChip(
+                  label: isTamil ? 'மொத்த வல்லுநர்கள்' : 'Total Registered',
+                  count: total,
+                  icon: Icons.people_alt,
+                  color: logoGold,
+                ),
+                _buildStatChip(
+                  label: isTamil ? 'மருத்துவர்கள்' : 'Doctors',
+                  count: doctors,
+                  icon: Icons.medical_services,
+                  color: logoGold,
+                ),
+                _buildStatChip(
+                  label: isTamil ? 'வழக்கறிஞர்கள்' : 'Lawyers / Advocates',
+                  count: lawyers,
+                  icon: Icons.gavel,
+                  color: logoGold,
+                ),
+              ],
             ],
           ),
         ],
@@ -1209,33 +1162,70 @@ class _ProfessionalsContentState extends State<ProfessionalsContent> {
             direction: isNarrow ? Axis.vertical : Axis.horizontal,
             crossAxisAlignment: isNarrow ? CrossAxisAlignment.stretch : CrossAxisAlignment.center,
             children: [
-              // Segmented Category Buttons
-              Wrap(
-                spacing: 8,
-                children: [
-                  _buildCategoryFilterChip('ALL', isTamil ? 'அனைத்தும்' : 'All', Icons.groups),
-                  _buildCategoryFilterChip(
-                    'Doctor',
-                    isTamil ? 'மருத்துவர்கள்' : 'Doctors',
-                    Icons.medical_services,
+              if (widget.initialCategory == 'ALL') ...[
+                // Segmented Category Buttons
+                Wrap(
+                  spacing: 8,
+                  children: [
+                    _buildCategoryFilterChip('ALL', isTamil ? 'அனைத்தும்' : 'All', Icons.groups),
+                    _buildCategoryFilterChip(
+                      'Doctor',
+                      isTamil ? 'மருத்துவர்கள்' : 'Doctors',
+                      Icons.medical_services,
+                    ),
+                    _buildCategoryFilterChip(
+                      'Lawyer',
+                      isTamil ? 'வழக்கறிஞர்கள்' : 'Lawyers',
+                      Icons.gavel,
+                    ),
+                  ],
+                ),
+                if (isNarrow) const SizedBox(height: 12) else const Spacer(),
+              ] else ...[
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: primaryMaroon.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: primaryMaroon.withValues(alpha: 0.22),
+                    ),
                   ),
-                  _buildCategoryFilterChip(
-                    'Lawyer',
-                    isTamil ? 'வழக்கறிஞர்கள்' : 'Lawyers',
-                    Icons.gavel,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        _selectedCategory == 'Doctor' ? Icons.medical_services : Icons.gavel,
+                        size: 16,
+                        color: primaryMaroon,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        _selectedCategory == 'Doctor'
+                            ? (isTamil ? 'மருத்துவர்கள் பட்டியல்' : 'Doctors Directory')
+                            : (isTamil ? 'வழக்கறிஞர்கள் பட்டியல்' : 'Lawyers Directory'),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: primaryMaroon,
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              if (isNarrow) const SizedBox(height: 12) else const Spacer(),
+                ),
+                if (isNarrow) const SizedBox(height: 12) else const Spacer(),
+              ],
               // Search Field
               SizedBox(
                 width: isNarrow ? double.infinity : 320,
                 child: TextField(
                   controller: _searchController,
                   decoration: InputDecoration(
-                    hintText: isTamil
-                        ? 'பெயர், ஊர், சிறப்பு துறை தேட...'
-                        : 'Search name, native, specialization...',
+                    hintText: _selectedCategory == 'Doctor'
+                        ? (isTamil ? 'மருத்துவர் பெயர், சிறப்புத் துறை, ஊர்...' : 'Search doctor, specialty, native...')
+                        : (_selectedCategory == 'Lawyer'
+                            ? (isTamil ? 'வழக்கறிஞர் பெயர், துறை, நீதிமன்றம், ஊர்...' : 'Search lawyer, practice, native...')
+                            : (isTamil ? 'பெயர், ஊர், சிறப்பு துறை தேட...' : 'Search name, native, specialization...')),
                     hintStyle: const TextStyle(fontSize: 13, color: Color(0xFF94A3B8)),
                     prefixIcon: const Icon(Icons.search, size: 20, color: primaryMaroon),
                     suffixIcon: _searchController.text.isNotEmpty
@@ -1372,9 +1362,11 @@ class _ProfessionalsContentState extends State<ProfessionalsContent> {
     return LayoutBuilder(
       builder: (context, constraints) {
         int crossAxisCount = 1;
-        if (constraints.maxWidth > 1100) {
+        if (constraints.maxWidth > 1200) {
+          crossAxisCount = 4;
+        } else if (constraints.maxWidth > 850) {
           crossAxisCount = 3;
-        } else if (constraints.maxWidth > 700) {
+        } else if (constraints.maxWidth > 550) {
           crossAxisCount = 2;
         }
 
@@ -1382,7 +1374,7 @@ class _ProfessionalsContentState extends State<ProfessionalsContent> {
           return Column(
             children: _professionals.map((p) {
               return Padding(
-                padding: const EdgeInsets.only(bottom: 16),
+                padding: const EdgeInsets.only(bottom: 12),
                 child: _buildProfessionalCard(p, isTamil, isGrid: false),
               );
             }).toList(),
@@ -1394,9 +1386,9 @@ class _ProfessionalsContentState extends State<ProfessionalsContent> {
           physics: const NeverScrollableScrollPhysics(),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: crossAxisCount,
-            crossAxisSpacing: 16,
-            mainAxisSpacing: 16,
-            mainAxisExtent: 380,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+            mainAxisExtent: 260,
           ),
           itemCount: _professionals.length,
           itemBuilder: (ctx, idx) => _buildProfessionalCard(_professionals[idx], isTamil, isGrid: true),
@@ -1415,7 +1407,7 @@ class _ProfessionalsContentState extends State<ProfessionalsContent> {
     final headerBorder = isDoctor ? const Color(0xFFEADBCE) : const Color(0xFFF1E6D0);
 
     final cardBody = Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1425,66 +1417,66 @@ class _ProfessionalsContentState extends State<ProfessionalsContent> {
             runSpacing: 4,
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
-                  color: isDoctor ? const Color(0xFFECFDF5) : const Color(0xFFFFFBEB),
-                  borderRadius: BorderRadius.circular(6),
+                  color: primaryMaroon.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(5),
                   border: Border.all(
-                    color: isDoctor ? const Color(0xFFA7F3D0) : const Color(0xFFFDE68A),
+                    color: primaryMaroon.withValues(alpha: 0.25),
                   ),
                 ),
                 child: Text(
                   isDoctor ? 'Doctor' : 'Lawyer',
-                  style: TextStyle(
-                    fontSize: 11,
+                  style: const TextStyle(
+                    fontSize: 9.5,
                     fontWeight: FontWeight.bold,
-                    color: isDoctor ? const Color(0xFF047857) : const Color(0xFFB45309),
+                    color: primaryMaroon,
                   ),
                 ),
               ),
               if (experience != null)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
                     color: lightGold,
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: const Color(0xFFFDE68A)),
+                    borderRadius: BorderRadius.circular(5),
+                    border: Border.all(color: logoGold.withValues(alpha: 0.5)),
                   ),
                   child: Text(
                     '$experience+ Yrs Exp',
                     style: const TextStyle(
-                      fontSize: 11,
+                      fontSize: 9.5,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFFB45309),
+                      color: darkSidebarBrown,
                     ),
                   ),
                 ),
               if (item['current_location'] != null)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
                     color: const Color(0xFFF5F5F4),
-                    borderRadius: BorderRadius.circular(6),
+                    borderRadius: BorderRadius.circular(5),
                   ),
                   child: Text(
                     item['current_location'].toString(),
-                    style: const TextStyle(fontSize: 11, color: Color(0xFF57534E)),
+                    style: const TextStyle(fontSize: 9.5, color: Color(0xFF57534E)),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
 
           // Workplace
           if (item['workplace'] != null) ...[
             _buildCardInfoRow(
               icon: Icons.business,
               text: item['workplace'],
-              maxLines: 2,
+              maxLines: 1,
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 4),
           ],
 
           // Native Place
@@ -1494,7 +1486,7 @@ class _ProfessionalsContentState extends State<ProfessionalsContent> {
               text: '${isTamil ? "சொந்த ஊர்: " : "Native: "}${item["native_place"]}',
               maxLines: 1,
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 4),
           ],
 
           // Qualifications
@@ -1502,9 +1494,9 @@ class _ProfessionalsContentState extends State<ProfessionalsContent> {
             _buildCardInfoRow(
               icon: Icons.school,
               text: item['qualifications'],
-              maxLines: 2,
+              maxLines: 1,
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 4),
           ],
 
           // Phone
@@ -1523,13 +1515,13 @@ class _ProfessionalsContentState extends State<ProfessionalsContent> {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: const Color(0xFFE7E5E4)),
         boxShadow: [
           BoxShadow(
             color: darkSidebarBrown.withValues(alpha: 0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -1538,38 +1530,39 @@ class _ProfessionalsContentState extends State<ProfessionalsContent> {
         children: [
           // Card Header
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
               color: headerBg,
               borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(16),
-                topRight: Radius.circular(16),
+                topLeft: Radius.circular(12),
+                topRight: Radius.circular(12),
               ),
               border: Border(bottom: BorderSide(color: headerBorder)),
             ),
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Container(
                   padding: const EdgeInsets.all(2),
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    border: Border.all(color: logoGold, width: 1.5),
+                    border: Border.all(color: logoGold, width: 1.2),
                   ),
                   child: CircleAvatar(
-                    radius: 24,
+                    radius: 17,
                     backgroundColor: primaryMaroon,
                     child: Icon(
                       isDoctor ? Icons.medical_services_rounded : Icons.gavel_rounded,
                       color: logoGold,
-                      size: 22,
+                      size: 16,
                     ),
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Row(
                         children: [
@@ -1577,7 +1570,7 @@ class _ProfessionalsContentState extends State<ProfessionalsContent> {
                             child: Text(
                               item['name'] ?? '',
                               style: const TextStyle(
-                                fontSize: 16,
+                                fontSize: 13.5,
                                 fontWeight: FontWeight.bold,
                                 color: darkSidebarBrown,
                               ),
@@ -1585,15 +1578,16 @@ class _ProfessionalsContentState extends State<ProfessionalsContent> {
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          const Icon(Icons.verified, size: 16, color: logoGold),
+                          const SizedBox(width: 3),
+                          const Icon(Icons.verified, size: 14, color: logoGold),
                         ],
                       ),
-                      const SizedBox(height: 3),
+                      const SizedBox(height: 1),
                       Text(
                         item['specialization'] ??
                             (isDoctor ? 'Doctor / Physician' : 'Advocate / Legal Practitioner'),
                         style: const TextStyle(
-                          fontSize: 12,
+                          fontSize: 11,
                           color: primaryMaroon,
                           fontWeight: FontWeight.w600,
                         ),
@@ -1605,7 +1599,9 @@ class _ProfessionalsContentState extends State<ProfessionalsContent> {
                 ),
                 if (_canManage)
                   PopupMenuButton<String>(
-                    icon: const Icon(Icons.more_vert, size: 20, color: Color(0xFF78716C)),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    icon: const Icon(Icons.more_vert, size: 18, color: Color(0xFF78716C)),
                     onSelected: (val) {
                       if (val == 'edit') {
                         _showAddEditDialog(item: item);
@@ -1618,9 +1614,9 @@ class _ProfessionalsContentState extends State<ProfessionalsContent> {
                         value: 'edit',
                         child: Row(
                           children: [
-                            Icon(Icons.edit, size: 18, color: primaryMaroon),
+                            Icon(Icons.edit, size: 16, color: primaryMaroon),
                             SizedBox(width: 8),
-                            Text('Edit Profile'),
+                            Text('Edit Profile', style: TextStyle(fontSize: 12)),
                           ],
                         ),
                       ),
@@ -1628,9 +1624,9 @@ class _ProfessionalsContentState extends State<ProfessionalsContent> {
                         value: 'delete',
                         child: Row(
                           children: [
-                            Icon(Icons.delete, size: 18, color: Colors.red),
+                            Icon(Icons.delete, size: 16, color: Colors.red),
                             SizedBox(width: 8),
-                            Text('Delete', style: TextStyle(color: Colors.red)),
+                            Text('Delete', style: TextStyle(color: Colors.red, fontSize: 12)),
                           ],
                         ),
                       ),
@@ -1645,7 +1641,7 @@ class _ProfessionalsContentState extends State<ProfessionalsContent> {
 
           // Card Footer Actions
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: const BoxDecoration(
               border: Border(top: BorderSide(color: Color(0xFFF5F5F4))),
             ),
@@ -1655,13 +1651,13 @@ class _ProfessionalsContentState extends State<ProfessionalsContent> {
                 style: OutlinedButton.styleFrom(
                   foregroundColor: primaryMaroon,
                   side: BorderSide(color: primaryMaroon.withValues(alpha: 0.3)),
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
                 ),
-                onPressed: () => _showDetailModal(item),
+                onPressed: () => _openProfilePage(item),
                 child: Text(
                   isTamil ? 'விவரங்கள்' : 'View Profile',
-                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
                 ),
               ),
             ),
@@ -1678,18 +1674,18 @@ class _ProfessionalsContentState extends State<ProfessionalsContent> {
     bool isBold = false,
   }) {
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Icon(icon, size: 14, color: const Color(0xFFA8A29E)),
-        const SizedBox(width: 6),
+        Icon(icon, size: 12, color: const Color(0xFFA8A29E)),
+        const SizedBox(width: 5),
         Expanded(
           child: Text(
             text,
             style: TextStyle(
-              fontSize: 12,
+              fontSize: 11,
               color: isBold ? darkSidebarBrown : const Color(0xFF44403C),
               fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
-              height: 1.3,
+              height: 1.25,
             ),
             maxLines: maxLines,
             overflow: TextOverflow.ellipsis,

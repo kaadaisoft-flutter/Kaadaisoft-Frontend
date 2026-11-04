@@ -1440,8 +1440,8 @@ class _PaymentsContentState extends State<PaymentsContent> {
     if (_isLoading) return const Center(child: LoadingSpinner(message: 'Loading members...'));
     if (_errorMessage.isNotEmpty) return Center(child: Text(_errorMessage, style: const TextStyle(color: Colors.red)));
 
-    final double fixedWidth = colSno + colFamilyId + colName + colMobile + 20;
-    final double scrollableWidth = colRole + colDistrict + colTaluk + colPanchayat + colVillage + colActions;
+    final double fixedWidth = colSno + colActions + colFamilyId + colName + colMobile + 20;
+    final double scrollableWidth = colRole + colDistrict + colTaluk + colPanchayat + colVillage;
 
     return Container(
       decoration: BoxDecoration(
@@ -1467,7 +1467,6 @@ class _PaymentsContentState extends State<PaymentsContent> {
                     _buildCell(AppLocalizations.of(context)?.talukHeader ?? 'TALUK', colTaluk, isHeader: true),
                     _buildCell(AppLocalizations.of(context)?.panchayatHeader ?? 'PANCHAYAT', colPanchayat, isHeader: true),
                     _buildCell(AppLocalizations.of(context)?.villageUpperHeader ?? 'VILLAGE', colVillage, isHeader: true),
-                    _buildCell(AppLocalizations.of(context)?.actionHeader?.toUpperCase() ?? 'ACTIONS', colActions, isHeader: true, isActions: true),
                   ],
                 ),
               ),
@@ -1504,6 +1503,7 @@ class _PaymentsContentState extends State<PaymentsContent> {
                           _buildCell(AppLocalizations.of(context)?.sNo?.toUpperCase() ?? 'S.NO', colSno, isHeader: true),
                           _buildCell(AppLocalizations.of(context)?.familyIdHeader ?? 'FAMILY ID', colFamilyId, isHeader: true),
                           _buildCell(AppLocalizations.of(context)?.nameHeader?.toUpperCase() ?? 'NAME', colName, isHeader: true),
+                          _buildCell(AppLocalizations.of(context)?.actionHeader?.toUpperCase() ?? 'ACTIONS', colActions, isHeader: true, isActions: true),
                           _buildCell(AppLocalizations.of(context)?.mobileLabel?.toUpperCase() ?? 'MOBILE', colMobile, isHeader: true),
                         ],
                       ),
@@ -1576,6 +1576,31 @@ class _PaymentsContentState extends State<PaymentsContent> {
             _buildCell(sno.toString(), colSno),
             _buildCell(member['Familymembershipid'] ?? '-', colFamilyId),
             _buildCell(member['Name'] ?? 'N/A', colName),
+            _buildCell('', colActions, isActions: true, child: Builder(builder: (context) {
+              double eventMoney = 0.0;
+              if (_selectedEventId != null) {
+                try {
+                  final event = _events.firstWhere((e) => e['Id'] == _selectedEventId);
+                  eventMoney = double.tryParse(event['TaxAmount']?.toString() ?? '0') ?? 0.0;
+                } catch (e) {}
+              }
+              final paidCash = double.tryParse(member['paidamount']?.toString() ?? '0') ?? 0.0;
+              final pendingCash = (member['balanceamount'] != null) ? double.tryParse(member['balanceamount'].toString()) ?? 0.0 : eventMoney - paidCash;
+              final isFullyPaid = _selectedEventId != null && pendingCash <= 0 && paidCash > 0;
+              final showPayNow = !isFullyPaid;
+              final showViewReceipts = _selectedEventId == null || paidCash > 0 || member['payment_status'] == 'Paid';
+              return Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (showPayNow)
+                    _buildActionButton('Pay Now', Colors.green, () => _showPaymentDialog(member)),
+                  if (showViewReceipts) ...[
+                    if (showPayNow) const SizedBox(width: 8),
+                    _buildActionButton('View Receipts', const Color(0xFF5D1712), () => _showMemberReceiptsDialog(member)),
+                  ],
+                ],
+              );
+            })),
             _buildCell(member['Phonenumber']?.toString() ?? '-', colMobile),
           ],
         ),
@@ -1623,17 +1648,6 @@ class _PaymentsContentState extends State<PaymentsContent> {
             _buildCell(member['Taluk'] ?? '-', colTaluk),
             _buildCell(member['Panchayat'] ?? '-', colPanchayat),
             _buildCell(member['Village'] ?? '-', colVillage),
-            _buildCell('', colActions, isActions: true, child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                if (showPayNow)
-                  _buildActionButton('Pay Now', Colors.green, () => _showPaymentDialog(member)),
-                if (showViewReceipts) ...[
-                  if (showPayNow) const SizedBox(width: 8),
-                  _buildActionButton('View Receipts', const Color(0xFF5D1712), () => _showMemberReceiptsDialog(member)),
-                ],
-              ],
-            )),
           ],
         ),
       ),

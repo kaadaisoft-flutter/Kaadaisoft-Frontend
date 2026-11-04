@@ -407,7 +407,7 @@ class _CoordinatorsContentState extends State<CoordinatorsContent> {
                       ],
                     )
                   : Wrap(
-                      alignment: WrapAlignment.spaceBetween,
+                      alignment: WrapAlignment.start,
                       crossAxisAlignment: WrapCrossAlignment.center,
                       runSpacing: 10,
                       spacing: 12,
@@ -521,8 +521,7 @@ class _CoordinatorsContentState extends State<CoordinatorsContent> {
                               _buildHeaderCell(AppLocalizations.of(context)?.talukHeader ?? 'TALUK', 100),
                                _buildHeaderCell(AppLocalizations.of(context)?.panchayatHeader ?? 'PANCHAYAT', 130),
                               _buildHeaderCell(AppLocalizations.of(context)?.villageUpperHeader ?? 'VILLAGE', 130),
-                              _buildHeaderCell(AppLocalizations.of(context)?.assignedVillageHeader ?? 'ASSIGNED VILLAGE', 150),
-                              _buildHeaderCell(AppLocalizations.of(context)?.actionHeader?.toUpperCase() ?? 'ACTIONS', 120, isLast: true),
+                              _buildHeaderCell(AppLocalizations.of(context)?.assignedVillageHeader ?? 'ASSIGNED VILLAGE', 150, isLast: true),
                             ],
                           ),
                         ),
@@ -555,7 +554,7 @@ class _CoordinatorsContentState extends State<CoordinatorsContent> {
                       children: [
                         // Fixed Left Part
                         SizedBox(
-                          width: 390, // 50+110+110+120
+                          width: 510, // 50+120+110+110+120
                           child: Column(
                             children: [
                               Container(
@@ -565,6 +564,7 @@ class _CoordinatorsContentState extends State<CoordinatorsContent> {
                                     _buildHeaderCell(AppLocalizations.of(context)?.sNo?.toUpperCase() ?? 'S.NO', 50),
                                     _buildHeaderCell(AppLocalizations.of(context)?.userIdHeader ?? 'USER ID', 110),
                                     _buildHeaderCell(AppLocalizations.of(context)?.nameHeader?.toUpperCase() ?? 'NAME', 110),
+                                    _buildHeaderCell(AppLocalizations.of(context)?.actionHeader?.toUpperCase() ?? 'ACTIONS', 120),
                                     _buildHeaderCell(AppLocalizations.of(context)?.mobileLabel?.toUpperCase() ?? 'MOBILE', 120),
                                   ],
                                 ),
@@ -593,7 +593,7 @@ class _CoordinatorsContentState extends State<CoordinatorsContent> {
                         ),
                         // Scrollable Right Part
                         isNarrow 
-                            ? SizedBox(width: 730, child: rightPart)
+                            ? SizedBox(width: 610, child: rightPart)
                             : Expanded(
                                 child: Scrollbar(
                                   controller: _horizontalScrollController,
@@ -603,7 +603,7 @@ class _CoordinatorsContentState extends State<CoordinatorsContent> {
                                     controller: _horizontalScrollController,
                                     scrollDirection: Axis.horizontal,
                                     child: SizedBox(
-                                      width: 730, // 100+100+130+130+150+120
+                                      width: 610, // 100+100+130+130+150
                                       child: rightPart,
                                     ),
                                   ),
@@ -676,6 +676,7 @@ class _CoordinatorsContentState extends State<CoordinatorsContent> {
 }
 
   Widget _buildFixedRow(int index, String sno, String numericId, String id, String name, String mobile) {
+    final isTamil = Localizations.localeOf(context).languageCode == 'ta';
     final isHovered = _hoveredIndex == index;
     return MouseRegion(
       onEnter: (_) => setState(() => _hoveredIndex = index),
@@ -695,6 +696,18 @@ class _CoordinatorsContentState extends State<CoordinatorsContent> {
                 _buildDataCell(sno, 50),
                 _buildDataCell(id, 110, isBlue: true),
                 _buildDataCell(name, 110, isBold: true),
+                _buildDataCell('', 120, child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    if (widget.role != 3) ...[
+                      _actionIcon(Icons.edit_outlined, const Color(0xFF5D1712), () => _showEditCoordinatorDialog(numericId), tooltip: isTamil ? 'திருத்து' : 'Edit'),
+                      const SizedBox(width: 8),
+                    ],
+                    _actionIcon(Icons.assignment_ind_outlined, Colors.orange, () => _showCoordinatorResponsibilitiesDialog(numericId, id), tooltip: isTamil ? 'பொறுப்புகள்' : 'Responsibilities'),
+                    const SizedBox(width: 8),
+                    _actionIcon(Icons.visibility_outlined, Colors.green, () => _showCoordinatorDetailsDialog(numericId, id), tooltip: isTamil ? 'பார்' : 'View'),
+                  ],
+                )),
                 _buildDataCell(mobile, 120),
               ],
             ),
@@ -726,19 +739,7 @@ class _CoordinatorsContentState extends State<CoordinatorsContent> {
               _buildDataCell(taluk, 100),
               _buildDataCell(panchayat, 130),
               _buildDataCell(village, 130),
-              _buildDataCell(assignedVillage, 150),
-              _buildDataCell('', 120, isLast: true, child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  if (widget.role != 3) ...[
-                    _actionIcon(Icons.edit_outlined, const Color(0xFF5D1712), () => _showEditCoordinatorDialog(numericId), tooltip: isTamil ? 'திருத்து' : 'Edit'),
-                    const SizedBox(width: 8),
-                  ],
-                  _actionIcon(Icons.assignment_ind_outlined, Colors.orange, () => _showCoordinatorResponsibilitiesDialog(numericId, id), tooltip: isTamil ? 'பொறுப்புகள்' : 'Responsibilities'),
-                  const SizedBox(width: 8),
-                  _actionIcon(Icons.visibility_outlined, Colors.green, () => _showCoordinatorDetailsDialog(numericId, id), tooltip: isTamil ? 'பார்' : 'View'),
-                ],
-              )),
+              _buildDataCell(assignedVillage, 150, isLast: true),
             ],
           ),
         ),
