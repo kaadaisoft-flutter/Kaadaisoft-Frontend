@@ -1,9 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'presentation/pages/login_page.dart';
-import 'presentation/pages/admin_dashboard.dart';
-import 'presentation/widgets/loading_spinner.dart';
-
 import 'package:toastification/toastification.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
@@ -13,6 +8,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:firebase_core/firebase_core.dart';
 import 'services/fcm_service.dart';
 import 'utils/web_utils.dart';
+import 'presentation/pages/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -44,30 +40,9 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  bool? _isLoggedIn;
-  String? _userName;
-  int? _userRole;
-  dynamic _userId;
-
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      notifyFirstFrame();
-    });
-    _checkLoginStatus();
-  }
-
-  Future<void> _checkLoginStatus() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
-      if (_isLoggedIn!) {
-        _userId = prefs.getInt('userId');
-        _userName = prefs.getString('userName');
-        _userRole = prefs.getInt('userRole');
-      }
-    });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       notifyFirstFrame();
     });
@@ -75,14 +50,7 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoggedIn == null) {
-      return const MaterialApp(
-        debugShowCheckedModeBanner: false,
-        home: const Scaffold(body: LoadingSpinner(message: 'Initializing...')),
-      );
-    }
-
-    // Extract URL parameters
+    // Extract URL parameters (e.g. memberId for deep linking or web redirect)
     final uri = Uri.base;
     final String? viewMemberId = uri.queryParameters['memberId'];
 
@@ -105,16 +73,8 @@ class _MyAppState extends State<MyApp> {
             thickness: MaterialStateProperty.all(6),
           ),
         ),
-        home: _isLoggedIn!
-            ? AdminDashboard(
-                userId: _userId,
-                userName: _userName ?? 'User',
-                userRole: _userRole ?? 3,
-                initialViewMemberId: viewMemberId,
-              )
-            : LoginPage(redirectMemberId: viewMemberId),
+        home: SplashScreen(redirectMemberId: viewMemberId),
       ),
     );
   }
 }
-
