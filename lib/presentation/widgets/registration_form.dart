@@ -1945,16 +1945,18 @@ class _RegistrationFormState extends State<RegistrationForm> {
   }
 
   Widget _buildSectionTitle(IconData icon, String title, {Widget? trailing}) {
-    String translatedTitle = title;
+    final bool hasAsterisk = title.contains('*');
+    final String cleanTitle = title.replaceAll('*', '').trim();
+    String translatedTitle = cleanTitle;
     final loc = AppLocalizations.of(context);
     if (loc != null) {
-      if (title == 'Family Member Details' || title == 'Basic Details') translatedTitle = loc.basicDetails ?? title;
-      else if (title == 'Education & Career Details') translatedTitle = loc.educationCareerDetails ?? title;
-      else if (title == 'Native Address') translatedTitle = loc.nativeAddress ?? title;
-      else if (title == 'Current Address') translatedTitle = loc.currentAddress ?? title;
-      else if (title == 'Family Details') translatedTitle = loc.familyDetails ?? title;
-      else if (title == 'Documents') translatedTitle = loc.documents ?? title;
-      else if (title == 'Terms and Conditions') translatedTitle = loc.termsAndConditionsTitle ?? title;
+      if (cleanTitle == 'Family Member Details' || cleanTitle == 'Basic Details') translatedTitle = loc.basicDetails ?? cleanTitle;
+      else if (cleanTitle == 'Education & Career Details') translatedTitle = loc.educationCareerDetails ?? cleanTitle;
+      else if (cleanTitle == 'Native Address') translatedTitle = loc.nativeAddress ?? cleanTitle;
+      else if (cleanTitle == 'Current Address') translatedTitle = loc.currentAddress ?? cleanTitle;
+      else if (cleanTitle == 'Family Details') translatedTitle = loc.familyDetails ?? cleanTitle;
+      else if (cleanTitle == 'Documents') translatedTitle = loc.documents ?? cleanTitle;
+      else if (cleanTitle == 'Terms and Conditions') translatedTitle = loc.termsAndConditionsTitle ?? cleanTitle;
     }
     return Container(
       padding: const EdgeInsets.only(left: 0, bottom: 8),
@@ -1973,14 +1975,34 @@ class _RegistrationFormState extends State<RegistrationForm> {
           Icon(icon, color: primaryBrown, size: 20),
           const SizedBox(width: 8),
           Expanded(
-            child: Text(
-              translatedTitle,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                color: primaryBrown,
-              ),
-            ),
+            child: hasAsterisk
+                ? Text.rich(
+                    TextSpan(
+                      text: '$translatedTitle ',
+                      children: const [
+                        TextSpan(
+                          text: '*',
+                          style: TextStyle(
+                            color: Colors.red,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: primaryBrown,
+                    ),
+                  )
+                : Text(
+                    translatedTitle,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: primaryBrown,
+                    ),
+                  ),
           ),
           if (trailing != null) trailing,
         ],

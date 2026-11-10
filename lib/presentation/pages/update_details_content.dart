@@ -1635,50 +1635,47 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
 
 
   Widget _sectionTitle(String title, IconData icon) {
-
-    String translatedTitle = title;
-
+    final bool hasAsterisk = title.contains('*');
+    final String cleanTitle = title.replaceAll('*', '').trim();
+    String translatedTitle = cleanTitle;
     final loc = AppLocalizations.of(context);
-
     if (loc != null) {
-
-      if (title == 'Basic Details') translatedTitle = loc.basicDetails ?? title;
-
-      else if (title == 'Education & Career Details') translatedTitle = loc.educationCareerDetails ?? title;
-
-      else if (title == 'Native Address') translatedTitle = loc.nativeAddress ?? title;
-
-      else if (title == 'Current Address') translatedTitle = loc.currentAddress ?? title;
-
-      else if (title == 'Documents') translatedTitle = loc.documents ?? title;
-
+      if (cleanTitle == 'Basic Details') translatedTitle = loc.basicDetails ?? cleanTitle;
+      else if (cleanTitle == 'Education & Career Details') translatedTitle = loc.educationCareerDetails ?? cleanTitle;
+      else if (cleanTitle == 'Native Address') translatedTitle = loc.nativeAddress ?? cleanTitle;
+      else if (cleanTitle == 'Current Address') translatedTitle = loc.currentAddress ?? cleanTitle;
+      else if (cleanTitle == 'Documents') translatedTitle = loc.documents ?? cleanTitle;
     }
 
-
-
     return Padding(
-
       padding: const EdgeInsets.only(bottom: 16),
-
       child: Row(children: [
-
         Container(width: 4, height: 20, decoration: BoxDecoration(color: _gold, borderRadius: BorderRadius.circular(2))),
-
         const SizedBox(width: 12),
-
         Icon(icon, size: 20, color: _darkBrown),
-
         const SizedBox(width: 8),
-
-        Expanded(child: Text(translatedTitle, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: _darkBrown))),
-
+        Expanded(
+          child: hasAsterisk
+              ? Text.rich(
+                  TextSpan(
+                    text: '$translatedTitle ',
+                    children: const [
+                      TextSpan(
+                        text: '*',
+                        style: TextStyle(
+                          color: Colors.red,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: _darkBrown),
+                )
+              : Text(translatedTitle, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: _darkBrown)),
+        ),
       ]),
-
     );
-
   }
-
-
 
   Widget _buildBasicSection(bool isMobile) {
 
