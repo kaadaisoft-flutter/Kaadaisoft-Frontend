@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:toastification/toastification.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'l10n/app_localizations.dart';
 import 'providers/locale_provider.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -9,11 +10,27 @@ import 'package:firebase_core/firebase_core.dart';
 import 'services/fcm_service.dart';
 import 'utils/web_utils.dart';
 import 'presentation/pages/splash_screen.dart';
+import 'presentation/pages/login_page.dart';
+import 'presentation/pages/admin_dashboard.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  if (!kIsWeb) {
+  Map<String, dynamic>? initialAuth;
+  if (kIsWeb) {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
+      initialAuth = {
+        'isLoggedIn': isLoggedIn,
+        'userId': prefs.getInt('userId'),
+        'userName': prefs.getString('userName'),
+        'userRole': prefs.getInt('userRole'),
+      };
+    } catch (e) {
+      debugPrint("Auth read error: $e");
+    }
+  } else {
     try {
       await Firebase.initializeApp();
       await FcmService.initialize();
@@ -27,13 +44,14 @@ void main() async {
       providers: [
         ChangeNotifierProvider(create: (_) => LocaleProvider()),
       ],
-      child: const MyApp(),
+      child: MyApp(initialAuth: initialAuth),
     ),
   );
 }
 
 class MyApp extends StatefulWidget {
-  const MyApp({super.key});
+  final Map<String, dynamic>? initialAuth;
+  const MyApp({super.key, this.initialAuth});
 
   @override
   State<MyApp> createState() => _MyAppState();
@@ -56,6 +74,25 @@ class _MyAppState extends State<MyApp> {
 
     final localeProvider = Provider.of<LocaleProvider>(context);
 
+    // On Web, skip redundant Dart SplashScreen since web/index.html already handles preloading.
+    // Mount AdminDashboard or LoginPage directly so startup completes in 3-4s.
+    Widget homeScreen;
+    if (kIsWeb) {
+      final bool isLoggedIn = widget.initialAuth?['isLoggedIn'] ?? false;
+      if (isLoggedIn) {
+        homeScreen = AdminDashboard(
+          userId: widget.initialAuth?['userId'],
+          userName: widget.initialAuth?['userName'] ?? 'User',
+          userRole: widget.initialAuth?['userRole'] ?? 3,
+          initialViewMemberId: viewMemberId,
+        );
+      } else {
+        homeScreen = LoginPage(redirectMemberId: viewMemberId);
+      }
+    } else {
+      homeScreen = SplashScreen(redirectMemberId: viewMemberId);
+    }
+
     return ToastificationWrapper(
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
@@ -73,7 +110,7 @@ class _MyAppState extends State<MyApp> {
             thickness: MaterialStateProperty.all(6),
           ),
         ),
-        home: SplashScreen(redirectMemberId: viewMemberId),
+        home: homeScreen,
       ),
     );
   }

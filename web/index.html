@@ -27,7 +27,6 @@
 
   <!-- Preload Flutter JS Bundles -->
   <link rel="preload" href="flutter_bootstrap.js" as="script">
-  <link rel="preload" href="main.dart.js" as="script">
 
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" media="print" onload="this.media='all'">
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet" media="print" onload="this.media='all'">
@@ -61,7 +60,7 @@
       justify-content: center;
       z-index: 9999999;
       font-family: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.4s ease;
+      transition: opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.25s ease;
       user-select: none;
       -webkit-user-select: none;
     }
@@ -285,7 +284,7 @@
           if (screen && screen.parentNode) {
             screen.parentNode.removeChild(screen);
           }
-        }, 500);
+        }, 300);
       }
 
       window.dismissLoadingScreen = dismissLoadingScreen;
@@ -293,10 +292,10 @@
       // Primary: dismiss smoothly when Flutter renders its first frame
       window.addEventListener('flutter-first-frame', dismissLoadingScreen);
 
-      // Fallback safety timeout (12s) in case of very slow connection so screen is never permanently stuck
+      // Fallback safety timeout (4.5s max) so screen is guaranteed dismissed within 4-5 seconds
       setTimeout(function() {
         dismissLoadingScreen();
-      }, 12000);
+      }, 4500);
     })();
   </script>
 

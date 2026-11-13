@@ -79,4 +79,5 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
+/web/canvaskit/
 test_india.dart
