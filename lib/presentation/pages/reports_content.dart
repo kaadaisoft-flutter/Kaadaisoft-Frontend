@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:typed_data';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:excel/excel.dart' hide Border;
@@ -739,15 +740,28 @@ class _ReportsContentState extends State<ReportsContent> {
           );
           
           if (isNarrow) {
-            return Scrollbar(
-              controller: _horizontalScrollController,
-              thumbVisibility: true,
-              child: SingleChildScrollView(
-                controller: _horizontalScrollController,
-                scrollDirection: Axis.horizontal,
-                child: tableContent,
-              ),
-            );
+            return kIsWeb
+                ? Scrollbar(
+                    controller: _horizontalScrollController,
+                    thumbVisibility: true,
+                    child: SingleChildScrollView(
+                      controller: _horizontalScrollController,
+                      scrollDirection: Axis.horizontal,
+                      child: Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: tableContent,
+                      ),
+                    ),
+                  )
+                : ScrollConfiguration(
+                    behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
+                    child: SingleChildScrollView(
+                      controller: _horizontalScrollController,
+                      scrollDirection: Axis.horizontal,
+                      physics: const BouncingScrollPhysics(),
+                      child: tableContent,
+                    ),
+                  );
           }
           
           return tableContent;

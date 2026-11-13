@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import '../widgets/custom_dropdown_search.dart';
 import 'package:http/http.dart' as http;
@@ -1526,32 +1527,58 @@ class _PaymentsContentState extends State<PaymentsContent> {
               isNarrow
                   ? SizedBox(width: scrollableWidth, child: rightPart)
                   : Expanded(
-                      child: Scrollbar(
-                        controller: _horizontalScrollController,
-                        thumbVisibility: true,
-                        child: SingleChildScrollView(
-                          controller: _horizontalScrollController,
-                          scrollDirection: Axis.horizontal,
-                          child: SizedBox(
-                            width: scrollableWidth,
-                            child: rightPart,
-                          ),
-                        ),
-                      ),
+                      child: kIsWeb
+                          ? Scrollbar(
+                              controller: _horizontalScrollController,
+                              thumbVisibility: true,
+                              child: SingleChildScrollView(
+                                controller: _horizontalScrollController,
+                                scrollDirection: Axis.horizontal,
+                                child: SizedBox(
+                                  width: scrollableWidth,
+                                  child: rightPart,
+                                ),
+                              ),
+                            )
+                          : ScrollConfiguration(
+                              behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
+                              child: SingleChildScrollView(
+                                controller: _horizontalScrollController,
+                                scrollDirection: Axis.horizontal,
+                                physics: const BouncingScrollPhysics(),
+                                child: SizedBox(
+                                  width: scrollableWidth,
+                                  child: rightPart,
+                                ),
+                              ),
+                            ),
                     ),
             ],
           );
           
           if (isNarrow) {
-            return Scrollbar(
-              controller: _horizontalScrollController,
-              thumbVisibility: true,
-              child: SingleChildScrollView(
-                controller: _horizontalScrollController,
-                scrollDirection: Axis.horizontal,
-                child: tableContent,
-              ),
-            );
+            return kIsWeb
+                ? Scrollbar(
+                    controller: _horizontalScrollController,
+                    thumbVisibility: true,
+                    child: SingleChildScrollView(
+                      controller: _horizontalScrollController,
+                      scrollDirection: Axis.horizontal,
+                      child: Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: tableContent,
+                      ),
+                    ),
+                  )
+                : ScrollConfiguration(
+                    behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
+                    child: SingleChildScrollView(
+                      controller: _horizontalScrollController,
+                      scrollDirection: Axis.horizontal,
+                      physics: const BouncingScrollPhysics(),
+                      child: tableContent,
+                    ),
+                  );
           }
           
           return tableContent;

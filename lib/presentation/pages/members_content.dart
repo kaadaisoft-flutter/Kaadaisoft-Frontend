@@ -962,27 +962,53 @@ class _MembersContentState extends State<MembersContent> {
 
                             : Expanded(
 
-                                  child: Scrollbar(
+                                child: kIsWeb
 
-                                    controller: _horizontalScrollController,
+                                    ? Scrollbar(
 
-                                  child: SingleChildScrollView(
+                                        controller: _horizontalScrollController,
 
-                                    controller: _horizontalScrollController,
+                                        child: SingleChildScrollView(
 
-                                    scrollDirection: Axis.horizontal,
+                                          controller: _horizontalScrollController,
 
-                                    child: SizedBox(
+                                          scrollDirection: Axis.horizontal,
 
-                                      width: 740, // 110+110+110+130+130+150
+                                          child: SizedBox(
 
-                                      child: rightPart,
+                                            width: 740,
 
-                                    ),
+                                            child: rightPart,
 
-                                  ),
+                                          ),
 
-                                ),
+                                        ),
+
+                                      )
+
+                                    : ScrollConfiguration(
+
+                                        behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
+
+                                        child: SingleChildScrollView(
+
+                                          controller: _horizontalScrollController,
+
+                                          scrollDirection: Axis.horizontal,
+
+                                          physics: const BouncingScrollPhysics(),
+
+                                          child: SizedBox(
+
+                                            width: 740,
+
+                                            child: rightPart,
+
+                                          ),
+
+                                        ),
+
+                                      ),
 
                               ),
 
@@ -994,21 +1020,47 @@ class _MembersContentState extends State<MembersContent> {
 
                     if (isNarrow) {
 
-                      return Scrollbar(
+                      return kIsWeb
 
-                        controller: _horizontalScrollController,
+                          ? Scrollbar(
 
-                        child: SingleChildScrollView(
+                              controller: _horizontalScrollController,
 
-                          controller: _horizontalScrollController,
+                              child: SingleChildScrollView(
 
-                          scrollDirection: Axis.horizontal,
+                                controller: _horizontalScrollController,
 
-                          child: tableContent,
+                                scrollDirection: Axis.horizontal,
 
-                        ),
+                                child: Padding(
 
-                      );
+                                  padding: const EdgeInsets.only(bottom: 10),
+
+                                  child: tableContent,
+
+                                ),
+
+                              ),
+
+                            )
+
+                          : ScrollConfiguration(
+
+                              behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
+
+                              child: SingleChildScrollView(
+
+                                controller: _horizontalScrollController,
+
+                                scrollDirection: Axis.horizontal,
+
+                                physics: const BouncingScrollPhysics(),
+
+                                child: tableContent,
+
+                              ),
+
+                            );
 
                     }
 

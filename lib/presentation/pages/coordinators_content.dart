@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import '../../l10n/app_localizations.dart';
 import 'package:http/http.dart' as http;
@@ -595,34 +596,60 @@ class _CoordinatorsContentState extends State<CoordinatorsContent> {
                         isNarrow 
                             ? SizedBox(width: 610, child: rightPart)
                             : Expanded(
-                                child: Scrollbar(
-                                  controller: _horizontalScrollController,
-                                  thumbVisibility: true,
-                                  trackVisibility: true,
-                                  child: SingleChildScrollView(
-                                    controller: _horizontalScrollController,
-                                    scrollDirection: Axis.horizontal,
-                                    child: SizedBox(
-                                      width: 610, // 100+100+130+130+150
-                                      child: rightPart,
-                                    ),
-                                  ),
-                                ),
+                                child: kIsWeb
+                                    ? Scrollbar(
+                                        controller: _horizontalScrollController,
+                                        thumbVisibility: true,
+                                        trackVisibility: true,
+                                        child: SingleChildScrollView(
+                                          controller: _horizontalScrollController,
+                                          scrollDirection: Axis.horizontal,
+                                          child: SizedBox(
+                                            width: 610, // 100+100+130+130+150
+                                            child: rightPart,
+                                          ),
+                                        ),
+                                      )
+                                    : ScrollConfiguration(
+                                        behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
+                                        child: SingleChildScrollView(
+                                          controller: _horizontalScrollController,
+                                          scrollDirection: Axis.horizontal,
+                                          physics: const BouncingScrollPhysics(),
+                                          child: SizedBox(
+                                            width: 610,
+                                            child: rightPart,
+                                          ),
+                                        ),
+                                      ),
                               ),
                       ],
                     );
                     
                     Widget finalTable = isNarrow 
-                        ? Scrollbar(
-                            controller: _horizontalScrollController,
-                            thumbVisibility: true,
-                            trackVisibility: true,
-                            child: SingleChildScrollView(
-                              controller: _horizontalScrollController,
-                              scrollDirection: Axis.horizontal,
-                              child: tableContent,
-                            ),
-                          )
+                        ? (kIsWeb
+                            ? Scrollbar(
+                                controller: _horizontalScrollController,
+                                thumbVisibility: true,
+                                trackVisibility: true,
+                                child: SingleChildScrollView(
+                                  controller: _horizontalScrollController,
+                                  scrollDirection: Axis.horizontal,
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(bottom: 10),
+                                    child: tableContent,
+                                  ),
+                                ),
+                              )
+                            : ScrollConfiguration(
+                                behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
+                                child: SingleChildScrollView(
+                                  controller: _horizontalScrollController,
+                                  scrollDirection: Axis.horizontal,
+                                  physics: const BouncingScrollPhysics(),
+                                  child: tableContent,
+                                ),
+                              ))
                         : tableContent;
 
                     return Column(
