@@ -74,10 +74,11 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   Future<void> _initializeApp() async {
-    // Parallelize token/session check and a minimum splash display duration
+    // On web, index.html already displays the preloader during download.
+    // Transition immediately on web so total load time is minimized.
     final minDelay = kIsWeb
-        ? const Duration(milliseconds: 600)
-        : const Duration(milliseconds: 2200);
+        ? Duration.zero
+        : const Duration(milliseconds: 2000);
 
     final results = await Future.wait([
       _checkAuth(),
@@ -101,10 +102,12 @@ class _SplashScreenState extends State<SplashScreen>
       nextScreen = LoginPage(redirectMemberId: widget.redirectMemberId);
     }
 
-    // Smooth fade transition to next screen
+    // Smooth transition to next screen (instant on web, smooth fade on mobile)
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
-        transitionDuration: const Duration(milliseconds: 600),
+        transitionDuration: kIsWeb
+            ? const Duration(milliseconds: 200)
+            : const Duration(milliseconds: 500),
         pageBuilder: (context, animation, secondaryAnimation) => nextScreen,
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           return FadeTransition(opacity: animation, child: child);
