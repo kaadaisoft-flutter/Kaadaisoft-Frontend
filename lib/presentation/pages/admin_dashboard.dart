@@ -963,6 +963,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
             _buildHeader(),
             Expanded(
               child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   if (isDesktop)
                     AnimatedContainer(
@@ -983,7 +984,13 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
                       ),
                     ),
                   Expanded(
-                    child: _buildMainContent(),
+                    child: Align(
+                      alignment: Alignment.topCenter,
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: _buildMainContent(),
+                      ),
+                    ),
                   ),
                 ],
               ),

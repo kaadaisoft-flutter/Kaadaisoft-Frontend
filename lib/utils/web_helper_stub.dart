@@ -1,5 +1,5 @@
 class Blob {
-  Blob(List<dynamic> bytes);
+  Blob(List<dynamic> bytes, [String? type]);
 }
 
 class Url {
@@ -9,7 +9,15 @@ class Url {
 
 class AnchorElement {
   String? href;
+  String? download;
   AnchorElement({this.href});
   void setAttribute(String name, String value) {}
   void click() {}
 }
+
+class _Window {
+  void open(String url, String target) {}
+}
+
+final window = _Window();
+

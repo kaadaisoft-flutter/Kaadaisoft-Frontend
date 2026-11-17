@@ -75,8 +75,9 @@ class _UpdateRequestsContentState extends State<UpdateRequestsContent> {
         ? _requests.sublist(startIndex, endIndex) 
         : [];
 
+    final isMobile = MediaQuery.of(context).size.width < 700;
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24.0),
+      padding: EdgeInsets.all(isMobile ? 12.0 : 24.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
