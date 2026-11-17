@@ -1158,24 +1158,60 @@ class _MyDetailsContentState extends State<MyDetailsContent> {
               ),
             ),
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Expanded(child: _buildDetailRow(AppLocalizations.of(context)?.nameLabel ?? 'Name:', (_userData?['Name'] ?? 'N/A').toString(), isBold: true, isBlue: true, isMobile: isMobile)),
-              if (!isMobile && _userData?['has_pending_update'] == true)
-                Container(
-                  margin: const EdgeInsets.only(left: 8),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(color: Colors.orange.withOpacity(0.1), borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.orange)),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.hourglass_top, color: Colors.orange, size: 14),
-                      SizedBox(width: 4),
-                      Text('Waiting for update approval', style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold, fontSize: 12)),
-                    ],
+              SizedBox(
+                width: isMobile ? 120 : 200,
+                child: Text(
+                  AppLocalizations.of(context)?.nameLabel ?? 'Name:',
+                  style: TextStyle(
+                    fontSize: isMobile ? 14 : 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black54,
                   ),
                 ),
+              ),
+              Expanded(
+                child: Wrap(
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 12,
+                  runSpacing: 6,
+                  children: [
+                    Text(
+                      (_userData?['Name'] ?? 'N/A').toString(),
+                      style: TextStyle(
+                        fontSize: isMobile ? 15 : 18,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFF5D1712),
+                      ),
+                    ),
+                    if (!isMobile && _userData?['has_pending_update'] == true)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: Colors.orange),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.hourglass_top, color: Colors.orange, size: 14),
+                            SizedBox(width: 4),
+                            Text(
+                              'Waiting for update approval',
+                              style: TextStyle(
+                                color: Colors.orange,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 32),

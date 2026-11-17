@@ -2292,7 +2292,7 @@ class _RegistrationFormState extends State<RegistrationForm> {
       else if (baseLabel == 'District') translatedLabel = loc.districtHeader ?? baseLabel;
       else if (baseLabel == 'Taluk') translatedLabel = loc.talukHeader ?? baseLabel;
       else if (baseLabel == 'Panchayat') translatedLabel = loc.panchayatHeader ?? baseLabel;
-      else if (baseLabel == 'Village') translatedLabel = loc.villageUpperHeader ?? baseLabel;
+      else if (baseLabel == 'Village' || baseLabel == 'Village Name') translatedLabel = loc.villageUpperHeader ?? loc.villageLabel ?? baseLabel;
       else if (baseLabel == 'State') translatedLabel = loc.stateLabel ?? baseLabel;
       else if (baseLabel == 'Country') translatedLabel = loc.countryLabel ?? baseLabel;
       else if (baseLabel == 'City') translatedLabel = loc.cityVillageLabel ?? baseLabel;
@@ -2492,21 +2492,24 @@ class _RegistrationFormState extends State<RegistrationForm> {
           cursor: SystemMouseCursors.click,
           child: GestureDetector(
             onTap: () async {
+              final bool isPassport = label.contains('Passport') || label.contains('Photo');
+              final allowedExtensions = isPassport ? ['jpg', 'jpeg', 'png', 'webp'] : ['jpg', 'jpeg', 'png', 'pdf'];
               final result = await fp_pkg.FilePicker.pickFiles(
                 type: fp_pkg.FileType.custom,
-                allowedExtensions: ['jpg', 'jpeg', 'png', 'pdf'],
+                allowedExtensions: allowedExtensions,
                 withData: kIsWeb,
               );
               if (result != null && result.files.isNotEmpty && (result.files.single.path != null || result.files.single.bytes != null)) {
                 final file = result.files.single;
                 final ext = (file.extension ?? file.name.split('.').last).toLowerCase();
-                final allowedExtensions = ['jpg', 'jpeg', 'png', 'pdf'];
                 if (!allowedExtensions.contains(ext)) {
                   if (mounted) {
                     showStatusDialog(
                       context,
                       title: 'Validation Error',
-                      message: 'Only JPG, JPEG, PNG, and PDF document formats are supported.',
+                      message: isPassport
+                          ? 'Only image files (JPG, JPEG, PNG, WEBP) are allowed for Passport Photo.'
+                          : 'Only JPG, JPEG, PNG, and PDF document formats are supported.',
                       type: DialogType.error,
                     );
                   }
@@ -2651,7 +2654,9 @@ class _RegistrationFormState extends State<RegistrationForm> {
       else if (baseLabel == 'District') translatedLabel = loc.districtHeader ?? baseLabel;
       else if (baseLabel == 'Taluk') translatedLabel = loc.talukHeader ?? baseLabel;
       else if (baseLabel == 'Panchayat') translatedLabel = loc.panchayatHeader ?? baseLabel;
-      else if (baseLabel == 'Village') translatedLabel = loc.villageUpperHeader ?? baseLabel;
+      else if (baseLabel == 'Village' || baseLabel == 'Village Name') translatedLabel = loc.villageUpperHeader ?? loc.villageLabel ?? baseLabel;
+      else if (baseLabel == 'Enter Village' || baseLabel == 'Enter Village Name') translatedLabel = Localizations.localeOf(context).languageCode == 'ta' ? 'கிராமத்தை உள்ளிடவும்' : baseLabel;
+      else if (baseLabel == 'Enter Panchayat') translatedLabel = Localizations.localeOf(context).languageCode == 'ta' ? 'பஞ்சாயத்தை உள்ளிடவும்' : baseLabel;
       else if (baseLabel == 'Door No & Street Name') translatedLabel = loc.streetNameLabel ?? baseLabel;
       else if (baseLabel == 'Pin Code' || baseLabel == 'Zip / Postal Code' || baseLabel == 'Zip/Postal Code') translatedLabel = loc.pincodeLabel ?? baseLabel;
       else if (baseLabel == 'Current Address Type') translatedLabel = loc.currentAddressTypeLabel ?? baseLabel;

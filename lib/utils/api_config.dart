@@ -61,6 +61,8 @@ class ApiConfig {
   static String get sendWhatsappInvitations => '$baseUrl/api/send-whatsapp-invitations';
   static String sendIndividualInvite(String id) => '$baseUrl/api/send-individual-invite/$id';
   static String get toggleMemberDisabledStatus => '$baseUrl/api/toggle-member-disabled-status';
+  static String downloadIdCard(dynamic userId) => '$baseUrl/api/download-id-card/$userId?origin=$webOrigin';
+  static String get downloadBulkIdCards => '$baseUrl/api/download-bulk-id-cards';
 
   // Attendance Scanning Module
   static String checkScannerPermission(dynamic userId) => '$baseUrl/api/attendance/check-permission/$userId';

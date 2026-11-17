@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:url_launcher/url_launcher.dart';
 import '../widgets/loading_spinner.dart';
 import '../../utils/api_config.dart';
 import '../widgets/pagination_widget.dart';
@@ -601,7 +602,9 @@ class _UpdateRequestsContentState extends State<UpdateRequestsContent> {
                               displayVal = (displayVal.toLowerCase() == 'true' || displayVal == '1') ? 'Yes' : 'No';
                             }
                             if (isImageField && e.value.toString().isNotEmpty) {
-                              final imageUrl = '${ApiConfig.baseUrl}/assets/uploads/${e.value}';
+                              final fileVal = e.value.toString();
+                              final isPdf = fileVal.toLowerCase().endsWith('.pdf');
+                              final fileUrl = '${ApiConfig.baseUrl}/assets/uploads/$fileVal';
                               return Padding(
                                 padding: const EdgeInsets.only(bottom: 16),
                                 child: Column(
@@ -617,58 +620,89 @@ class _UpdateRequestsContentState extends State<UpdateRequestsContent> {
                                         border: Border.all(color: Colors.orange, width: 2),
                                         borderRadius: BorderRadius.circular(8),
                                       ),
-                                      child: GestureDetector(
-                                        onTap: () {
-                                          showDialog(
-                                            context: context,
-                                            builder: (context) => Dialog(
-                                              backgroundColor: Colors.transparent,
-                                              insetPadding: const EdgeInsets.all(16),
-                                              child: Stack(
-                                                alignment: Alignment.center,
-                                                children: [
-                                                  InteractiveViewer(
-                                                    panEnabled: true,
-                                                    minScale: 0.5,
-                                                    maxScale: 4,
-                                                    child: Image.network(imageUrl, fit: BoxFit.contain),
-                                                  ),
-                                                  Positioned(
-                                                    top: 0,
-                                                    right: 0,
-                                                    child: IconButton(
-                                                      icon: const Icon(Icons.close, color: Colors.white, size: 32),
-                                                      onPressed: () => Navigator.pop(context),
+                                      child: isPdf
+                                          ? InkWell(
+                                              onTap: () async {
+                                                final uri = Uri.parse(fileUrl);
+                                                if (await canLaunchUrl(uri)) {
+                                                  await launchUrl(uri, mode: LaunchMode.externalApplication);
+                                                }
+                                              },
+                                              borderRadius: BorderRadius.circular(6),
+                                              child: Container(
+                                                padding: const EdgeInsets.all(12),
+                                                color: Colors.grey.shade50,
+                                                child: Row(
+                                                  children: [
+                                                    const Icon(Icons.picture_as_pdf, color: Colors.red, size: 36),
+                                                    const SizedBox(width: 12),
+                                                    Expanded(
+                                                      child: Column(
+                                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                                        children: [
+                                                          Text(fileVal, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.black87), maxLines: 1, overflow: TextOverflow.ellipsis),
+                                                          const SizedBox(height: 2),
+                                                          const Text('Click to view / download document', style: TextStyle(fontSize: 11, color: Colors.blueAccent)),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                    const Icon(Icons.open_in_new, size: 18, color: Colors.grey),
+                                                  ],
+                                                ),
+                                              ),
+                                            )
+                                          : GestureDetector(
+                                              onTap: () {
+                                                showDialog(
+                                                  context: context,
+                                                  builder: (context) => Dialog(
+                                                    backgroundColor: Colors.transparent,
+                                                    insetPadding: const EdgeInsets.all(16),
+                                                    child: Stack(
+                                                      alignment: Alignment.center,
+                                                      children: [
+                                                        InteractiveViewer(
+                                                          panEnabled: true,
+                                                          minScale: 0.5,
+                                                          maxScale: 4,
+                                                          child: Image.network(fileUrl, fit: BoxFit.contain),
+                                                        ),
+                                                        Positioned(
+                                                          top: 0,
+                                                          right: 0,
+                                                          child: IconButton(
+                                                            icon: const Icon(Icons.close, color: Colors.white, size: 32),
+                                                            onPressed: () => Navigator.pop(context),
+                                                          ),
+                                                        ),
+                                                      ],
                                                     ),
                                                   ),
-                                                ],
+                                                );
+                                              },
+                                              child: ClipRRect(
+                                                borderRadius: BorderRadius.circular(6),
+                                                child: Image.network(
+                                                  fileUrl,
+                                                  height: 160,
+                                                  fit: BoxFit.contain,
+                                                  errorBuilder: (ctx, err, st) => Container(
+                                                    height: 80,
+                                                    color: Colors.grey.shade100,
+                                                    child: Center(
+                                                      child: Text('Image: ${e.value}', style: const TextStyle(color: Colors.orange, fontSize: 12)),
+                                                    ),
+                                                  ),
+                                                  loadingBuilder: (ctx, child, progress) {
+                                                    if (progress == null) return child;
+                                                    return const SizedBox(height: 80, child: Center(child: CircularProgressIndicator()));
+                                                  },
+                                                ),
                                               ),
                                             ),
-                                          );
-                                        },
-                                        child: ClipRRect(
-                                          borderRadius: BorderRadius.circular(6),
-                                          child: Image.network(
-                                            imageUrl,
-                                            height: 160,
-                                            fit: BoxFit.contain,
-                                            errorBuilder: (ctx, err, st) => Container(
-                                              height: 80,
-                                              color: Colors.grey.shade100,
-                                              child: Center(
-                                                child: Text('Image: ${e.value}', style: const TextStyle(color: Colors.orange, fontSize: 12)),
-                                              ),
-                                            ),
-                                            loadingBuilder: (ctx, child, progress) {
-                                              if (progress == null) return child;
-                                              return const SizedBox(height: 80, child: Center(child: CircularProgressIndicator()));
-                                            },
-                                          ),
-                                        ),
-                                      ),
                                     ),
                                     const SizedBox(height: 4),
-                                    Text('New image uploaded', style: TextStyle(color: Colors.orange.shade700, fontSize: 11, fontStyle: FontStyle.italic)),
+                                    Text(isPdf ? 'New document uploaded' : 'New image uploaded', style: TextStyle(color: Colors.orange.shade700, fontSize: 11, fontStyle: FontStyle.italic)),
                                   ],
                                 ),
                               );

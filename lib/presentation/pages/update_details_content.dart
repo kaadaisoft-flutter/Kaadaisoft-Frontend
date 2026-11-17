@@ -2671,9 +2671,9 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
 
         _row(isMobile, [
 
-          _fileUploadField(AppLocalizations.of(context)?.passportPhotoLabel ?? 'Passport Photo', _memberImage, (file) => setState(() => _memberImage = file)),
+          _fileUploadField(AppLocalizations.of(context)?.passportPhotoLabel ?? 'Passport Photo', _memberImage, (file) => setState(() => _memberImage = file), isImageOnly: true),
 
-          _fileUploadField(AppLocalizations.of(context)?.communityCertificateLabel ?? 'Community Certificate', _communityCert, (file) => setState(() => _communityCert = file)),
+          _fileUploadField(AppLocalizations.of(context)?.communityCertificateLabel ?? 'Community Certificate', _communityCert, (file) => setState(() => _communityCert = file), isImageOnly: false),
 
         ]),
 
@@ -2685,7 +2685,7 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
 
 
 
-  Widget _fileUploadField(String label, dynamic file, ValueChanged<dynamic> onPicked) {
+  Widget _fileUploadField(String label, dynamic file, ValueChanged<dynamic> onPicked, {bool isImageOnly = false}) {
 
     String fileName = AppLocalizations.of(context)?.chooseFile ?? 'Choose file...';
 
@@ -2777,7 +2777,7 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
 
         child: InkWell(
 
-          onTap: () => _pickFile(onPicked),
+          onTap: () => _pickFile(onPicked, isImageOnly: isImageOnly),
 
           borderRadius: BorderRadius.circular(8),
 
@@ -2831,15 +2831,19 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
 
 
 
-  Future<void> _pickFile(ValueChanged<dynamic> onPicked) async {
+  Future<void> _pickFile(ValueChanged<dynamic> onPicked, {bool isImageOnly = false}) async {
 
     try {
+
+      final allowedExtensions = isImageOnly 
+          ? ['jpg', 'jpeg', 'png', 'webp'] 
+          : ['jpg', 'jpeg', 'png', 'pdf'];
 
       final result = await fp_pkg.FilePicker.pickFiles(
 
         type: fp_pkg.FileType.custom,
 
-        allowedExtensions: ['jpg', 'jpeg', 'png', 'pdf'],
+        allowedExtensions: allowedExtensions,
 
         withData: true, // Crucial for Web
 
@@ -2855,8 +2859,6 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
 
         final ext = (file.extension ?? file.name.split('.').last).toLowerCase();
 
-        final allowedExtensions = ['jpg', 'jpeg', 'png', 'pdf'];
-
         if (!allowedExtensions.contains(ext)) {
 
           if (mounted) {
@@ -2867,7 +2869,9 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
 
               title: 'Validation Error',
 
-              message: 'Only JPG, JPEG, PNG, and PDF document formats are supported.',
+              message: isImageOnly
+                  ? 'Only image files (JPG, JPEG, PNG, WEBP) are allowed for Passport Photo.'
+                  : 'Only JPG, JPEG, PNG, and PDF document formats are supported.',
 
               type: DialogType.error,
 

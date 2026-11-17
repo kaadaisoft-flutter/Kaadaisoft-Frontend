@@ -56,6 +56,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
   String _activeItem = 'Dashboard';
   final List<String> _navigationHistory = [];
   AnimationController? _blinkController;
+  bool _isSidebarCollapsed = false;
 
   static const List<Map<String, dynamic>> _sidebarSections = [
     {
@@ -957,17 +958,30 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
         drawer: isDesktop ? null : Drawer(
           child: _buildSidebar(),
         ),
-        body: Row(
+        body: Column(
           children: [
-            if (isDesktop)
-              SizedBox(
-                width: 280,
-                child: _buildSidebar(),
-              ),
+            _buildHeader(),
             Expanded(
-              child: Column(
+              child: Row(
                 children: [
-                  _buildHeader(),
+                  if (isDesktop)
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 250),
+                      curve: Curves.easeInOut,
+                      width: _isSidebarCollapsed ? 72 : 280,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF2D1B18),
+                        border: Border(
+                          right: BorderSide(
+                            color: Colors.white24,
+                            width: 1,
+                          ),
+                        ),
+                      ),
+                      child: ClipRect(
+                        child: _buildSidebar(),
+                      ),
+                    ),
                   Expanded(
                     child: _buildMainContent(),
                   ),
@@ -1274,127 +1288,128 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
     final isDesktop = MediaQuery.of(context).size.width >= 900;
     final isTa = Provider.of<LocaleProvider>(context, listen: false).locale.languageCode == 'ta';
 
-    Map<String, dynamic>? dashboardItem;
-    Map<String, dynamic>? idCardItem;
-    Map<String, dynamic>? myDetailsItem;
-    Map<String, dynamic>? logoutItem;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isCollapsed = isDesktop && (constraints.maxWidth < 160 || _isSidebarCollapsed);
 
-    for (var it in _menuItems) {
-      if (it['title'] == 'Dashboard') dashboardItem = it;
-      if (it['title'] == 'ID Card Benefits') idCardItem = it;
-      if (it['title'] == 'My Details') myDetailsItem = it;
-      if (it['title'] == 'Logout') logoutItem = it;
-    }
+        Map<String, dynamic>? dashboardItem;
+        Map<String, dynamic>? idCardItem;
+        Map<String, dynamic>? myDetailsItem;
+        Map<String, dynamic>? logoutItem;
 
-    final standaloneTitles = {'Dashboard', 'ID Card Benefits', 'My Details', 'Logout'};
-    final sectionItemTitles = _sidebarSections.expand((s) => s['items'] as List<String>).toSet();
-    final otherItems = _menuItems.where((it) => !standaloneTitles.contains(it['title']) && !sectionItemTitles.contains(it['title'])).toList();
+        for (var it in _menuItems) {
+          if (it['title'] == 'Dashboard') dashboardItem = it;
+          if (it['title'] == 'ID Card Benefits') idCardItem = it;
+          if (it['title'] == 'My Details') myDetailsItem = it;
+          if (it['title'] == 'Logout') logoutItem = it;
+        }
 
-    return Container(
-      color: const Color(0xFF2D1B18), // Dark sidebar color matching splash screen
-      child: SafeArea(
-        child: Column(
-          children: [
-            // Sidebar Header (height: 72 on desktop, matching top header)
-            Container(
-              height: isDesktop ? 72 : null,
-              padding: EdgeInsets.symmetric(
-                vertical: isDesktop ? 0 : 20,
-                horizontal: 16,
-              ),
-              decoration: BoxDecoration(
-                border: isDesktop
-                    ? const Border(
-                        bottom: BorderSide(
-                          color: Colors.white24,
-                          width: 1,
-                        ),
-                      )
-                    : null,
-              ),
-              child: Row(
-                children: [
+        final standaloneTitles = {'Dashboard', 'ID Card Benefits', 'My Details', 'Logout'};
+        final sectionItemTitles = _sidebarSections.expand((s) => s['items'] as List<String>).toSet();
+        final otherItems = _menuItems.where((it) => !standaloneTitles.contains(it['title']) && !sectionItemTitles.contains(it['title'])).toList();
+
+        return Container(
+          color: const Color(0xFF2D1B18), // Dark sidebar color matching splash screen
+          child: SafeArea(
+            top: !isDesktop,
+            bottom: true,
+            child: Column(
+              children: [
+                if (!isDesktop) ...[
                   Container(
-                    width: isDesktop ? 40 : 44,
-                    height: isDesktop ? 40 : 44,
-                    decoration: const BoxDecoration(
-                      shape: BoxShape.circle,
-                      image: DecorationImage(
-                        image: AssetImage('assets/images/poondurai kaadaikulam image.png'),
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        AppLocalizations.of(context)?.appTitle ?? 'Poondurai Kaadai Kulam',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: isDesktop ? 16 : 18,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 0.5,
+                    padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 44,
+                          height: 44,
+                          decoration: const BoxDecoration(
+                            shape: BoxShape.circle,
+                            image: DecorationImage(
+                              image: AssetImage('assets/images/poondurai kaadaikulam image.png'),
+                              fit: BoxFit.cover,
+                            ),
+                          ),
                         ),
-                      ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            AppLocalizations.of(context)?.appTitle ?? 'Poondurai Kaadai Kulam',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close, color: Colors.white70, size: 24),
+                          tooltip: 'Close Menu',
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          onPressed: () => Navigator.of(context).pop(),
+                        ),
+                      ],
                     ),
                   ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: _buildProfileMenu(inDrawer: true),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 16, right: 16, bottom: 8),
+                    child: _buildLanguageSwitcher(context, inDrawer: true),
+                  ),
+                  const SizedBox(height: 8),
+                  const Divider(color: Colors.white24, height: 1),
                 ],
-              ),
-            ),
-            if (!isDesktop) ...[
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: _buildProfileMenu(inDrawer: true),
-              ),
-              Padding(
-                padding: const EdgeInsets.only(left: 16, right: 16, bottom: 8),
-                child: _buildLanguageSwitcher(context, inDrawer: true),
-              ),
-              const SizedBox(height: 8),
-              const Divider(color: Colors.white24, height: 1),
-            ],
-            // Menu Items List
-            Expanded(
-              child: SingleChildScrollView(
-                physics: const ClampingScrollPhysics(),
-                padding: EdgeInsets.symmetric(vertical: isDesktop ? 10 : 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    if (dashboardItem != null) _buildMenuItem(dashboardItem),
-                    if (idCardItem != null) _buildMenuItem(idCardItem),
+                // Menu Items List
+                Expanded(
+                  child: SingleChildScrollView(
+                    physics: const ClampingScrollPhysics(),
+                    padding: EdgeInsets.symmetric(vertical: isDesktop ? 10 : 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        if (dashboardItem != null) _buildMenuItem(dashboardItem, isCollapsed),
+                        if (idCardItem != null) _buildMenuItem(idCardItem, isCollapsed),
 
-                    // Collapsible Categorized Sections
-                    ..._sidebarSections.map((sec) => _buildCollapsibleSection(sec, isTa, isDesktop)),
+                        // Collapsible Categorized Sections
+                        ..._sidebarSections.map((sec) => _buildCollapsibleSection(sec, isTa, isDesktop, isCollapsed)),
 
-                    // Any unmapped items (fallback)
-                    ...otherItems.map((it) => _buildMenuItem(it)),
+                        // Any unmapped items (fallback)
+                        ...otherItems.map((it) => _buildMenuItem(it, isCollapsed)),
 
-                    if (myDetailsItem != null) _buildMenuItem(myDetailsItem),
+                        if (myDetailsItem != null) _buildMenuItem(myDetailsItem, isCollapsed),
 
-                    if (logoutItem != null) ...[
-                      SizedBox(height: isDesktop ? 16 : 24),
-                      const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 16),
-                        child: Divider(color: Colors.white24, height: 1),
-                      ),
-                      SizedBox(height: isDesktop ? 8 : 12),
-                      _buildMenuItem(logoutItem),
-                    ],
-                  ],
+                        if (logoutItem != null) ...[
+                          SizedBox(height: isDesktop ? 16 : 24),
+                          Padding(
+                            padding: EdgeInsets.symmetric(horizontal: isCollapsed ? 8 : 16),
+                            child: const Divider(color: Colors.white24, height: 1),
+                          ),
+                          SizedBox(height: isDesktop ? 8 : 12),
+                          _buildMenuItem(logoutItem, isCollapsed),
+                        ],
+
+                        if (isDesktop) ...[
+                          const SizedBox(height: 6),
+                          _buildSidebarToggleItem(isTa, isCollapsed),
+                        ],
+                      ],
+                    ),
+                  ),
                 ),
-              ),
+              ],
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildCollapsibleSection(Map<String, dynamic> sec, bool isTa, bool isDesktop) {
+  Widget _buildCollapsibleSection(Map<String, dynamic> sec, bool isTa, bool isDesktop, bool isCollapsed) {
     final List<String> itemTitles = List<String>.from(sec['items']);
     final visibleItems = _menuItems.where((it) => itemTitles.contains(it['title'])).toList();
     if (visibleItems.isEmpty) {
@@ -1407,6 +1422,98 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
     final title = isTa ? sec['titleTa'] : sec['titleEn'];
     final icon = sec['icon'] as IconData;
     bool isHovered = false;
+
+    if (isCollapsed) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4.5),
+        child: StatefulBuilder(
+          builder: (context, setSectionState) {
+            return MouseRegion(
+              cursor: SystemMouseCursors.click,
+              onEnter: (_) => setSectionState(() => isHovered = true),
+              onExit: (_) => setSectionState(() => isHovered = false),
+              child: Tooltip(
+                message: title,
+                preferBelow: false,
+                child: InkWell(
+                  onTap: () {
+                    final RenderBox? button = context.findRenderObject() as RenderBox?;
+                    final RenderBox? overlay = Overlay.of(context).context.findRenderObject() as RenderBox?;
+                    if (button != null && overlay != null) {
+                      final RelativeRect position = RelativeRect.fromRect(
+                        Rect.fromPoints(
+                          button.localToGlobal(Offset(button.size.width + 4, 0), ancestor: overlay),
+                          button.localToGlobal(button.size.bottomRight(Offset.zero), ancestor: overlay),
+                        ),
+                        Offset.zero & overlay.size,
+                      );
+                      showMenu<String>(
+                        context: context,
+                        position: position,
+                        color: const Color(0xFF2D1B18),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          side: BorderSide(color: Colors.white.withOpacity(0.15)),
+                        ),
+                        items: visibleItems.map((item) {
+                          final isItemActive = _activeItem == item['title'];
+                          return PopupMenuItem<String>(
+                            value: item['title'],
+                            child: Row(
+                              children: [
+                                Icon(
+                                  item['icon'],
+                                  size: 18,
+                                  color: isItemActive ? const Color(0xFF38BDF8) : Colors.white70,
+                                ),
+                                const SizedBox(width: 12),
+                                Text(
+                                  _getTranslatedSidebarLabel(context, item['title']),
+                                  style: TextStyle(
+                                    color: isItemActive ? Colors.white : Colors.white.withOpacity(0.85),
+                                    fontSize: 13,
+                                    fontWeight: isItemActive ? FontWeight.bold : FontWeight.normal,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                      ).then((selected) {
+                        if (selected != null) {
+                          _navigateTo(selected);
+                        }
+                      });
+                    }
+                  },
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: hasActiveChild 
+                          ? Colors.white.withOpacity(0.08) 
+                          : (isHovered ? Colors.white.withOpacity(0.04) : Colors.transparent),
+                      borderRadius: BorderRadius.circular(8),
+                      border: hasActiveChild 
+                          ? Border.all(color: const Color(0xFFC49A3C).withOpacity(0.45)) 
+                          : null,
+                    ),
+                    child: Center(
+                      child: Icon(
+                        icon, 
+                        color: hasActiveChild ? const Color(0xFFC49A3C) : (isHovered ? Colors.white : Colors.white70), 
+                        size: 18,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      );
+    }
 
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: isDesktop ? 8 : 12, vertical: isDesktop ? 4.5 : 6.0),
@@ -1642,7 +1749,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
     }
   }
 
-  Widget _buildMenuItem(Map<String, dynamic> item) {
+  Widget _buildMenuItem(Map<String, dynamic> item, bool isCollapsed) {
     final isDesktop = MediaQuery.of(context).size.width >= 900;
     final isActive = _activeItem == item['title'];
     final isLogout = item['title'] == 'Logout';
@@ -1658,7 +1765,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
     final double fontSize = isDesktop ? 13.5 : 15.0;
 
     return Padding(
-      padding: EdgeInsets.symmetric(horizontal: isDesktop ? 8 : 12, vertical: outerVPad),
+      padding: EdgeInsets.symmetric(horizontal: isCollapsed ? 8 : (isDesktop ? 8 : 12), vertical: outerVPad),
       child: StatefulBuilder(
         builder: (context, setMenuItemState) {
           final isHighlighted = (isActive || isHovered) && !isMemberDisabledMenu;
@@ -1670,6 +1777,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
           final textColor = isMemberDisabledMenu 
               ? Colors.white30 
               : (isHighlighted ? Colors.white : Colors.white70);
+          final label = _getTranslatedSidebarLabel(context, item['title']);
 
           return MouseRegion(
             cursor: isMemberDisabledMenu ? SystemMouseCursors.forbidden : SystemMouseCursors.click,
@@ -1723,37 +1831,48 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
                 opacity: isMemberDisabledMenu ? 0.45 : 1.0,
                 child: Builder(
                   builder: (context) {
-                    Widget content = AnimatedContainer(
-                      duration: const Duration(milliseconds: 150),
-                      decoration: BoxDecoration(
-                        color: isHighlighted ? Colors.white.withOpacity(0.08) : Colors.transparent,
-                        borderRadius: BorderRadius.circular(8),
-                        border: isHighlighted 
-                            ? Border.all(color: (isLogout ? Colors.red : const Color(0xFF0EA5E9)).withOpacity(0.4)) 
-                            : null,
-                      ),
-                      padding: EdgeInsets.symmetric(horizontal: isDesktop ? 12 : 16, vertical: innerVPad),
-                      child: Row(
-                        children: [
-                          Icon(item['icon'], color: iconColor, size: iconSize),
-                          SizedBox(width: isDesktop ? 10 : 12),
-                          Expanded(
-                            child: FittedBox(
-                              fit: BoxFit.scaleDown,
-                              alignment: Alignment.centerLeft,
-                              child: Text(
-                                _getTranslatedSidebarLabel(context, item['title']),
-                                style: TextStyle(
-                                  color: textColor,
-                                  fontSize: Localizations.localeOf(context).languageCode == 'ta' ? (fontSize - 0.5) : fontSize,
-                                  fontWeight: isHighlighted ? FontWeight.bold : FontWeight.w500,
-                                ),
+                    Widget content = Tooltip(
+                      message: isCollapsed ? label : '',
+                      preferBelow: false,
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 150),
+                        decoration: BoxDecoration(
+                          color: isHighlighted ? Colors.white.withOpacity(0.08) : Colors.transparent,
+                          borderRadius: BorderRadius.circular(8),
+                          border: isHighlighted 
+                              ? Border.all(color: (isLogout ? Colors.red : const Color(0xFF0EA5E9)).withOpacity(0.4)) 
+                              : null,
+                        ),
+                        padding: EdgeInsets.symmetric(vertical: innerVPad),
+                        child: isCollapsed
+                            ? Center(
+                                child: Icon(item['icon'], color: iconColor, size: iconSize),
+                              )
+                            : Row(
+                                children: [
+                                  const SizedBox(width: 12),
+                                  Icon(item['icon'], color: iconColor, size: iconSize),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Text(
+                                      label,
+                                      maxLines: 1,
+                                      softWrap: false,
+                                      overflow: TextOverflow.clip,
+                                      style: TextStyle(
+                                        color: textColor,
+                                        fontSize: Localizations.localeOf(context).languageCode == 'ta' ? (fontSize - 0.5) : fontSize,
+                                        fontWeight: isHighlighted ? FontWeight.bold : FontWeight.w500,
+                                      ),
+                                    ),
+                                  ),
+                                  if (isHighlighted)
+                                    Padding(
+                                      padding: const EdgeInsets.only(right: 12),
+                                      child: Icon(Icons.chevron_right, color: isLogout ? Colors.red : const Color(0xFF0EA5E9), size: isDesktop ? 16 : 18),
+                                    ),
+                                ],
                               ),
-                            ),
-                          ),
-                          if (isHighlighted)
-                            Icon(Icons.chevron_right, color: isLogout ? Colors.red : const Color(0xFF0EA5E9), size: isDesktop ? 16 : 18),
-                        ],
                       ),
                     );
 
@@ -1779,6 +1898,83 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
 
                     return content;
                   },
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildSidebarToggleItem(bool isTa, bool isCollapsed) {
+    bool isHovered = false;
+    final toggleLabel = isCollapsed 
+        ? (isTa ? 'மெனுவைக் காட்டு' : 'Expand Menu') 
+        : (isTa ? 'மெனுவை மறை' : 'Hide Menu');
+    final toggleIcon = isCollapsed ? Icons.menu : Icons.menu_open;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4.5),
+      child: StatefulBuilder(
+        builder: (context, setToggleState) {
+          return Tooltip(
+            message: isCollapsed ? toggleLabel : '',
+            preferBelow: false,
+            child: MouseRegion(
+              cursor: SystemMouseCursors.click,
+              onEnter: (_) => setToggleState(() => isHovered = true),
+              onExit: (_) => setToggleState(() => isHovered = false),
+              child: InkWell(
+                onTap: () {
+                  setState(() {
+                    _isSidebarCollapsed = !_isSidebarCollapsed;
+                  });
+                },
+                borderRadius: BorderRadius.circular(8),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 150),
+                  decoration: BoxDecoration(
+                    color: isHovered ? Colors.white.withOpacity(0.08) : Colors.white.withOpacity(0.03),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: isHovered ? Colors.white24 : Colors.white12,
+                      width: 1,
+                    ),
+                  ),
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  child: isCollapsed
+                      ? Center(
+                          child: Icon(
+                            toggleIcon,
+                            color: isHovered ? Colors.white : Colors.white70,
+                            size: 18,
+                          ),
+                        )
+                      : Row(
+                          children: [
+                            const SizedBox(width: 12),
+                            Icon(
+                              toggleIcon,
+                              color: isHovered ? Colors.white : Colors.white70,
+                              size: 18,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                toggleLabel,
+                                maxLines: 1,
+                                softWrap: false,
+                                overflow: TextOverflow.clip,
+                                style: TextStyle(
+                                  color: isHovered ? Colors.white : Colors.white70,
+                                  fontSize: isTa ? 13.0 : 13.5,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                 ),
               ),
             ),
@@ -1910,6 +2106,28 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  image: DecorationImage(
+                    image: AssetImage('assets/images/poondurai kaadaikulam image.png'),
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                AppLocalizations.of(context)?.appTitle ?? 'Poondurai Kaadai Kulam',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const SizedBox(width: 16),
               // Flexible spacer on the left to help center
               const Spacer(),
               

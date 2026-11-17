@@ -1,4 +1,4 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 
@@ -9,6 +9,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:cross_file/cross_file.dart';
 
 import 'package:excel/excel.dart' as excel_pkg;
+import 'package:url_launcher/url_launcher.dart';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 
@@ -122,6 +123,20 @@ class _MembersContentState extends State<MembersContent> {
 
   String? _selectedLastLoginDate;
 
+  String? _selectedPhotoStatus = 'All';
+
+  final List<String> _photoStatuses = ['All', 'With Photo', 'Without Photo'];
+
+  String? _selectedLoginStatus = 'All';
+
+  final List<String> _loginStatuses = ['All', 'Logged In', 'Never Logged In'];
+
+  String? _selectedLoginMonth;
+
+  String? _selectedPrivilegeType = 'All';
+
+  final List<String> _privilegeTypes = ['All', 'Privilege Member', 'Standard Member'];
+
 
 
   List<String> _districts = [];
@@ -226,11 +241,29 @@ class _MembersContentState extends State<MembersContent> {
 
               const SizedBox(width: 10),
 
-              Text(
+              Expanded(
 
-                isTa ? 'à®‰à®±à¯à®ªà¯à®ªà®¿à®©à®°à¯ à®µà®•à¯ˆ' : 'Select Member Type',
+                child: Text(
 
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF2D1B18)),
+                  isTa ? '\u0B89\u0BB1\u0BCD\u0BAA\u0BBF\u0BA9\u0BB0\u0BCD \u0BB5\u0B95\u0BC8' : 'Select Member Type',
+
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF2D1B18)),
+
+                ),
+
+              ),
+
+              IconButton(
+
+                icon: const Icon(Icons.close, color: Colors.black54, size: 22),
+
+                onPressed: () => Navigator.pop(ctx),
+
+                tooltip: isTa ? '\u0BAE\u0BC2\u0B9F\u0BC1' : 'Close',
+
+                padding: EdgeInsets.zero,
+
+                constraints: const BoxConstraints(),
 
               ),
 
@@ -406,45 +439,72 @@ class _MembersContentState extends State<MembersContent> {
 
 
 
-  Future<void> _fetchMembers({bool resetPage = true}) async {
+  String _buildFilterQueryParams({int? page, int? limit, String? origin}) {
+    List<String> queryParts = [
+      'user_id=${widget.userId}',
+      'role=${widget.role}',
+    ];
+    if (origin != null && origin.isNotEmpty) queryParts.add('origin=$origin');
+    if (page != null) queryParts.add('page=$page');
+    if (limit != null) queryParts.add('limit=$limit');
 
-    if (resetPage) {
-
-      setState(() {
-
-        _currentPage = 1;
-
-      });
-
+    if (_searchController.text.isNotEmpty) {
+      queryParts.add('search=${Uri.encodeComponent(_searchController.text)}');
+    }
+    if (_selectedDistrict != null) {
+      queryParts.add('district=${Uri.encodeComponent(_selectedDistrict!)}');
+    }
+    if (_selectedTaluk != null) {
+      queryParts.add('taluk=${Uri.encodeComponent(_selectedTaluk!)}');
+    }
+    if (_selectedPanchayat != null) {
+      queryParts.add('panchayat=${Uri.encodeComponent(_selectedPanchayat!)}');
+    }
+    if (_selectedVillage != null) {
+      queryParts.add('village=${Uri.encodeComponent(_selectedVillage!)}');
+    }
+    if (_selectedBloodGroup != null) {
+      queryParts.add('blood_group=${Uri.encodeComponent(_selectedBloodGroup!)}');
+    }
+    if (_selectedGender != null && _selectedGender != 'All') {
+      queryParts.add('gender=${Uri.encodeComponent(_selectedGender!)}');
+    }
+    if (_selectedOccupation != null && _selectedOccupation != 'All') {
+      queryParts.add('occupation=${Uri.encodeComponent(_selectedOccupation!)}');
+    }
+    if (_selectedLoginStatus == 'Logged In') {
+      queryParts.add('login_status=logged_in');
+    } else if (_selectedLoginStatus == 'Never Logged In') {
+      queryParts.add('login_status=never_logged_in');
+    }
+    if (_selectedLoginMonth != null) {
+      queryParts.add('last_login_month=${Uri.encodeComponent(_selectedLoginMonth!)}');
+    } else if (_selectedLastLoginDate != null) {
+      queryParts.add('last_login_date=${Uri.encodeComponent(_selectedLastLoginDate!)}');
+    }
+    if (_selectedPhotoStatus == 'With Photo') {
+      queryParts.add('photo_status=with_photo');
+    } else if (_selectedPhotoStatus == 'Without Photo') {
+      queryParts.add('photo_status=without_photo');
+    }
+    if (_selectedPrivilegeType == 'Privilege Member') {
+      queryParts.add('privilege_type=privilege');
+    } else if (_selectedPrivilegeType == 'Standard Member') {
+      queryParts.add('privilege_type=standard');
     }
 
+    return queryParts.join('&');
+  }
+
+  Future<void> _fetchMembers({bool resetPage = true}) async {
+    if (resetPage) {
+      setState(() {
+        _currentPage = 1;
+      });
+    }
     try {
-
-      String url = '${ApiConfig.members}?user_id=${widget.userId}&role=${widget.role}&page=$_currentPage&limit=$_itemsPerPage';
-
-      
-
-      // Append filters to URL
-
-      if (_searchController.text.isNotEmpty) url += '&search=${Uri.encodeComponent(_searchController.text)}';
-
-      if (_selectedDistrict != null) url += '&district=${Uri.encodeComponent(_selectedDistrict!)}';
-
-      if (_selectedTaluk != null) url += '&taluk=${Uri.encodeComponent(_selectedTaluk!)}';
-
-      if (_selectedPanchayat != null) url += '&panchayat=${Uri.encodeComponent(_selectedPanchayat!)}';
-
-      if (_selectedVillage != null) url += '&village=${Uri.encodeComponent(_selectedVillage!)}';
-
-      if (_selectedBloodGroup != null) url += '&blood_group=${Uri.encodeComponent(_selectedBloodGroup!)}';
-
-      if (_selectedGender != null && _selectedGender != 'All') url += '&gender=${Uri.encodeComponent(_selectedGender!)}';
-
-      if (_selectedOccupation != null && _selectedOccupation != 'All') url += '&occupation=${Uri.encodeComponent(_selectedOccupation!)}';
-
-      if (_selectedLastLoginDate != null) url += '&last_login_date=${Uri.encodeComponent(_selectedLastLoginDate!)}';
-
-
+      final query = _buildFilterQueryParams(page: _currentPage, limit: _itemsPerPage);
+      final String url = '${ApiConfig.members}?$query';
 
       final response = await http.get(Uri.parse(url));
 
@@ -686,9 +746,10 @@ class _MembersContentState extends State<MembersContent> {
 
           const SizedBox(height: 16),
 
+          // Member Type Quick Filter Tabs
+          _buildMemberTypeQuickFilter(isTa),
 
-
-
+          const SizedBox(height: 16),
 
           // Members Table
 
@@ -854,7 +915,7 @@ class _MembersContentState extends State<MembersContent> {
 
                         SizedBox(
 
-                          width: 620, // 50+190+120+140+120
+                          width: 650, // 50+120+140+220+120
 
                           child: Column(
 
@@ -878,7 +939,7 @@ class _MembersContentState extends State<MembersContent> {
 
                                     _buildHeaderCell(AppLocalizations.of(context)?.nameHeader?.toUpperCase() ?? 'NAME', 140),
 
-                                    _buildHeaderCell(isTa ? 'à®šà¯†à®¯à®²à¯à®•à®³à¯' : 'ACTIONS', 190),
+                                    _buildHeaderCell(isTa ? 'à®šà¯†à®¯à®²à¯à®•à®³à¯' : 'ACTIONS', 220),
 
                                     _buildHeaderCell(AppLocalizations.of(context)?.mobileLabel?.toUpperCase() ?? 'MOBILE', 120),
 
@@ -924,6 +985,8 @@ class _MembersContentState extends State<MembersContent> {
 
                                             final bool showPrivilegeId = isPrivilege && isStatusActive && privilegeId != null && privilegeId.isNotEmpty;
 
+                                            final bool hasPhoto = member['Memberimage'] != null && member['Memberimage'].toString().isNotEmpty && member['Memberimage'].toString() != 'null';
+
                                             return _buildFixedTableRow(
 
                                               (startIndex + index + 1).toString(),
@@ -941,6 +1004,8 @@ class _MembersContentState extends State<MembersContent> {
                                               privilegeId: showPrivilegeId ? privilegeId : null,
 
                                               isDisabled: isDisabled,
+
+                                              hasPhoto: hasPhoto,
 
                                             );
 
@@ -2232,6 +2297,8 @@ class _MembersContentState extends State<MembersContent> {
 
           _buildOutlinedButton(AppLocalizations.of(context)?.downloadBtn ?? 'Download', Icons.download_outlined, const Color(0xFF5D1712), isMobile: true, onPressed: _downloadMembersData),
 
+          _buildOutlinedButton(isTa ? 'அடையாள அட்டை அச்சிடு' : 'Print ID Cards', Icons.badge_outlined, const Color(0xFFC49A3C), isMobile: true, onPressed: _downloadBulkIdCards),
+
           if (widget.role == 1)
 
             _buildSolidButton(AppLocalizations.of(context)?.assignBtn ?? 'Assign', Icons.person_add_alt_1, const Color(0xFF5D1712), isMobile: true, onPressed: widget.onAssignPressed),
@@ -2287,6 +2354,8 @@ class _MembersContentState extends State<MembersContent> {
         })),
 
         _buildOutlinedButton(AppLocalizations.of(context)?.downloadBtn ?? 'Download', Icons.download_outlined, const Color(0xFF5D1712), onPressed: _downloadMembersData),
+
+        _buildOutlinedButton(isTa ? 'அடையாள அட்டை அச்சிடு' : 'Print ID Cards', Icons.badge_outlined, const Color(0xFFC49A3C), onPressed: _downloadBulkIdCards),
 
         if (widget.role == 1)
 
@@ -2490,7 +2559,7 @@ class _MembersContentState extends State<MembersContent> {
 
 
 
-  Widget _buildFixedTableRow(String sno, String id, String name, String mobile, String memberId, {bool isPrivilege = false, String? privilegeId, bool isDisabled = false}) {
+  Widget _buildFixedTableRow(String sno, String id, String name, String mobile, String memberId, {bool isPrivilege = false, String? privilegeId, bool isDisabled = false, bool hasPhoto = false}) {
 
     final bool showPriv = isPrivilege && !isDisabled && privilegeId != null && privilegeId.isNotEmpty;
 
@@ -2610,7 +2679,7 @@ class _MembersContentState extends State<MembersContent> {
 
               _buildDataCell(name, 140, isBold: true),
 
-              _buildDataCell('', 190, child: Row(
+              _buildDataCell('', 220, child: Row(
 
                 mainAxisAlignment: MainAxisAlignment.center,
 
@@ -2629,6 +2698,20 @@ class _MembersContentState extends State<MembersContent> {
                     onTap: () => _toggleMemberDisabledStatus(memberId, name, isDisabled),
 
                     tooltip: isDisabled ? 'Enable ID Card' : 'Disable ID Card',
+
+                  ),
+
+                  const SizedBox(width: 4),
+
+                  _actionIcon(
+
+                    Icons.badge_outlined,
+
+                    hasPhoto ? const Color(0xFFC49A3C) : Colors.blueGrey,
+
+                    onTap: () => _downloadSingleIdCard(memberId, id),
+
+                    tooltip: hasPhoto ? 'Download / Print ID Card (Photo Uploaded)' : 'Download / Print ID Card',
 
                   ),
 
@@ -3946,128 +4029,220 @@ class _MembersContentState extends State<MembersContent> {
 
 
 
-  void _downloadMembersData() {
 
-    if (_members.isEmpty) {
-
-      showStatusDialog(context, title: 'Note', message: 'No data available to download.', type: DialogType.info);
-
-      return;
-
-    }
-
-
-
-    var excel = excel_pkg.Excel.createExcel();
-
-    String defaultSheet = excel.getDefaultSheet() ?? 'Sheet1';
-
-    var sheet = excel[defaultSheet];
-
-    
-
-    // Headers
-
-    List<excel_pkg.CellValue> headers = [
-
-      excel_pkg.TextCellValue('S.NO'),
-
-      excel_pkg.TextCellValue('FAMILY ID'),
-
-      excel_pkg.TextCellValue('NAME'),
-
-      excel_pkg.TextCellValue('ROLE'),
-
-      excel_pkg.TextCellValue('MOBILE'),
-
-      excel_pkg.TextCellValue('DISTRICT'),
-
-      excel_pkg.TextCellValue('TALUK'),
-
-      excel_pkg.TextCellValue('PANCHAYAT'),
-
-      excel_pkg.TextCellValue('VILLAGE'),
-
-      excel_pkg.TextCellValue('BLOOD GROUP'),
-
-      excel_pkg.TextCellValue('GENDER'),
-
-      excel_pkg.TextCellValue('OCCUPATION'),
-
-    ];
-
-
-
-    sheet.appendRow(headers);
-
-    
-
-    // Data Rows
-
-    for (int i = 0; i < _members.length; i++) {
-
-      final member = _members[i];
-
-      sheet.appendRow([
-
-        excel_pkg.TextCellValue((i + 1).toString()),
-
-        excel_pkg.TextCellValue(member['Familymembershipid'] ?? 'N/A'),
-
-        excel_pkg.TextCellValue(member['Name'] ?? '-'),
-
-        excel_pkg.TextCellValue(member['Role']?.toString() == '2' ? 'COORDINATOR' : 'MEMBER'),
-
-        excel_pkg.TextCellValue(member['Phonenumber']?.toString() ?? '-'),
-
-        excel_pkg.TextCellValue(member['District'] ?? '-'),
-
-        excel_pkg.TextCellValue(member['Taluk'] ?? '-'),
-
-        excel_pkg.TextCellValue(member['Panchayat'] ?? '-'),
-
-        excel_pkg.TextCellValue(member['Village'] ?? '-'),
-
-        excel_pkg.TextCellValue(member['Bloodgroup'] ?? '-'),
-
-        excel_pkg.TextCellValue(member['Gender'] ?? '-'),
-
-        excel_pkg.TextCellValue(member['Profession'] ?? '-'),
-
-      ]);
-
-
-
-    }
-
-    
-
-    final bytes = excel.encode();
-
-    if (bytes != null) {
-
-      if (kIsWeb) {
-
-        final blob = html.Blob([bytes]);
-
-        final url = html.Url.createObjectUrlFromBlob(blob);
-
-        html.AnchorElement(href: url)
-
-          ..setAttribute("download", "members_data_${DateTime.now().millisecondsSinceEpoch}.xlsx")
-
-          ..click();
-
-        html.Url.revokeObjectUrl(url);
-
-      } else {
-
-        showStatusDialog(context, title: 'Note', message: 'Data download is supported in browser.', type: DialogType.info);
-
+  void _downloadSingleIdCard(String memberId, String familyId) async {
+    final url = '${ApiConfig.downloadIdCard(memberId)}';
+    final uri = Uri.parse(url);
+    if (kIsWeb) {
+      html.window.open(url, '_blank');
+    } else {
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
       }
+    }
+  }
 
+  Future<void> _downloadBulkIdCards() async {
+    if (_members.isEmpty) {
+      showStatusDialog(context, title: 'Note', message: 'No members found to print ID cards.', type: DialogType.info);
+      return;
     }
 
+    final isTa = Localizations.localeOf(context).languageCode == 'ta';
+    final int count = _totalMembersCount > 0 ? _totalMembersCount : _members.length;
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            const Icon(Icons.badge_outlined, color: Color(0xFFC49A3C)),
+            const SizedBox(width: 8),
+            Text(isTa ? 'அடையாள அட்டைகளை அச்சிடவா?' : 'Print ID Cards?'),
+          ],
+        ),
+        content: Text(
+          isTa
+              ? 'தற்போது வடிகட்டப்பட்ட உறுப்பினர்களுக்கு ($count உறுப்பினர்கள்) அடையாள அட்டைகளின் ஒருங்கிணைந்த PDF பதிவிறக்கப்படும். தொடரவா?'
+              : 'A combined printable PDF with ID cards for the currently filtered members ($count members) will be generated. Continue?',
+          style: const TextStyle(fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(isTa ? 'ரத்து' : 'Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFC49A3C),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(isTa ? 'அச்சிடு / பதிவிறக்கு' : 'Print / Download'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    final query = _buildFilterQueryParams(origin: Uri.base.origin);
+    final url = '${ApiConfig.downloadBulkIdCards}?$query';
+    final uri = Uri.parse(url);
+
+    if (kIsWeb) {
+      html.window.open(url, '_blank');
+    } else {
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      }
+    }
+  }
+
+  Future<void> _downloadMembersData() async {
+    final bool isTa = Localizations.localeOf(context).languageCode == 'ta';
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => Center(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 10)],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(color: Color(0xFF5D1712), strokeWidth: 3),
+              ),
+              const SizedBox(width: 16),
+              Text(
+                isTa ? 'அனைத்து உறுப்பினர்களின் தரவு பதிவிறக்கப்படுகிறது...' : 'Downloading all members data...',
+                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF2D1B18), decoration: TextDecoration.none),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    try {
+      final query = _buildFilterQueryParams(limit: 0);
+      final url = '${ApiConfig.members}?$query';
+      final response = await http.get(Uri.parse(url));
+
+      if (mounted) Navigator.pop(context);
+
+      if (response.statusCode == 200) {
+        final resData = jsonDecode(response.body);
+        final List allMembers = resData['data'] ?? [];
+
+        if (allMembers.isEmpty) {
+          showStatusDialog(
+            context,
+            title: isTa ? 'குறிப்பு' : 'Note',
+            message: isTa ? 'பதிவிறக்க தரவு எதுவும் இல்லை.' : 'No data available to download.',
+            type: DialogType.info,
+          );
+          return;
+        }
+
+        var excel = excel_pkg.Excel.createExcel();
+        String defaultSheet = excel.getDefaultSheet() ?? 'Sheet1';
+        var sheet = excel[defaultSheet];
+
+        // Headers
+        List<excel_pkg.CellValue> headers = [
+          excel_pkg.TextCellValue('S.NO'),
+          excel_pkg.TextCellValue('FAMILY ID'),
+          excel_pkg.TextCellValue('PRIVILEGE ID'),
+          excel_pkg.TextCellValue('NAME'),
+          excel_pkg.TextCellValue('ROLE'),
+          excel_pkg.TextCellValue('MOBILE'),
+          excel_pkg.TextCellValue('DISTRICT'),
+          excel_pkg.TextCellValue('TALUK'),
+          excel_pkg.TextCellValue('PANCHAYAT'),
+          excel_pkg.TextCellValue('VILLAGE'),
+          excel_pkg.TextCellValue('BLOOD GROUP'),
+          excel_pkg.TextCellValue('GENDER'),
+          excel_pkg.TextCellValue('OCCUPATION'),
+        ];
+
+        sheet.appendRow(headers);
+
+        // Data Rows
+        for (int i = 0; i < allMembers.length; i++) {
+          final member = allMembers[i];
+          final bool isPrivilege = member['is_privilege'] == true ||
+              member['is_privilege'] == 1 ||
+              member['is_privilege']?.toString().toLowerCase() == 'true';
+          final String? privilegeId = member['privilege_id']?.toString();
+          final bool hasPrivId = privilegeId != null &&
+              privilegeId.trim().isNotEmpty &&
+              privilegeId.trim().toLowerCase() != 'null';
+          final bool isCoordinator = member['Role']?.toString() == '2';
+
+          String roleText = 'MEMBER';
+          if (isPrivilege || hasPrivId) {
+            roleText = isCoordinator ? 'COORDINATOR (PRIVILEGE)' : 'PRIVILEGE';
+          } else if (isCoordinator) {
+            roleText = 'COORDINATOR';
+          }
+
+          sheet.appendRow([
+            excel_pkg.TextCellValue((i + 1).toString()),
+            excel_pkg.TextCellValue(member['Familymembershipid'] ?? 'N/A'),
+            excel_pkg.TextCellValue(hasPrivId ? privilegeId!.trim() : '-'),
+            excel_pkg.TextCellValue(member['Name'] ?? '-'),
+            excel_pkg.TextCellValue(roleText),
+            excel_pkg.TextCellValue(member['Phonenumber']?.toString() ?? '-'),
+            excel_pkg.TextCellValue(member['District'] ?? '-'),
+            excel_pkg.TextCellValue(member['Taluk'] ?? '-'),
+            excel_pkg.TextCellValue(member['Panchayat'] ?? '-'),
+            excel_pkg.TextCellValue(member['Village'] ?? '-'),
+            excel_pkg.TextCellValue(member['Bloodgroup'] ?? '-'),
+            excel_pkg.TextCellValue(member['Gender'] ?? '-'),
+            excel_pkg.TextCellValue(member['Profession'] ?? '-'),
+          ]);
+        }
+
+        final bytes = excel.encode();
+        if (bytes != null) {
+          if (kIsWeb) {
+            final blob = html.Blob([bytes]);
+            final blobUrl = html.Url.createObjectUrlFromBlob(blob);
+            html.AnchorElement(href: blobUrl)
+              ..setAttribute("download", "members_data_${DateTime.now().millisecondsSinceEpoch}.xlsx")
+              ..click();
+            html.Url.revokeObjectUrl(blobUrl);
+          } else {
+            showStatusDialog(context, title: 'Note', message: 'Data download is supported in browser.', type: DialogType.info);
+          }
+        }
+      } else {
+        showStatusDialog(
+          context,
+          title: isTa ? 'பிழை' : 'Error',
+          message: isTa ? 'தரவைப் பெற முடியவில்லை.' : 'Failed to fetch data.',
+          type: DialogType.error,
+        );
+      }
+    } catch (e) {
+      if (mounted) Navigator.pop(context);
+      showStatusDialog(
+        context,
+        title: isTa ? 'பிழை' : 'Error',
+        message: 'Download failed: $e',
+        type: DialogType.error,
+      );
+    }
   }
 
 
@@ -4237,6 +4412,8 @@ class _MembersContentState extends State<MembersContent> {
 
 
   Widget _buildFilterSection() {
+
+    final bool isTa = Localizations.localeOf(context).languageCode == 'ta';
 
     return Container(
 
@@ -4464,7 +4641,98 @@ class _MembersContentState extends State<MembersContent> {
 
                         })),
 
-                        SizedBox(width: itemWidth, child: _buildDateFilter('Last Login Date:', _selectedLastLoginDate)),
+                        SizedBox(
+                          width: itemWidth,
+                          child: _buildFilterDropdown(
+                            isTa ? 'உள்நுழைவு நிலை:' : 'Login Status:',
+                            isTa ? ['அனைத்தும்', 'உள்நுழைந்தவர்கள்', 'உள்நுழையாதவர்கள்'] : _loginStatuses,
+                            isTa
+                                ? (_selectedLoginStatus == 'Logged In'
+                                    ? 'உள்நுழைந்தவர்கள்'
+                                    : (_selectedLoginStatus == 'Never Logged In' ? 'உள்நுழையாதவர்கள்' : 'அனைத்தும்'))
+                                : _selectedLoginStatus,
+                            (v) {
+                              if (v != null) {
+                                if (isTa) {
+                                  if (v == 'உள்நுழைந்தவர்கள்') _selectedLoginStatus = 'Logged In';
+                                  else if (v == 'உள்நுழையாதவர்கள்') {
+                                    _selectedLoginStatus = 'Never Logged In';
+                                    _selectedLoginMonth = null;
+                                  } else {
+                                    _selectedLoginStatus = 'All';
+                                  }
+                                } else {
+                                  _selectedLoginStatus = v;
+                                  if (v == 'Never Logged In') _selectedLoginMonth = null;
+                                }
+                                setState(() {});
+                                _fetchMembers();
+                              }
+                            },
+                          ),
+                        ),
+
+                        SizedBox(
+                          width: itemWidth,
+                          child: _buildMonthFilter(
+                            isTa ? 'கடைசி உள்நுழைவு மாதம்:' : 'Last Login Month:',
+                            _selectedLoginMonth,
+                            isTa,
+                            isDisabled: _selectedLoginStatus == 'Never Logged In',
+                          ),
+                        ),
+
+                        SizedBox(
+                          width: itemWidth,
+                          child: _buildFilterDropdown(
+                            isTa ? 'சுயவிவரப் படம்:' : 'Profile Photo:',
+                            isTa ? ['அனைத்தும்', 'புகைப்படம் உள்ளது', 'புகைப்படம் இல்லை'] : _photoStatuses,
+                            isTa
+                                ? (_selectedPhotoStatus == 'With Photo'
+                                    ? 'புகைப்படம் உள்ளது'
+                                    : (_selectedPhotoStatus == 'Without Photo' ? 'புகைப்படம் இல்லை' : 'அனைத்தும்'))
+                                : _selectedPhotoStatus,
+                            (v) {
+                              if (v != null) {
+                                if (isTa) {
+                                  if (v == 'புகைப்படம் உள்ளது') _selectedPhotoStatus = 'With Photo';
+                                  else if (v == 'புகைப்படம் இல்லை') _selectedPhotoStatus = 'Without Photo';
+                                  else _selectedPhotoStatus = 'All';
+                                } else {
+                                  _selectedPhotoStatus = v;
+                                }
+                                setState(() {});
+                                _fetchMembers();
+                              }
+                            },
+                          ),
+                        ),
+
+                        SizedBox(
+                          width: itemWidth,
+                          child: _buildFilterDropdown(
+                            isTa ? 'உறுப்பினர் வகை:' : 'Member Type:',
+                            isTa ? ['அனைத்தும்', 'சிறப்பு உறுப்பினர் (Privilege)', 'வழக்கமான உறுப்பினர் (Standard)'] : _privilegeTypes,
+                            isTa
+                                ? (_selectedPrivilegeType == 'Privilege Member'
+                                    ? 'சிறப்பு உறுப்பினர் (Privilege)'
+                                    : (_selectedPrivilegeType == 'Standard Member' ? 'வழக்கமான உறுப்பினர் (Standard)' : 'அனைத்தும்'))
+                                : _selectedPrivilegeType,
+                            (v) {
+                              if (v != null) {
+                                if (isTa) {
+                                  if (v == 'சிறப்பு உறுப்பினர் (Privilege)') _selectedPrivilegeType = 'Privilege Member';
+                                  else if (v == 'வழக்கமான உறுப்பினர் (Standard)') _selectedPrivilegeType = 'Standard Member';
+                                  else _selectedPrivilegeType = 'All';
+                                } else {
+                                  _selectedPrivilegeType = v;
+                                }
+                                setState(() {});
+                                _fetchMembers();
+                              }
+                            },
+                          ),
+                        ),
 
                       ],
 
@@ -4590,6 +4858,243 @@ class _MembersContentState extends State<MembersContent> {
 
 
 
+
+  String _formatMonthDisplay(String yyyyMm, bool isTa) {
+    try {
+      final parts = yyyyMm.split('-');
+      if (parts.length == 2) {
+        final year = parts[0];
+        final monthIdx = int.tryParse(parts[1]) ?? 1;
+        final List<String> tamilMonths = [
+          'ஜனவரி', 'பிப்ரவரி', 'மார்ச்', 'ஏப்ரல்', 'மே', 'ஜூன்',
+          'ஜூலை', 'ஆகஸ்ட்', 'செப்டம்பர்', 'அக்டோபர்', 'நவம்பர்', 'டிசம்பர்'
+        ];
+        final List<String> engMonths = [
+          'January', 'February', 'March', 'April', 'May', 'June',
+          'July', 'August', 'September', 'October', 'November', 'December'
+        ];
+        final mName = isTa ? tamilMonths[monthIdx - 1] : engMonths[monthIdx - 1];
+        return '$mName $year';
+      }
+    } catch (_) {}
+    return yyyyMm;
+  }
+
+  void _showMonthYearPicker(bool isTa) {
+    int currentYear = DateTime.now().year;
+    if (_selectedLoginMonth != null) {
+      final p = _selectedLoginMonth!.split('-');
+      if (p.isNotEmpty) currentYear = int.tryParse(p[0]) ?? currentYear;
+    }
+
+    final List<String> tamilMonths = [
+      'ஜனவரி', 'பிப்ரவரி', 'மார்ச்', 'ஏப்ரல்', 'மே', 'ஜூன்',
+      'ஜூலை', 'ஆகஸ்ட்', 'செப்டம்பர்', 'அக்டோபர்', 'நவம்பர்', 'டிசம்பர்'
+    ];
+    final List<String> engMonths = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    ];
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        int tempYear = currentYear;
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return AlertDialog(
+              backgroundColor: Colors.white,
+              surfaceTintColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
+              title: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    isTa ? 'மாதம் தேர்ந்தெடுக்க' : 'Select Month & Year',
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF2D1B18)),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, size: 20, color: Colors.grey),
+                    onPressed: () => Navigator.pop(ctx),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                ],
+              ),
+              content: SizedBox(
+                width: 320,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.amber.shade200),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.chevron_left, color: Color(0xFF5D1712)),
+                            onPressed: () => setModalState(() => tempYear--),
+                          ),
+                          Text(
+                            '$tempYear',
+                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF5D1712)),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.chevron_right, color: Color(0xFF5D1712)),
+                            onPressed: tempYear < DateTime.now().year
+                                ? () => setModalState(() => tempYear++)
+                                : null,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    GridView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 3,
+                        mainAxisSpacing: 8,
+                        crossAxisSpacing: 8,
+                        childAspectRatio: 2.2,
+                      ),
+                      itemCount: 12,
+                      itemBuilder: (context, idx) {
+                        final mNum = idx + 1;
+                        final String yyyyMm = "$tempYear-${mNum.toString().padLeft(2, '0')}";
+                        final bool isSelected = _selectedLoginMonth == yyyyMm;
+                        final bool isFuture = tempYear == DateTime.now().year && mNum > DateTime.now().month;
+
+                        return InkWell(
+                          onTap: isFuture
+                              ? null
+                              : () {
+                                  Navigator.pop(ctx);
+                                  setState(() {
+                                    _selectedLoginMonth = yyyyMm;
+                                    _selectedLastLoginDate = null;
+                                    if (_selectedLoginStatus == 'Never Logged In') {
+                                      _selectedLoginStatus = 'Logged In';
+                                    }
+                                  });
+                                  _fetchMembers();
+                                },
+                          borderRadius: BorderRadius.circular(8),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? const Color(0xFFC49A3C)
+                                  : (isFuture ? Colors.grey.shade100 : Colors.grey.shade50),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: isSelected
+                                    ? const Color(0xFFC49A3C)
+                                    : (isFuture ? Colors.grey.shade200 : Colors.grey.shade300),
+                              ),
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                              isTa ? tamilMonths[idx] : engMonths[idx],
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                color: isSelected
+                                    ? Colors.white
+                                    : (isFuture ? Colors.grey.shade400 : Colors.black87),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                if (_selectedLoginMonth != null)
+                  TextButton(
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      setState(() => _selectedLoginMonth = null);
+                      _fetchMembers();
+                    },
+                    child: Text(isTa ? 'வடிகட்டியை நீக்கு' : 'Clear Month', style: const TextStyle(color: Colors.red)),
+                  ),
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: Text(isTa ? 'மூடு' : 'Close'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildMonthFilter(String label, String? selectedMonth, bool isTa, {bool isDisabled = false}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black87)),
+        const SizedBox(height: 6),
+        InkWell(
+          onTap: isDisabled ? null : () => _showMonthYearPicker(isTa),
+          borderRadius: BorderRadius.circular(8),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            decoration: BoxDecoration(
+              color: isDisabled ? Colors.grey.shade100 : Colors.white,
+              border: Border.all(color: selectedMonth != null ? const Color(0xFFC49A3C) : Colors.grey.shade300),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    isDisabled
+                        ? (isTa ? 'பொருந்தாது' : 'Not Applicable')
+                        : (selectedMonth != null
+                            ? _formatMonthDisplay(selectedMonth, isTa)
+                            : (isTa ? 'மாதம் தேர்ந்தெடுக்க...' : 'Select Month...')),
+                    style: TextStyle(
+                      color: isDisabled
+                          ? Colors.grey.shade400
+                          : (selectedMonth == null ? Colors.grey.shade600 : Colors.black87),
+                      fontSize: 13,
+                      fontWeight: selectedMonth != null ? FontWeight.bold : FontWeight.normal,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                if (selectedMonth != null && !isDisabled)
+                  InkWell(
+                    onTap: () {
+                      setState(() => _selectedLoginMonth = null);
+                      _fetchMembers();
+                    },
+                    child: const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 4),
+                      child: Icon(Icons.close, size: 16, color: Colors.grey),
+                    ),
+                  )
+                else
+                  Icon(Icons.calendar_month, size: 16, color: isDisabled ? Colors.grey.shade400 : Colors.amber.shade700),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildDateFilter(String label, String? selectedDate) {
 
     return Column(
@@ -4678,6 +5183,14 @@ class _MembersContentState extends State<MembersContent> {
 
       _searchController.clear();
 
+      _selectedPhotoStatus = 'All';
+
+      _selectedLoginStatus = 'All';
+
+      _selectedLoginMonth = null;
+
+      _selectedLastLoginDate = null;
+
       _selectedDistrict = null;
 
       _selectedTaluk = null;
@@ -4692,12 +5205,142 @@ class _MembersContentState extends State<MembersContent> {
 
       _selectedOccupation = 'All';
 
+      _selectedPrivilegeType = 'All';
+
       _selectedLastLoginDate = null;
 
     });
 
     _fetchMembers();
 
+  }
+
+  Widget _buildMemberTypeQuickFilter(bool isTa) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.grey.shade300),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.filter_list, size: 18, color: Colors.amber.shade800),
+          const SizedBox(width: 8),
+          Text(
+            isTa ? 'உறுப்பினர் வகை:' : 'Member Type:',
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF2D1B18)),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 6,
+              children: [
+                _buildQuickFilterPill(
+                  label: isTa ? 'அனைத்தும்' : 'All',
+                  isSelected: _selectedPrivilegeType == 'All',
+                  onTap: () {
+                    if (_selectedPrivilegeType != 'All') {
+                      setState(() => _selectedPrivilegeType = 'All');
+                      _fetchMembers();
+                    }
+                  },
+                ),
+                _buildQuickFilterPill(
+                  label: isTa ? 'சிறப்பு உறுப்பினர் (Privilege)' : 'Privilege Members',
+                  icon: Icons.stars_rounded,
+                  iconColor: const Color(0xFFC49A3C),
+                  isSelected: _selectedPrivilegeType == 'Privilege Member',
+                  selectedBgColor: const Color(0xFFFFF8E7),
+                  selectedBorderColor: const Color(0xFFC49A3C),
+                  selectedTextColor: const Color(0xFF7A5800),
+                  onTap: () {
+                    if (_selectedPrivilegeType != 'Privilege Member') {
+                      setState(() => _selectedPrivilegeType = 'Privilege Member');
+                      _fetchMembers();
+                    }
+                  },
+                ),
+                _buildQuickFilterPill(
+                  label: isTa ? 'வழக்கமான உறுப்பினர் (Standard)' : 'Standard Members',
+                  icon: Icons.person_outline,
+                  isSelected: _selectedPrivilegeType == 'Standard Member',
+                  onTap: () {
+                    if (_selectedPrivilegeType != 'Standard Member') {
+                      setState(() => _selectedPrivilegeType = 'Standard Member');
+                      _fetchMembers();
+                    }
+                  },
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuickFilterPill({
+    required String label,
+    IconData? icon,
+    Color? iconColor,
+    required bool isSelected,
+    Color? selectedBgColor,
+    Color? selectedBorderColor,
+    Color? selectedTextColor,
+    required VoidCallback onTap,
+  }) {
+    final activeBg = selectedBgColor ?? const Color(0xFF5D1712);
+    final activeBorder = selectedBorderColor ?? const Color(0xFF5D1712);
+    final activeText = selectedTextColor ?? Colors.white;
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? activeBg : Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isSelected ? activeBorder : Colors.grey.shade300,
+            width: isSelected ? 1.5 : 1.0,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (icon != null) ...[
+              Icon(
+                icon,
+                size: 15,
+                color: isSelected
+                    ? (selectedTextColor != null ? iconColor ?? activeText : Colors.white)
+                    : (iconColor ?? Colors.black54),
+              ),
+              const SizedBox(width: 5),
+            ],
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                color: isSelected ? activeText : Colors.black87,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
 }
