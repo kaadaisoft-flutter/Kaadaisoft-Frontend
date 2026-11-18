@@ -4134,7 +4134,7 @@ class _MembersContentState extends State<MembersContent> {
     );
 
     try {
-      final query = _buildFilterQueryParams(limit: 0);
+      final query = _buildFilterQueryParams(page: 1, limit: 10000);
       final url = '${ApiConfig.members}?$query';
       final response = await http.get(Uri.parse(url));
 
