@@ -303,6 +303,22 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
           return;
         }
       }
+
+      // If user typed a search query that isn't a module name:
+      // If already on Members page, route query directly to member search!
+      if (_activeItem == 'Members') {
+        setState(() {});
+        return;
+      }
+
+      // If on another page, navigate to Members and pass search query
+      final allowedTitles = _menuItems.map((item) => item['title'].toString()).toList();
+      if (allowedTitles.contains('Members')) {
+        _navigateTo('Members');
+        setState(() {});
+        return;
+      }
+
       NotificationHelper.showError(context, 'No matching module found for "$query"');
     }
   }

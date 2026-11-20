@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -104,8 +105,27 @@ class _MembersContentState extends State<MembersContent> {
   // Filter State
 
   bool _showFilters = false;
+  bool _showMobileOptions = false;
 
   final TextEditingController _searchController = TextEditingController();
+  Timer? _searchDebounce;
+
+  void _onSearchChanged(String val) {
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 350), () {
+      if (mounted) {
+        _fetchMembers(resetPage: true);
+      }
+    });
+    setState(() {});
+  }
+
+  void _clearSearch() {
+    _searchDebounce?.cancel();
+    _searchController.clear();
+    _fetchMembers(resetPage: true);
+    setState(() {});
+  }
 
   String? _selectedDistrict;
 
@@ -202,19 +222,12 @@ class _MembersContentState extends State<MembersContent> {
 
 
   @override
-
   void didUpdateWidget(covariant MembersContent oldWidget) {
-
     super.didUpdateWidget(oldWidget);
-
     if (widget.globalSearchQuery != oldWidget.globalSearchQuery) {
-
       _searchController.text = widget.globalSearchQuery ?? '';
-
-      _fetchMembers();
-
+      _fetchMembers(resetPage: true);
     }
-
   }
 
 
@@ -448,8 +461,8 @@ class _MembersContentState extends State<MembersContent> {
     if (page != null) queryParts.add('page=$page');
     if (limit != null) queryParts.add('limit=$limit');
 
-    if (_searchController.text.isNotEmpty) {
-      queryParts.add('search=${Uri.encodeComponent(_searchController.text)}');
+    if (_searchController.text.trim().isNotEmpty) {
+      queryParts.add('search=${Uri.encodeComponent(_searchController.text.trim())}');
     }
     if (_selectedDistrict != null) {
       queryParts.add('district=${Uri.encodeComponent(_selectedDistrict!)}');
@@ -567,13 +580,11 @@ class _MembersContentState extends State<MembersContent> {
 
 
   @override
-
   void dispose() {
-
+    _searchDebounce?.cancel();
+    _searchController.dispose();
     _horizontalScrollController.dispose();
-
     super.dispose();
-
   }
 
 
@@ -695,29 +706,34 @@ class _MembersContentState extends State<MembersContent> {
                       ),
 
                       if (!isNarrow)
-
                         Flexible(
-
                           child: Padding(
-
                             padding: const EdgeInsets.only(left: 16),
-
                             child: _buildActionButtons(false),
-
                           ),
-
                         ),
-
+                      if (isNarrow)
+                        _buildMobileOptionsToggle(isTa),
                     ],
-
                   ),
-
-                  if (isNarrow) ...[
-
-                    const SizedBox(height: 16),
-
-                    _buildActionButtons(true),
-
+                  if (isNarrow && _showMobileOptions) ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: Colors.grey.shade300),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.04),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: _buildActionButtons(true),
+                    ),
                   ],
 
                 ],
@@ -746,8 +762,8 @@ class _MembersContentState extends State<MembersContent> {
 
           const SizedBox(height: 16),
 
-          // Member Type Quick Filter Tabs
-          _buildMemberTypeQuickFilter(isTa),
+          // Search & Member Type Quick Filter Bar
+          _buildSearchAndFiltersBar(isTa),
 
           const SizedBox(height: 16),
 
@@ -838,13 +854,37 @@ class _MembersContentState extends State<MembersContent> {
                               )
 
                             : _members.isEmpty
-
-                                ? const Padding(
-
-                                    padding: EdgeInsets.all(32),
-
-                                    child: Center(child: Text('No members found.', style: TextStyle(color: Colors.black54))),
-
+                                ? Padding(
+                                    padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 16),
+                                    child: Center(
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(Icons.search_off_rounded, size: 36, color: Colors.grey.shade400),
+                                          const SizedBox(height: 8),
+                                          Text(
+                                            _searchController.text.trim().isNotEmpty
+                                                ? (isTa
+                                                    ? '"${_searchController.text.trim()}" என்ற தேடலுக்கு முடிவுகள் இல்லை.'
+                                                    : 'No members found matching "${_searchController.text.trim()}".')
+                                                : (isTa ? 'உறுப்பினர்கள் யாரும் இல்லை.' : 'No members found.'),
+                                            style: const TextStyle(color: Colors.black54, fontSize: 14),
+                                            textAlign: TextAlign.center,
+                                          ),
+                                          if (_searchController.text.trim().isNotEmpty) ...[
+                                            const SizedBox(height: 12),
+                                            TextButton.icon(
+                                              onPressed: _clearSearch,
+                                              icon: const Icon(Icons.clear, size: 16),
+                                              label: Text(isTa ? 'தேடலை அழி' : 'Clear Search'),
+                                              style: TextButton.styleFrom(
+                                                foregroundColor: const Color(0xFF5D1712),
+                                              ),
+                                            ),
+                                          ],
+                                        ],
+                                      ),
+                                    ),
                                   )
 
                                 : ListView.separated(
@@ -2259,6 +2299,64 @@ class _MembersContentState extends State<MembersContent> {
 
 
 
+  Widget _buildMobileOptionsToggle(bool isTa) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {
+          setState(() {
+            _showMobileOptions = !_showMobileOptions;
+          });
+        },
+        borderRadius: BorderRadius.circular(8),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: _showMobileOptions ? const Color(0xFF5D1712) : Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: _showMobileOptions ? const Color(0xFF5D1712) : Colors.grey.shade300,
+              width: 1.2,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 4,
+                offset: const Offset(0, 1),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.tune_rounded,
+                size: 16,
+                color: _showMobileOptions ? Colors.white : const Color(0xFF5D1712),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                isTa ? 'விருப்பங்கள்' : 'Options',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: _showMobileOptions ? Colors.white : const Color(0xFF5D1712),
+                ),
+              ),
+              const SizedBox(width: 4),
+              Icon(
+                _showMobileOptions ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                size: 18,
+                color: _showMobileOptions ? Colors.white : const Color(0xFF5D1712),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildActionButtons(bool isMobile) {
 
     final isTa = Localizations.localeOf(context).languageCode == 'ta';
@@ -2476,49 +2574,28 @@ class _MembersContentState extends State<MembersContent> {
       ),
 
       style: OutlinedButton.styleFrom(
-
         side: BorderSide(color: color),
-
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-
-        padding: EdgeInsets.symmetric(horizontal: isMobile ? 8 : 16, vertical: 10),
-
+        padding: EdgeInsets.symmetric(horizontal: isMobile ? 8 : 16, vertical: isMobile ? 8 : 10),
+        minimumSize: isMobile ? const Size(0, 38) : null,
       ),
-
     );
-
   }
 
-
-
-
-
   Widget _buildSolidButton(String label, IconData icon, Color color, {VoidCallback? onPressed, bool isMobile = false}) {
-
     return ElevatedButton.icon(
-
       onPressed: onPressed ?? () {},
-
       icon: Icon(icon, color: Colors.white, size: isMobile ? 16 : 18),
-
       label: FittedBox(
-
         fit: BoxFit.scaleDown,
-
         child: Text(label, style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: isMobile ? 12 : 13)),
-
       ),
-
       style: ElevatedButton.styleFrom(
-
         backgroundColor: color,
-
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-
-        padding: EdgeInsets.symmetric(horizontal: isMobile ? 8 : 16, vertical: 10),
-
+        padding: EdgeInsets.symmetric(horizontal: isMobile ? 8 : 16, vertical: isMobile ? 8 : 10),
+        minimumSize: isMobile ? const Size(0, 38) : null,
         elevation: 0,
-
       ),
 
     );
@@ -2959,7 +3036,9 @@ class _MembersContentState extends State<MembersContent> {
 
                           ? const Color(0xFFFFF8E1)
 
-                          : (role == '2' ? Colors.orange.shade50 : const Color(0xFFFDECEB))),
+                          : ((role == '1' || role == '4')
+                              ? const Color(0xFFF3E5F5)
+                              : (role == '2' ? Colors.orange.shade50 : const Color(0xFFFDECEB)))),
 
                   borderRadius: BorderRadius.circular(4),
 
@@ -2973,7 +3052,9 @@ class _MembersContentState extends State<MembersContent> {
 
                             ? const Color(0xFFC49A3C)
 
-                            : (role == '2' ? Colors.orange.shade200 : const Color(0xFFE5A09D))),
+                            : ((role == '1' || role == '4')
+                                ? const Color(0xFFCE93D8)
+                                : (role == '2' ? Colors.orange.shade200 : const Color(0xFFE5A09D)))),
 
                   ),
 
@@ -3007,11 +3088,11 @@ class _MembersContentState extends State<MembersContent> {
 
                                 ? (isTa ? 'à®šà®¿à®±à®ªà¯à®ªà¯' : 'PRIVILEGE')
 
-                                : (role == '2'
-
-                                    ? (isTa ? 'à®’à®°à¯à®™à¯à®•à®¿à®£à¯ˆà®ªà¯à®ªà®¾à®³à®°à¯' : 'COORDINATOR')
-
-                                    : (isTa ? 'à®‰à®±à¯à®ªà¯à®ªà®¿à®©à®°à¯' : 'MEMBER'))),
+                                : ((role == '1' || role == '4')
+                                    ? (isTa ? 'மேலாளர்' : 'MANAGER')
+                                    : (role == '2'
+                                        ? (isTa ? 'ஒருங்கிணைப்பாளர்' : 'COORDINATOR')
+                                        : (isTa ? 'உறுப்பினர்' : 'MEMBER')))),
 
                         style: TextStyle(
 
@@ -3023,7 +3104,9 @@ class _MembersContentState extends State<MembersContent> {
 
                                   ? const Color(0xFF8D6E18)
 
-                                  : (role == '2' ? Colors.orange.shade700 : const Color(0xFF5D1712))),
+                                  : ((role == '1' || role == '4')
+                                      ? const Color(0xFF6A1B9A)
+                                      : (role == '2' ? Colors.orange.shade700 : const Color(0xFF5D1712)))),
 
                           fontSize: 10,
 
@@ -4187,11 +4270,16 @@ class _MembersContentState extends State<MembersContent> {
           final bool hasPrivId = privilegeId != null &&
               privilegeId.trim().isNotEmpty &&
               privilegeId.trim().toLowerCase() != 'null';
+          final bool isManager = member['Role']?.toString() == '1' || member['Role']?.toString() == '4';
           final bool isCoordinator = member['Role']?.toString() == '2';
 
           String roleText = 'MEMBER';
           if (isPrivilege || hasPrivId) {
-            roleText = isCoordinator ? 'COORDINATOR (PRIVILEGE)' : 'PRIVILEGE';
+            roleText = isManager
+                ? 'MANAGER (PRIVILEGE)'
+                : (isCoordinator ? 'COORDINATOR (PRIVILEGE)' : 'PRIVILEGE');
+          } else if (isManager) {
+            roleText = 'MANAGER';
           } else if (isCoordinator) {
             roleText = 'COORDINATOR';
           }
@@ -4545,65 +4633,7 @@ class _MembersContentState extends State<MembersContent> {
 
 
 
-                    // Row 2: Specific Search
 
-                    Column(
-
-                      crossAxisAlignment: CrossAxisAlignment.start,
-
-                      children: [
-
-                        Text(AppLocalizations.of(context)?.specificSearchTitle ?? 'Specific Search (Name, Membership ID, Mobile, Email, Aadhar):', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black87)),
-
-                        const SizedBox(height: 12),
-
-                        TextField(
-
-                          controller: _searchController,
-
-                          onChanged: (v) => _fetchMembers(),
-
-                          decoration: InputDecoration(
-
-                            hintText: AppLocalizations.of(context)?.specificSearchHint ?? 'Type Name, Email, Mobile, Aadhar or Membership ID...',
-
-                            prefixIcon: const Icon(Icons.search, size: 20, color: Colors.amber),
-
-                            filled: true,
-
-                            fillColor: Colors.white,
-
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade300)),
-
-                            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade300)),
-
-                          ),
-
-                        ),
-
-                        const SizedBox(height: 8),
-
-                        Row(
-
-                          children: [
-
-                            Icon(Icons.info, size: 14, color: Colors.grey.shade500),
-
-                            const SizedBox(width: 6),
-
-                            Expanded(child: Text(AppLocalizations.of(context)?.specificSearchInfo ?? 'Search by Name, Email, Mobile, Aadhar Card, or Membership ID directly.', style: const TextStyle(fontSize: 12, color: Colors.grey))),
-
-                          ],
-
-                        ),
-
-                      ],
-
-                    ),
-
-                    const SizedBox(height: 24),
 
 
 
@@ -5212,12 +5242,10 @@ class _MembersContentState extends State<MembersContent> {
     });
 
     _fetchMembers();
-
   }
 
-  Widget _buildMemberTypeQuickFilter(bool isTa) {
+  Widget _buildSearchBar(bool isTa) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(10),
@@ -5230,61 +5258,245 @@ class _MembersContentState extends State<MembersContent> {
           ),
         ],
       ),
-      child: Row(
-        children: [
-          Icon(Icons.filter_list, size: 18, color: Colors.amber.shade800),
-          const SizedBox(width: 8),
-          Text(
-            isTa ? 'உறுப்பினர் வகை:' : 'Member Type:',
-            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF2D1B18)),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 6,
-              children: [
-                _buildQuickFilterPill(
-                  label: isTa ? 'அனைத்தும்' : 'All',
-                  isSelected: _selectedPrivilegeType == 'All',
-                  onTap: () {
-                    if (_selectedPrivilegeType != 'All') {
-                      setState(() => _selectedPrivilegeType = 'All');
-                      _fetchMembers();
-                    }
-                  },
-                ),
-                _buildQuickFilterPill(
-                  label: isTa ? 'சிறப்பு உறுப்பினர் (Privilege)' : 'Privilege Members',
-                  icon: Icons.stars_rounded,
-                  iconColor: const Color(0xFFC49A3C),
-                  isSelected: _selectedPrivilegeType == 'Privilege Member',
-                  selectedBgColor: const Color(0xFFFFF8E7),
-                  selectedBorderColor: const Color(0xFFC49A3C),
-                  selectedTextColor: const Color(0xFF7A5800),
-                  onTap: () {
-                    if (_selectedPrivilegeType != 'Privilege Member') {
-                      setState(() => _selectedPrivilegeType = 'Privilege Member');
-                      _fetchMembers();
-                    }
-                  },
-                ),
-                _buildQuickFilterPill(
-                  label: isTa ? 'வழக்கமான உறுப்பினர் (Standard)' : 'Standard Members',
-                  icon: Icons.person_outline,
-                  isSelected: _selectedPrivilegeType == 'Standard Member',
-                  onTap: () {
-                    if (_selectedPrivilegeType != 'Standard Member') {
-                      setState(() => _selectedPrivilegeType = 'Standard Member');
-                      _fetchMembers();
-                    }
-                  },
+      child: TextField(
+        controller: _searchController,
+        onChanged: _onSearchChanged,
+        onSubmitted: (v) {
+          _searchDebounce?.cancel();
+          _fetchMembers(resetPage: true);
+        },
+        style: const TextStyle(fontSize: 14, color: Color(0xFF2D1B18)),
+        decoration: InputDecoration(
+          isDense: true,
+          hintText: isTa
+              ? 'பெயர், எண், கைபேசி, மின்னஞ்சல் மூலம் தேடுக...'
+              : 'Search by Name, ID, Mobile, or Email...',
+          hintStyle: TextStyle(fontSize: 13, color: Colors.grey.shade500),
+          prefixIcon: const Icon(Icons.search, size: 20, color: Color(0xFF5D1712)),
+          prefixIconConstraints: const BoxConstraints(minWidth: 42, minHeight: 44),
+          suffixIcon: _searchController.text.isNotEmpty
+              ? IconButton(
+                  icon: const Icon(Icons.close, size: 18, color: Colors.grey),
+                  onPressed: _clearSearch,
+                  tooltip: isTa ? 'அழி' : 'Clear',
+                  splashRadius: 18,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 38, minHeight: 44),
+                )
+              : null,
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSearchAndFiltersBar(bool isTa) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isDesktop = constraints.maxWidth >= 950;
+        if (isDesktop) {
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                flex: 4,
+                child: _buildSearchBar(isTa),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                flex: 5,
+                child: _buildMemberTypeQuickFilter(isTa),
+              ),
+            ],
+          );
+        } else {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _buildSearchBar(isTa),
+              const SizedBox(height: 12),
+              _buildMemberTypeQuickFilter(isTa),
+            ],
+          );
+        }
+      },
+    );
+  }
+
+  Widget _buildMemberTypeQuickFilter(bool isTa) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isNarrow = constraints.maxWidth < 650;
+
+        if (isNarrow) {
+          return Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: Colors.grey.shade300),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.03),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
                 ),
               ],
             ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.filter_list, size: 16, color: Colors.amber.shade800),
+                        const SizedBox(width: 6),
+                        Text(
+                          isTa ? 'உறுப்பினர் வகை:' : 'Member Type:',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF2D1B18),
+                          ),
+                        ),
+                      ],
+                    ),
+                    _buildQuickFilterPill(
+                      label: isTa ? 'அனைத்தும்' : 'All',
+                      isSelected: _selectedPrivilegeType == 'All',
+                      onTap: () {
+                        if (_selectedPrivilegeType != 'All') {
+                          setState(() => _selectedPrivilegeType = 'All');
+                          _fetchMembers();
+                        }
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildQuickFilterPill(
+                        label: isTa ? 'சிறப்பு உறுப்பினர்' : 'Privilege Members',
+                        icon: Icons.stars_rounded,
+                        iconColor: const Color(0xFFC49A3C),
+                        isSelected: _selectedPrivilegeType == 'Privilege Member',
+                        selectedBgColor: const Color(0xFFFFF8E7),
+                        selectedBorderColor: const Color(0xFFC49A3C),
+                        selectedTextColor: const Color(0xFF7A5800),
+                        isFullWidth: true,
+                        onTap: () {
+                          if (_selectedPrivilegeType != 'Privilege Member') {
+                            setState(() => _selectedPrivilegeType = 'Privilege Member');
+                            _fetchMembers();
+                          }
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _buildQuickFilterPill(
+                        label: isTa ? 'வழக்கமான உறுப்பினர்' : 'Standard Members',
+                        icon: Icons.person_outline,
+                        isSelected: _selectedPrivilegeType == 'Standard Member',
+                        isFullWidth: true,
+                        onTap: () {
+                          if (_selectedPrivilegeType != 'Standard Member') {
+                            setState(() => _selectedPrivilegeType = 'Standard Member');
+                            _fetchMembers();
+                          }
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          );
+        }
+
+        final pills = [
+          _buildQuickFilterPill(
+            label: isTa ? 'அனைத்தும்' : 'All',
+            isSelected: _selectedPrivilegeType == 'All',
+            onTap: () {
+              if (_selectedPrivilegeType != 'All') {
+                setState(() => _selectedPrivilegeType = 'All');
+                _fetchMembers();
+              }
+            },
           ),
-        ],
-      ),
+          const SizedBox(width: 8),
+          _buildQuickFilterPill(
+            label: isTa ? 'சிறப்பு உறுப்பினர் (Privilege)' : 'Privilege Members',
+            icon: Icons.stars_rounded,
+            iconColor: const Color(0xFFC49A3C),
+            isSelected: _selectedPrivilegeType == 'Privilege Member',
+            selectedBgColor: const Color(0xFFFFF8E7),
+            selectedBorderColor: const Color(0xFFC49A3C),
+            selectedTextColor: const Color(0xFF7A5800),
+            onTap: () {
+              if (_selectedPrivilegeType != 'Privilege Member') {
+                setState(() => _selectedPrivilegeType = 'Privilege Member');
+                _fetchMembers();
+              }
+            },
+          ),
+          const SizedBox(width: 8),
+          _buildQuickFilterPill(
+            label: isTa ? 'வழக்கமான உறுப்பினர் (Standard)' : 'Standard Members',
+            icon: Icons.person_outline,
+            isSelected: _selectedPrivilegeType == 'Standard Member',
+            onTap: () {
+              if (_selectedPrivilegeType != 'Standard Member') {
+                setState(() => _selectedPrivilegeType = 'Standard Member');
+                _fetchMembers();
+              }
+            },
+          ),
+        ];
+
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: Colors.grey.shade300),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.03),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.filter_list, size: 18, color: Colors.amber.shade800),
+              const SizedBox(width: 8),
+              Text(
+                isTa ? 'உறுப்பினர் வகை:' : 'Member Type:',
+                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF2D1B18)),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: pills,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -5296,6 +5508,7 @@ class _MembersContentState extends State<MembersContent> {
     Color? selectedBgColor,
     Color? selectedBorderColor,
     Color? selectedTextColor,
+    bool isFullWidth = false,
     required VoidCallback onTap,
   }) {
     final activeBg = selectedBgColor ?? const Color(0xFF5D1712);
@@ -5307,7 +5520,7 @@ class _MembersContentState extends State<MembersContent> {
       borderRadius: BorderRadius.circular(8),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
         decoration: BoxDecoration(
           color: isSelected ? activeBg : Colors.grey.shade100,
           borderRadius: BorderRadius.circular(8),
@@ -5317,7 +5530,8 @@ class _MembersContentState extends State<MembersContent> {
           ),
         ),
         child: Row(
-          mainAxisSize: MainAxisSize.min,
+          mainAxisSize: isFullWidth ? MainAxisSize.max : MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             if (icon != null) ...[
               Icon(
@@ -5329,12 +5543,16 @@ class _MembersContentState extends State<MembersContent> {
               ),
               const SizedBox(width: 5),
             ],
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                color: isSelected ? activeText : Colors.black87,
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                  color: isSelected ? activeText : Colors.black87,
+                ),
               ),
             ),
           ],

@@ -130,18 +130,27 @@ class _LoginPageState extends State<LoginPage> {
         }
       } else {
         String errorMsg = 'The mobile number or password you entered is incorrect.';
+        String dialogTitle = 'Login Failed';
+        DialogType dialogType = DialogType.error;
         try {
           final data = jsonDecode(response.body);
           if (data['detail'] != null) {
             errorMsg = data['detail'];
+            final lower = errorMsg.toLowerCase();
+            if (lower.contains('rejected')) {
+              dialogTitle = 'Registration Rejected';
+            } else if (lower.contains('pending')) {
+              dialogTitle = 'Account Pending Approval';
+              dialogType = DialogType.warning;
+            }
           }
         } catch (_) {}
 
         showStatusDialog(
           context,
-          title: 'Login Failed',
+          title: dialogTitle,
           message: errorMsg,
-          type: DialogType.error,
+          type: dialogType,
         );
       }
     } catch (e) {
