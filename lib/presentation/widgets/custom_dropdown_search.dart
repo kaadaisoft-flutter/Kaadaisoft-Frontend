@@ -96,20 +96,30 @@ class _CustomDropdownSearchState extends State<CustomDropdownSearch> with Widget
   final FocusNode _mainFocusNode = FocusNode();
   final ScrollController _scrollController = ScrollController();
 
-  /// When true, the dropdown list is being actively scrolled on a touch
-  /// device. We use this to prevent accidental item selection.
-  bool _isScrolling = false;
-
   List<MapEntry<String, String>> _filteredItems = [];
   int _highlightedIndex = 0;
+  int _visibleCount = 100;
+
+  Map<String, String>? _cachedAllEntries;
+  List<MapEntry<String, String>>? _cachedAllEntriesList;
 
   Map<String, String> get _allEntries {
+    if (_cachedAllEntries != null) return _cachedAllEntries!;
     if (widget.dropdownMap != null) {
-      return widget.dropdownMap!;
+      _cachedAllEntries = widget.dropdownMap!;
     } else if (widget.dropdownItems != null) {
-      return {for (var item in widget.dropdownItems!) item: item};
+      _cachedAllEntries = {for (var item in widget.dropdownItems!) item: item};
+    } else {
+      _cachedAllEntries = {};
     }
-    return {};
+    _cachedAllEntriesList = _cachedAllEntries!.entries.toList();
+    return _cachedAllEntries!;
+  }
+
+  List<MapEntry<String, String>> get _allEntriesList {
+    if (_cachedAllEntriesList != null) return _cachedAllEntriesList!;
+    _allEntries;
+    return _cachedAllEntriesList!;
   }
 
   bool get _shouldShowSearch => widget.showSearch ?? (_allEntries.length > 5);
@@ -119,13 +129,9 @@ class _CustomDropdownSearchState extends State<CustomDropdownSearch> with Widget
     super.initState();
     WidgetsBinding.instance.addObserver(this);
 
-    _filteredItems = _allEntries.entries.toList();
+    _filteredItems = _allEntriesList;
 
-    _scrollController.addListener(() {
-      if (_scrollController.position.isScrollingNotifier.value) {
-        _isScrolling = true;
-      }
-    });
+    _scrollController.addListener(_onScroll);
 
     _searchFocusNode.onKeyEvent = (node, event) => _handleKey(event);
     _mainFocusNode.onKeyEvent = (node, event) => _handleKey(event);
@@ -137,6 +143,16 @@ class _CustomDropdownSearchState extends State<CustomDropdownSearch> with Widget
         _mainFocusNode.requestFocus();
       }
     });
+  }
+
+  void _onScroll() {
+    if (_scrollController.hasClients &&
+        _scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 250) {
+      if (_visibleCount < _filteredItems.length) {
+        _visibleCount = (_visibleCount + 100).clamp(0, _filteredItems.length);
+        _overlayEntry?.markNeedsBuild();
+      }
+    }
   }
 
   void _onFocusChange() {
@@ -223,7 +239,8 @@ class _CustomDropdownSearchState extends State<CustomDropdownSearch> with Widget
     } else {
       field.didChange(entry.key);
     }
-    _filteredItems = _allEntries.entries.toList();
+    _filteredItems = _allEntriesList;
+    _visibleCount = 100;
     _searchController.clear();
     widget.onChanged?.call(entry.key);
     _searchFocusNode.unfocus();
@@ -252,7 +269,10 @@ class _CustomDropdownSearchState extends State<CustomDropdownSearch> with Widget
       });
     }
     if (widget.dropdownItems != oldWidget.dropdownItems || widget.dropdownMap != oldWidget.dropdownMap || widget.isLoading != oldWidget.isLoading) {
-      _filteredItems = _allEntries.entries.toList();
+      _cachedAllEntries = null;
+      _cachedAllEntriesList = null;
+      _visibleCount = 100;
+      _filteredItems = _allEntriesList;
       if (_overlayEntry != null) {
         SchedulerBinding.instance.addPostFrameCallback((_) {
           if (mounted) {
@@ -265,11 +285,12 @@ class _CustomDropdownSearchState extends State<CustomDropdownSearch> with Widget
 
   void _filterItems(String query) {
     _highlightedIndex = 0;
+    _visibleCount = 100;
     if (query.isEmpty) {
-      _filteredItems = _allEntries.entries.toList();
+      _filteredItems = _allEntriesList;
     } else {
       final q = query.toLowerCase().trim();
-      _filteredItems = _allEntries.entries.where((entry) => entry.value.toLowerCase().contains(q)).toList();
+      _filteredItems = _allEntriesList.where((entry) => entry.value.toLowerCase().contains(q)).toList();
     }
     _overlayEntry?.markNeedsBuild();
   }
@@ -282,16 +303,6 @@ class _CustomDropdownSearchState extends State<CustomDropdownSearch> with Widget
     }
   }
 
-  void _handlePointerScroll(PointerScrollEvent event) {
-    if (!_scrollController.hasClients) return;
-    final double scrollDelta = event.scrollDelta.dy;
-    final double newOffset = (_scrollController.offset + scrollDelta).clamp(
-      _scrollController.position.minScrollExtent,
-      _scrollController.position.maxScrollExtent,
-    );
-    _scrollController.jumpTo(newOffset);
-  }
-
   void _showDropdown(FormFieldState<String> field) {
     if (!widget.isEnabled) return;
     if (_closeActiveDropdown != null) {
@@ -302,8 +313,9 @@ class _CustomDropdownSearchState extends State<CustomDropdownSearch> with Widget
     final RenderBox renderBox = context.findRenderObject() as RenderBox;
     final size = renderBox.size;
 
-    _filteredItems = _allEntries.entries.toList();
+    _filteredItems = _allEntriesList;
     _highlightedIndex = 0;
+    _visibleCount = 100;
     _searchController.clear();
 
     _overlayEntry = OverlayEntry(
@@ -476,91 +488,74 @@ class _CustomDropdownSearchState extends State<CustomDropdownSearch> with Widget
                                         textAlign: TextAlign.center,
                                       ),
                                     )
-                                  : NotificationListener<ScrollNotification>(
-                                      onNotification: (notification) {
-                                        if (notification is ScrollStartNotification) {
-                                          _isScrolling = true;
-                                        } else if (notification is ScrollEndNotification) {
-                                          Future.delayed(
-                                            const Duration(milliseconds: 150),
-                                            () => _isScrolling = false,
-                                          );
-                                        }
-                                        return false;
-                                      },
-                                      child: Listener(
-                                        onPointerSignal: (event) {
-                                          if (event is PointerScrollEvent) {
-                                            _handlePointerScroll(event);
-                                          }
-                                        },
-                                        child: ScrollConfiguration(
-                                          behavior: _TrackpadAwareScrollBehavior(),
-                                          child: ListView.builder(
-                                            controller: _scrollController,
-                                            shrinkWrap: true,
-                                            physics: const ClampingScrollPhysics(),
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 10,
-                                              vertical: 6,
-                                            ),
-                                            itemCount: _filteredItems.length,
-                                            itemBuilder: (context, index) {
-                                              final entry = _filteredItems[index];
-                                              final isHighlighted = index == _highlightedIndex;
-                                              final isSelected = entry.key == widget.value;
-
-                                              return Material(
-                                                color: Colors.transparent,
-                                                child: InkWell(
-                                                  splashFactory: NoSplash.splashFactory,
-                                                  onTap: () {
-                                                    if (_isScrolling) return;
-                                                    if (_fieldKey.currentState != null) {
-                                                      _selectItem(
-                                                        _fieldKey.currentState!,
-                                                        entry,
-                                                      );
-                                                    }
-                                                  },
-                                                  child: Container(
-                                                    width: double.infinity,
-                                                    padding: const EdgeInsets.symmetric(
-                                                      vertical: 10,
-                                                      horizontal: 10,
-                                                    ),
-                                                    decoration: BoxDecoration(
-                                                      borderRadius: BorderRadius.circular(6),
-                                                      color: isSelected
-                                                          ? AppColors.primary.withValues(alpha: 0.08)
-                                                          : (isHighlighted ? Colors.grey.shade100 : Colors.transparent),
-                                                    ),
-                                                    child: Row(
-                                                      children: [
-                                                        Expanded(
-                                                          child: Text(
-                                                            entry.value,
-                                                            style: AppTypography.inter(
-                                                              color: isSelected ? AppColors.primary : Colors.black87,
-                                                              fontSize: 14,
-                                                              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                                                            ),
-                                                          ),
-                                                        ),
-                                                        if (isSelected)
-                                                          const Icon(
-                                                            Icons.check,
-                                                            size: 16,
-                                                            color: AppColors.primary,
-                                                          ),
-                                                      ],
-                                                    ),
-                                                  ),
-                                                ),
-                                              );
-                                            },
-                                          ),
+                                  : ScrollConfiguration(
+                                      behavior: _TrackpadAwareScrollBehavior(),
+                                      child: ListView.builder(
+                                        controller: _scrollController,
+                                        itemExtent: 42.0,
+                                        shrinkWrap: _filteredItems.length < 8,
+                                        physics: const ClampingScrollPhysics(),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 10,
+                                          vertical: 6,
                                         ),
+                                        itemCount: _filteredItems.length > _visibleCount ? _visibleCount : _filteredItems.length,
+                                        itemBuilder: (context, index) {
+                                          final entry = _filteredItems[index];
+                                          final isHighlighted = index == _highlightedIndex;
+                                          final isSelected = entry.key == widget.value;
+
+                                          return Material(
+                                            color: Colors.transparent,
+                                            child: InkWell(
+                                              splashFactory: NoSplash.splashFactory,
+                                              onTap: () {
+                                                if (_fieldKey.currentState != null) {
+                                                  _selectItem(
+                                                    _fieldKey.currentState!,
+                                                    entry,
+                                                  );
+                                                }
+                                              },
+                                              child: Container(
+                                                height: 42.0,
+                                                width: double.infinity,
+                                                padding: const EdgeInsets.symmetric(
+                                                  horizontal: 10,
+                                                ),
+                                                alignment: Alignment.centerLeft,
+                                                decoration: BoxDecoration(
+                                                  borderRadius: BorderRadius.circular(6),
+                                                  color: isSelected
+                                                      ? AppColors.primary.withValues(alpha: 0.08)
+                                                      : (isHighlighted ? Colors.grey.shade100 : Colors.transparent),
+                                                ),
+                                                child: Row(
+                                                  children: [
+                                                    Expanded(
+                                                      child: Text(
+                                                        entry.value,
+                                                        style: AppTypography.inter(
+                                                          color: isSelected ? AppColors.primary : Colors.black87,
+                                                          fontSize: 14,
+                                                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                                                        ),
+                                                        maxLines: 1,
+                                                        overflow: TextOverflow.ellipsis,
+                                                      ),
+                                                    ),
+                                                    if (isSelected)
+                                                      const Icon(
+                                                        Icons.check,
+                                                        size: 16,
+                                                        color: AppColors.primary,
+                                                      ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
+                                          );
+                                        },
                                       ),
                                     ),
                         ),
@@ -596,10 +591,10 @@ class _CustomDropdownSearchState extends State<CustomDropdownSearch> with Widget
       _closeActiveDropdown = null;
     }
     _highlightedIndex = 0;
-    _isScrolling = false;
+    _visibleCount = 100;
     _searchController.clear();
     _searchFocusNode.unfocus();
-    _filteredItems = _allEntries.entries.toList();
+    _filteredItems = _allEntriesList;
     if (mounted) setState(() {});
   }
 

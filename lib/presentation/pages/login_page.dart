@@ -129,19 +129,44 @@ class _LoginPageState extends State<LoginPage> {
           );
         }
       } else {
-        String errorMsg = 'The mobile number or password you entered is incorrect.';
-        String dialogTitle = 'Login Failed';
+        final bool isTa = isTamilLocale(context);
+        String errorMsg = isTa
+            ? 'நீங்கள் உள்ளிட்ட அலைபேசி எண் அல்லது கடவுச்சொல் தவறானது.'
+            : 'The mobile number or password you entered is incorrect.';
+        String dialogTitle = isTa ? 'உள்நுழைவு தோல்வியடைந்தது' : 'Login Failed';
         DialogType dialogType = DialogType.error;
+        String? actionUrl;
+        String? actionUrlLabel;
         try {
           final data = jsonDecode(response.body);
           if (data['detail'] != null) {
-            errorMsg = data['detail'];
-            final lower = errorMsg.toLowerCase();
+            final rawDetail = data['detail'].toString();
+            errorMsg = rawDetail;
+            final lower = rawDetail.toLowerCase();
             if (lower.contains('rejected')) {
-              dialogTitle = 'Registration Rejected';
+              dialogTitle = isTa ? 'பதிவு நிராகரிக்கப்பட்டது' : 'Registration Rejected';
+              actionUrl = 'https://kaadaikulam.org/contact';
+              actionUrlLabel = isTa ? 'தொடர்பு கொள்ள: kaadaikulam.org/contact' : 'kaadaikulam.org/contact';
+
+              if (isTa) {
+                String reason = '';
+                if (rawDetail.contains('Reason:')) {
+                  final parts = rawDetail.split('Reason:');
+                  if (parts.length > 1) {
+                    reason = parts[1].split('\n')[0].trim();
+                  }
+                }
+                if (reason.toLowerCase().contains('duplicate')) {
+                  reason = 'ஏற்கனவே உள்ள உறுப்பினர் அல்லது நகல் விண்ணப்பம்';
+                }
+                errorMsg = 'உங்கள் உறுப்பினர் பதிவு விண்ணப்பம் நிராகரிக்கப்பட்டது.${reason.isNotEmpty ? '\nகாரணம்: $reason' : ''}\n\nதொடர்பு கொள்ள அல்லது கூடுதல் விவரங்களுக்கு இணையதளத்தைப் பார்வையிடவும்:\nhttps://kaadaikulam.org/contact';
+              }
             } else if (lower.contains('pending')) {
-              dialogTitle = 'Account Pending Approval';
+              dialogTitle = isTa ? 'கணக்கு சரிபார்ப்பு நிலுவையில் உள்ளது' : 'Account Pending Approval';
               dialogType = DialogType.warning;
+              if (isTa) {
+                errorMsg = 'உங்கள் கணக்கு தற்போது ஒப்புதலுக்காக நிலுவையில் உள்ளது. நீங்கள் உள்நுழைவதற்கு முன் நிர்வாகி அல்லது ஒருங்கிணைப்பாளர் உங்கள் பதிவை சரிபார்த்து அங்கீகரிக்கும் வரை காத்திருக்கவும்.';
+              }
             }
           }
         } catch (_) {}
@@ -151,6 +176,8 @@ class _LoginPageState extends State<LoginPage> {
           title: dialogTitle,
           message: errorMsg,
           type: dialogType,
+          actionUrl: actionUrl,
+          actionUrlLabel: actionUrlLabel,
         );
       }
     } catch (e) {
@@ -414,16 +441,16 @@ class _LoginPageState extends State<LoginPage> {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
+              const Icon(Icons.language, color: Colors.white, size: 18),
+              const SizedBox(width: 8),
               Text(
-                isEnglish ? 'English' : 'தமிழ்',
+                isEnglish ? 'தமிழ்' : 'English',
                 style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
                   fontSize: 14,
                 ),
               ),
-              const SizedBox(width: 8),
-              const Icon(Icons.language, color: Colors.white, size: 20),
             ],
           ),
         ),

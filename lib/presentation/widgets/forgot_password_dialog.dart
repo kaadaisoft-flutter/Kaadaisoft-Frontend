@@ -1,3 +1,5 @@
+import 'package:provider/provider.dart';
+import '../../providers/locale_provider.dart';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -65,7 +67,47 @@ class _ForgotPasswordDialogState extends State<ForgotPasswordDialog> {
       } else {
         setState(() => _isLoading = false);
         if (mounted) {
-          showStatusDialog(context, title: 'Error', message: data['detail'] ?? 'Failed to request OTP.', type: DialogType.error);
+          final isTa = isTamilLocale(context);
+          final detailMsg = (data['detail'] ?? 'Failed to request OTP.').toString();
+          final isRej = detailMsg.toLowerCase().contains('rejected');
+          
+          String title = isTa ? 'பிழை' : 'Error';
+          String displayMsg = detailMsg;
+          String? actionUrl;
+          String? actionUrlLabel;
+
+          if (isRej) {
+            title = isTa ? 'பதிவு நிராகரிக்கப்பட்டது' : 'Registration Rejected';
+            actionUrl = 'https://kaadaikulam.org/contact';
+            actionUrlLabel = isTa ? 'தொடர்பு கொள்ள: kaadaikulam.org/contact' : 'kaadaikulam.org/contact';
+            if (isTa) {
+              String reason = '';
+              if (detailMsg.contains('Reason:')) {
+                final parts = detailMsg.split('Reason:');
+                if (parts.length > 1) {
+                  reason = parts[1].split('\n')[0].trim();
+                }
+              }
+              if (reason.toLowerCase().contains('duplicate')) {
+                reason = 'ஏற்கனவே உள்ள உறுப்பினர் அல்லது நகல் விண்ணப்பம்';
+              }
+              displayMsg = 'உங்கள் உறுப்பினர் பதிவு விண்ணப்பம் நிராகரிக்கப்பட்டது.${reason.isNotEmpty ? '\nகாரணம்: $reason' : ''}\n\nதொடர்பு கொள்ள அல்லது கூடுதல் விவரங்களுக்கு இணையதளத்தைப் பார்வையிடவும்:\nhttps://kaadaikulam.org/contact';
+            }
+          } else if (detailMsg.toLowerCase().contains('pending')) {
+            title = isTa ? 'கணக்கு சரிபார்ப்பு நிலுவையில் உள்ளது' : 'Account Pending Approval';
+            if (isTa) {
+              displayMsg = 'உங்கள் கணக்கு தற்போது ஒப்புதலுக்காக நிலுவையில் உள்ளது. கடவுச்சொல்லை மீட்டமைக்க முன் நிர்வாகி அல்லது ஒருங்கிணைப்பாளர் உங்கள் பதிவை சரிபார்த்து அங்கீகரிக்கும் வரை காத்திருக்கவும்.';
+            }
+          }
+
+          showStatusDialog(
+            context,
+            title: title,
+            message: displayMsg,
+            type: DialogType.error,
+            actionUrl: actionUrl,
+            actionUrlLabel: actionUrlLabel,
+          );
         }
       }
     } catch (e) {

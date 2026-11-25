@@ -155,7 +155,7 @@ class _MembersContentState extends State<MembersContent> {
 
   String? _selectedPrivilegeType = 'All';
 
-  final List<String> _privilegeTypes = ['All', 'Privilege Member', 'Standard Member'];
+  final List<String> _privilegeTypes = ['All', 'Privilege Member', 'Standard Member', 'Rejected Member'];
 
 
 
@@ -164,6 +164,8 @@ class _MembersContentState extends State<MembersContent> {
   List<String> _taluks = [];
 
   List<String> _panchayats = [];
+
+  List<String> _allVillages = [];
 
   List<String> _villages = [];
 
@@ -216,6 +218,8 @@ class _MembersContentState extends State<MembersContent> {
     _fetchMembers();
 
     _fetchDistricts();
+
+    _fetchAllVillages();
 
   }
 
@@ -504,6 +508,8 @@ class _MembersContentState extends State<MembersContent> {
       queryParts.add('privilege_type=privilege');
     } else if (_selectedPrivilegeType == 'Standard Member') {
       queryParts.add('privilege_type=standard');
+    } else if (_selectedPrivilegeType == 'Rejected Member') {
+      queryParts.add('privilege_type=rejected');
     }
 
     return queryParts.join('&');
@@ -907,6 +913,10 @@ class _MembersContentState extends State<MembersContent> {
 
                                       final bool isPrivilege = member['is_privilege'] == true || member['is_privilege'] == 1 || member['is_privilege']?.toString().toLowerCase() == 'true';
 
+                                      final bool isRejected = (member['Approvedstatus'] ?? member['approvedstatus'] ?? '').toString().trim().toLowerCase() == 'rejected';
+
+                                      final String rejectReason = (member['RejectReason'] ?? member['rejectreason'] ?? member['reject_reason'] ?? '').toString();
+
                                       return _buildScrollableTableRow(
 
                                         member['Role']?.toString() ?? '3',
@@ -925,13 +935,17 @@ class _MembersContentState extends State<MembersContent> {
 
                                         member['Familymembershipid'] ?? 'N/A',
 
-                                        member['last_login'] != null ? member['last_login'].toString().replaceAll('T', ' ').substring(0, 16) : (isTa ? 'à®‰à®³à¯à®¨à¯à®´à¯ˆà®¯à®µà®¿à®²à¯à®²à¯ˆ' : 'Never'),
+                                        member['last_login'] != null ? member['last_login'].toString().replaceAll('T', ' ').substring(0, 16) : (isTa ? 'உள்நுழையவில்லை' : 'Never'),
 
                                         isDisabled,
 
                                         member['Phonenumber']?.toString() ?? '-',
 
-                                        isPrivilege: isPrivilege && !isDisabled && (member['Approvedstatus']?.toString().toLowerCase() != 'rejected'),
+                                        isPrivilege: isPrivilege && !isDisabled && !isRejected,
+
+                                        isRejected: isRejected,
+
+                                        rejectReason: rejectReason,
 
                                       );
 
@@ -955,7 +969,7 @@ class _MembersContentState extends State<MembersContent> {
 
                         SizedBox(
 
-                          width: 650, // 50+120+140+220+120
+                          width: 560, // 50+120+140+130+120
 
                           child: Column(
 
@@ -979,7 +993,7 @@ class _MembersContentState extends State<MembersContent> {
 
                                     _buildHeaderCell(AppLocalizations.of(context)?.nameHeader?.toUpperCase() ?? 'NAME', 140),
 
-                                    _buildHeaderCell(isTa ? 'à®šà¯†à®¯à®²à¯à®•à®³à¯' : 'ACTIONS', 220),
+                                    _buildHeaderCell(isTa ? 'à®šà¯†à®¯à®²à¯à®•à®³à¯' : 'ACTIONS', 130),
 
                                     _buildHeaderCell(AppLocalizations.of(context)?.mobileLabel?.toUpperCase() ?? 'MOBILE', 120),
 
@@ -1017,11 +1031,15 @@ class _MembersContentState extends State<MembersContent> {
 
                                             final bool isPrivilege = member['is_privilege'] == true || member['is_privilege'] == 1 || member['is_privilege']?.toString().toLowerCase() == 'true';
 
+                                            final bool isRejected = (member['Approvedstatus'] ?? member['approvedstatus'] ?? '').toString().trim().toLowerCase() == 'rejected';
+
+                                            final String rejectReason = (member['RejectReason'] ?? member['rejectreason'] ?? member['reject_reason'] ?? '').toString();
+
                                             final String? privilegeId = member['privilege_id']?.toString();
 
                                             final String approvedStatus = (member['Approvedstatus'] ?? member['approvedstatus'] ?? 'Verified').toString().trim().toLowerCase();
 
-                                            final bool isStatusActive = !isDisabled && (approvedStatus == 'verified' || approvedStatus == 'approved');
+                                            final bool isStatusActive = !isDisabled && !isRejected && (approvedStatus == 'verified' || approvedStatus == 'approved');
 
                                             final bool showPrivilegeId = isPrivilege && isStatusActive && privilegeId != null && privilegeId.isNotEmpty;
 
@@ -1039,13 +1057,17 @@ class _MembersContentState extends State<MembersContent> {
 
                                               member['Id'].toString(),
 
-                                              isPrivilege: isPrivilege && !isDisabled && (member['Approvedstatus']?.toString().toLowerCase() != 'rejected'),
+                                              isPrivilege: isPrivilege && !isDisabled && !isRejected,
 
                                               privilegeId: showPrivilegeId ? privilegeId : null,
 
                                               isDisabled: isDisabled,
 
                                               hasPhoto: hasPhoto,
+
+                                              isRejected: isRejected,
+
+                                              rejectReason: rejectReason,
 
                                             );
 
@@ -2636,7 +2658,9 @@ class _MembersContentState extends State<MembersContent> {
 
 
 
-  Widget _buildFixedTableRow(String sno, String id, String name, String mobile, String memberId, {bool isPrivilege = false, String? privilegeId, bool isDisabled = false, bool hasPhoto = false}) {
+  Widget _buildFixedTableRow(String sno, String id, String name, String mobile, String memberId, {bool isPrivilege = false, String? privilegeId, bool isDisabled = false, bool hasPhoto = false, bool isRejected = false, String rejectReason = ''}) {
+
+    final isTa = Localizations.localeOf(context).languageCode == 'ta';
 
     final bool showPriv = isPrivilege && !isDisabled && privilegeId != null && privilegeId.isNotEmpty;
 
@@ -2658,7 +2682,7 @@ class _MembersContentState extends State<MembersContent> {
 
             border: Border(bottom: BorderSide(color: Colors.grey.shade100)),
 
-            color: showPriv ? const Color(0xFFFFFDE7).withOpacity(0.35) : (isDisabled ? Colors.red.shade50.withOpacity(0.3) : null),
+            color: isRejected ? Colors.red.shade50.withOpacity(0.4) : (showPriv ? const Color(0xFFFFFDE7).withOpacity(0.35) : (isDisabled ? Colors.red.shade50.withOpacity(0.3) : null)),
 
           ),
 
@@ -2669,153 +2693,311 @@ class _MembersContentState extends State<MembersContent> {
               _buildDataCell(sno, 50),
 
               _buildDataCell(
-
                 id,
-
                 120,
-
-                isBlue: !showPriv,
-
-                child: showPriv
-
+                isBlue: !showPriv && !isRejected,
+                child: isRejected
                     ? Column(
-
                         mainAxisAlignment: MainAxisAlignment.center,
-
                         children: [
-
                           Text(
-
                             id,
-
                             style: const TextStyle(
-
                               color: Color(0xFF2D1B18),
-
                               fontWeight: FontWeight.bold,
-
                               fontSize: 11,
-
                             ),
-
                           ),
-
                           Container(
-
                             padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-
                             decoration: BoxDecoration(
-
-                              color: const Color(0xFFFFF8E1),
-
+                              color: const Color(0xFFFFEBEE),
                               borderRadius: BorderRadius.circular(3),
-
-                              border: Border.all(color: const Color(0xFFC49A3C), width: 0.8),
-
+                              border: Border.all(color: Colors.red.shade400, width: 0.8),
                             ),
-
-                            child: Row(
-
-                              mainAxisSize: MainAxisSize.min,
-
-                              children: [
-
-                                const Icon(Icons.workspace_premium, size: 10, color: Color(0xFF8D6E18)),
-
-                                const SizedBox(width: 2),
-
-                                Text(
-
-                                  privilegeId!,
-
-                                  style: const TextStyle(
-
-                                    color: Color(0xFF8D6E18),
-
-                                    fontWeight: FontWeight.bold,
-
-                                    fontSize: 9.5,
-
+                            child: Tooltip(
+                              message: rejectReason.isNotEmpty ? (isTa ? 'காரணம்: $rejectReason' : 'Reason: $rejectReason') : (isTa ? 'நிராகரிக்கப்பட்ட பதிவு' : 'Rejected Registration'),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.cancel_outlined, size: 9, color: Colors.red.shade700),
+                                  const SizedBox(width: 2),
+                                  Text(
+                                    isTa ? 'நிராகரிக்கப்பட்டது' : 'REJECTED',
+                                    style: TextStyle(
+                                      color: Colors.red.shade800,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 8.5,
+                                    ),
                                   ),
-
-                                ),
-
-                              ],
-
+                                ],
+                              ),
                             ),
-
                           ),
-
                         ],
-
                       )
-
-                    : null,
-
+                    : (showPriv
+                        ? Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                id,
+                                style: const TextStyle(
+                                  color: Color(0xFF2D1B18),
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 11,
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFFF8E1),
+                                  borderRadius: BorderRadius.circular(3),
+                                  border: Border.all(color: const Color(0xFFC49A3C), width: 0.8),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.workspace_premium, size: 10, color: Color(0xFF8D6E18)),
+                                    const SizedBox(width: 2),
+                                    Text(
+                                      privilegeId!,
+                                      style: const TextStyle(
+                                        color: Color(0xFF8D6E18),
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 9.5,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          )
+                        : null),
               ),
 
               _buildDataCell(name, 140, isBold: true),
 
-              _buildDataCell('', 220, child: Row(
-
+              _buildDataCell('', 130, child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
-
                 children: [
-
-                  _actionIcon(Icons.edit_outlined, const Color(0xFF5D1712), onTap: () => _showEditMemberDialog(memberId), tooltip: 'Edit'),
-
-                  const SizedBox(width: 4),
-
+                  // 1. Edit
                   _actionIcon(
-
-                    isDisabled ? Icons.check_circle_outline : Icons.block,
-
-                    isDisabled ? Colors.green : Colors.orange.shade800,
-
-                    onTap: () => _toggleMemberDisabledStatus(memberId, name, isDisabled),
-
-                    tooltip: isDisabled ? 'Enable ID Card' : 'Disable ID Card',
-
+                    Icons.edit_outlined,
+                    const Color(0xFF5D1712),
+                    onTap: () => _showEditMemberDialog(memberId),
+                    tooltip: isTa ? 'திருத்து' : 'Edit',
                   ),
+                  const SizedBox(width: 6),
 
-                  const SizedBox(width: 4),
-
+                  // 2. View
                   _actionIcon(
-
-                    Icons.badge_outlined,
-
-                    hasPhoto ? const Color(0xFFC49A3C) : Colors.blueGrey,
-
-                    onTap: () => _downloadSingleIdCard(memberId, id),
-
-                    tooltip: hasPhoto ? 'Download / Print ID Card (Photo Uploaded)' : 'Download / Print ID Card',
-
+                    Icons.visibility_outlined,
+                    Colors.blueGrey.shade700,
+                    onTap: () => _showViewMemberDialog(memberId, id),
+                    tooltip: isTa ? 'பார்' : 'View',
                   ),
+                  const SizedBox(width: 6),
 
-                  const SizedBox(width: 4),
-
-                  _actionIcon(
-
-                    Icons.send_rounded,
-
-                    const Color(0xFF25D366),
-
-                    onTap: () => _sendIndividualInvite(memberId, name, mobile),
-
-                    tooltip: 'Send Invite',
-
+                  // 3. More Options (3-dots)
+                  Theme(
+                    data: Theme.of(context).copyWith(
+                      hoverColor: Colors.transparent,
+                      splashColor: Colors.transparent,
+                    ),
+                    child: PopupMenuButton<String>(
+                      tooltip: isTa ? 'கூடுதல் செயல்கள்' : 'More Options',
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(minWidth: 200),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        side: BorderSide(color: Colors.grey.shade200),
+                      ),
+                      color: Colors.white,
+                      elevation: 4,
+                      offset: const Offset(0, 36),
+                      child: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.grey.shade100,
+                          border: Border.all(color: Colors.grey.shade300),
+                        ),
+                        child: Icon(
+                          Icons.more_vert,
+                          color: Colors.grey.shade700,
+                          size: 16,
+                        ),
+                      ),
+                      onSelected: (value) {
+                        switch (value) {
+                          case 'id_card':
+                            _downloadSingleIdCard(memberId, id);
+                            break;
+                          case 'invite':
+                            _sendIndividualInvite(memberId, name, mobile);
+                            break;
+                          case 'toggle_disable':
+                            _toggleMemberDisabledStatus(memberId, name, isDisabled);
+                            break;
+                          case 'rejection_reason':
+                            showDialog(
+                              context: context,
+                              builder: (ctx) => AlertDialog(
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                title: Row(
+                                  children: [
+                                    const Icon(Icons.cancel, color: Colors.red),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      isTa ? 'நிராகரிப்பு காரணம்' : 'Rejection Reason',
+                                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                                    ),
+                                  ],
+                                ),
+                                content: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      isTa ? 'உறுப்பினர்: $name' : 'Member: $name',
+                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      isTa ? 'காரணம்:' : 'Reason:',
+                                      style: const TextStyle(color: Colors.black54, fontSize: 12),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Container(
+                                      width: double.infinity,
+                                      padding: const EdgeInsets.all(10),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFFFEBEE),
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(color: Colors.red.shade200),
+                                      ),
+                                      child: Text(
+                                        rejectReason.isNotEmpty ? rejectReason : (isTa ? 'காரணம் குறிப்பிடப்படவில்லை' : 'No reason specified'),
+                                        style: TextStyle(color: Colors.red.shade900, fontWeight: FontWeight.w500, fontSize: 13),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(ctx),
+                                    child: Text(isTa ? 'மூடு' : 'Close'),
+                                  ),
+                                ],
+                              ),
+                            );
+                            break;
+                          case 'reject':
+                            _rejectMember(memberId, name);
+                            break;
+                        }
+                      },
+                      itemBuilder: (BuildContext context) => [
+                        PopupMenuItem<String>(
+                          value: 'id_card',
+                          height: 38,
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.badge_outlined,
+                                size: 16,
+                                color: hasPhoto ? const Color(0xFFC49A3C) : Colors.blueGrey,
+                              ),
+                              const SizedBox(width: 10),
+                              Text(
+                                isTa ? 'அடையாள அட்டை பதிவிறக்கு' : 'Download ID Card',
+                                style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500),
+                              ),
+                            ],
+                          ),
+                        ),
+                        PopupMenuItem<String>(
+                          value: 'invite',
+                          height: 38,
+                          child: Row(
+                            children: [
+                              const Icon(Icons.send_rounded, size: 16, color: Color(0xFF25D366)),
+                              const SizedBox(width: 10),
+                              Text(
+                                isTa ? 'அழைப்பு அனுப்பு' : 'Send Invite',
+                                style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const PopupMenuDivider(height: 8),
+                        PopupMenuItem<String>(
+                          value: 'toggle_disable',
+                          height: 38,
+                          child: Row(
+                            children: [
+                              Icon(
+                                isDisabled ? Icons.check_circle_outline : Icons.block,
+                                size: 16,
+                                color: isDisabled ? Colors.green : Colors.orange.shade800,
+                              ),
+                              const SizedBox(width: 10),
+                              Text(
+                                isDisabled
+                                    ? (isTa ? 'அடையாள அட்டை இயக்கு' : 'Enable ID Card')
+                                    : (isTa ? 'அடையாள அட்டை முடக்கு' : 'Disable ID Card'),
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w500,
+                                  color: isDisabled ? Colors.green.shade800 : Colors.orange.shade900,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (isRejected)
+                          PopupMenuItem<String>(
+                            value: 'rejection_reason',
+                            height: 38,
+                            child: Row(
+                              children: [
+                                Icon(Icons.info_outline, size: 16, color: Colors.red.shade700),
+                                const SizedBox(width: 10),
+                                Text(
+                                  isTa ? 'நிராகரிப்பு காரணம்' : 'View Rejection Reason',
+                                  style: TextStyle(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w500,
+                                    color: Colors.red.shade800,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        else
+                          PopupMenuItem<String>(
+                            value: 'reject',
+                            height: 38,
+                            child: Row(
+                              children: [
+                                const Icon(Icons.person_remove_outlined, size: 16, color: Colors.red),
+                                const SizedBox(width: 10),
+                                Text(
+                                  isTa ? 'உறுப்பினரை நிராகரி' : 'Reject Member',
+                                  style: const TextStyle(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w500,
+                                    color: Colors.red,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
-
-                  const SizedBox(width: 4),
-
-                  _actionIcon(Icons.person_remove_outlined, Colors.red, onTap: () => _rejectMember(memberId, name), tooltip: 'Reject'),
-
-                  const SizedBox(width: 4),
-
-                  _actionIcon(Icons.visibility_outlined, Colors.grey, onTap: () => _showViewMemberDialog(memberId, id), tooltip: 'View'),
-
                 ],
-
               )),
 
               _buildDataCell(mobile, 120),
@@ -2992,7 +3174,7 @@ class _MembersContentState extends State<MembersContent> {
 
 
 
-  Widget _buildScrollableTableRow(String role, String district, String taluk, String panchayat, String village, String memberId, String name, String familyId, String lastLogin, bool isDisabled, String mobile, {bool isPrivilege = false}) {
+  Widget _buildScrollableTableRow(String role, String district, String taluk, String panchayat, String village, String memberId, String name, String familyId, String lastLogin, bool isDisabled, String mobile, {bool isPrivilege = false, bool isRejected = false, String rejectReason = ''}) {
 
     final isTa = Localizations.localeOf(context).languageCode == 'ta';
 
@@ -3014,7 +3196,7 @@ class _MembersContentState extends State<MembersContent> {
 
             border: Border(bottom: BorderSide(color: Colors.grey.shade100)),
 
-            color: isDisabled ? Colors.red.shade50.withOpacity(0.3) : (isPrivilege ? const Color(0xFFFFFDE7).withOpacity(0.35) : null),
+            color: isRejected ? Colors.red.shade50.withOpacity(0.4) : (isDisabled ? Colors.red.shade50.withOpacity(0.3) : (isPrivilege ? const Color(0xFFFFFDE7).withOpacity(0.35) : null)),
 
           ),
 
@@ -3027,93 +3209,65 @@ class _MembersContentState extends State<MembersContent> {
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
 
                 decoration: BoxDecoration(
-
                   color: isDisabled
-
                       ? Colors.red.shade50
-
-                      : (isPrivilege
-
-                          ? const Color(0xFFFFF8E1)
-
-                          : ((role == '1' || role == '4')
-                              ? const Color(0xFFF3E5F5)
-                              : (role == '2' ? Colors.orange.shade50 : const Color(0xFFFDECEB)))),
-
+                      : (isRejected
+                          ? const Color(0xFFFFEBEE)
+                          : (isPrivilege
+                              ? const Color(0xFFFFF8E1)
+                              : ((role == '1' || role == '4')
+                                  ? const Color(0xFFF3E5F5)
+                                  : (role == '2' ? Colors.orange.shade50 : const Color(0xFFFDECEB))))),
                   borderRadius: BorderRadius.circular(4),
-
                   border: Border.all(
-
                     color: isDisabled
-
                         ? Colors.red.shade300
-
-                        : (isPrivilege
-
-                            ? const Color(0xFFC49A3C)
-
-                            : ((role == '1' || role == '4')
-                                ? const Color(0xFFCE93D8)
-                                : (role == '2' ? Colors.orange.shade200 : const Color(0xFFE5A09D)))),
-
-                  ),
-
-                ),
-
-                child: FittedBox(
-
-                  fit: BoxFit.scaleDown,
-
-                  child: Row(
-
-                    mainAxisSize: MainAxisSize.min,
-
-                    children: [
-
-                      if (isPrivilege && !isDisabled) ...[
-
-                        const Icon(Icons.stars_rounded, size: 12, color: Color(0xFF8D6E18)),
-
-                        const SizedBox(width: 3),
-
-                      ],
-
-                      Text(
-
-                        isDisabled
-
-                            ? 'DISABLED'
-
+                        : (isRejected
+                            ? Colors.red.shade400
                             : (isPrivilege
-
-                                ? (isTa ? 'à®šà®¿à®±à®ªà¯à®ªà¯' : 'PRIVILEGE')
-
+                                ? const Color(0xFFC49A3C)
                                 : ((role == '1' || role == '4')
-                                    ? (isTa ? 'மேலாளர்' : 'MANAGER')
-                                    : (role == '2'
-                                        ? (isTa ? 'ஒருங்கிணைப்பாளர்' : 'COORDINATOR')
-                                        : (isTa ? 'உறுப்பினர்' : 'MEMBER')))),
-
+                                    ? const Color(0xFFCE93D8)
+                                    : (role == '2' ? Colors.orange.shade200 : const Color(0xFFE5A09D))))),
+                  ),
+                ),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (isRejected) ...[
+                        Icon(Icons.cancel_outlined, size: 11, color: Colors.red.shade800),
+                        const SizedBox(width: 3),
+                      ] else if (isPrivilege && !isDisabled) ...[
+                        const Icon(Icons.stars_rounded, size: 12, color: Color(0xFF8D6E18)),
+                        const SizedBox(width: 3),
+                      ],
+                      Text(
+                        isDisabled
+                            ? 'DISABLED'
+                            : (isRejected
+                                ? (isTa ? 'நிராகரிக்கப்பட்டது' : 'REJECTED')
+                                : (isPrivilege
+                                    ? (isTa ? 'சிறப்பு' : 'PRIVILEGE')
+                                    : ((role == '1' || role == '4')
+                                        ? (isTa ? 'மேலாளர்' : 'MANAGER')
+                                        : (role == '2'
+                                            ? (isTa ? 'ஒருங்கிணைப்பாளர்' : 'COORDINATOR')
+                                            : (isTa ? 'உறுப்பினர்' : 'MEMBER'))))),
                         style: TextStyle(
-
                           color: isDisabled
-
                               ? Colors.red.shade700
-
-                              : (isPrivilege
-
-                                  ? const Color(0xFF8D6E18)
-
-                                  : ((role == '1' || role == '4')
-                                      ? const Color(0xFF6A1B9A)
-                                      : (role == '2' ? Colors.orange.shade700 : const Color(0xFF5D1712)))),
-
+                              : (isRejected
+                                  ? Colors.red.shade800
+                                  : (isPrivilege
+                                      ? const Color(0xFF8D6E18)
+                                      : ((role == '1' || role == '4')
+                                          ? const Color(0xFF6A1B9A)
+                                          : (role == '2' ? Colors.orange.shade700 : const Color(0xFF5D1712))))),
                           fontSize: 10,
-
                           fontWeight: FontWeight.bold,
-
                         ),
-
                       ),
 
                     ],
@@ -3742,6 +3896,72 @@ class _MembersContentState extends State<MembersContent> {
 
 
 
+  List<String> _cleanVillagesList(dynamic dataList) {
+    if (dataList == null) return [];
+    return List<String>.from(dataList)
+        .map((e) => e.trim())
+        .where((v) => v.isNotEmpty && v != '-' && v != '--' && v != '---' && v.toLowerCase() != 'n/a' && v.toLowerCase() != 'na' && v.toLowerCase() != 'null' && v.toLowerCase() != 'none')
+        .toList();
+  }
+
+  Future<void> _fetchAllVillages() async {
+    setState(() => _isLoadingVillages = true);
+    try {
+      final response = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/villages'));
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final list = _cleanVillagesList(data['data']);
+        setState(() {
+          _allVillages = list;
+          if (_selectedDistrict == null && _selectedTaluk == null && _selectedPanchayat == null) {
+            _villages = List.from(list);
+          }
+          _isLoadingVillages = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching all villages: $e');
+      setState(() => _isLoadingVillages = false);
+    }
+  }
+
+  Future<void> _fetchVillagesForDistrict(String district) async {
+    setState(() => _isLoadingVillages = true);
+    try {
+      final response = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/villages?district=${Uri.encodeComponent(district)}'));
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        setState(() {
+          _villages = _cleanVillagesList(data['data']);
+          _isLoadingVillages = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching villages for district: $e');
+      setState(() => _isLoadingVillages = false);
+    }
+  }
+
+  Future<void> _fetchVillagesForTaluk(String taluk) async {
+    setState(() => _isLoadingVillages = true);
+    try {
+      final query = _selectedDistrict != null
+          ? 'taluk=${Uri.encodeComponent(taluk)}&district=${Uri.encodeComponent(_selectedDistrict!)}'
+          : 'taluk=${Uri.encodeComponent(taluk)}';
+      final response = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/villages?$query'));
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        setState(() {
+          _villages = _cleanVillagesList(data['data']);
+          _isLoadingVillages = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching villages for taluk: $e');
+      setState(() => _isLoadingVillages = false);
+    }
+  }
+
   Future<void> _fetchDistricts() async {
 
     setState(() => _isLoadingDistricts = true);
@@ -3790,11 +4010,11 @@ class _MembersContentState extends State<MembersContent> {
 
       _selectedPanchayat = null;
 
-      _villages = [];
-
       _selectedVillage = null;
 
     });
+
+    _fetchVillagesForDistrict(district);
 
     try {
 
@@ -3836,11 +4056,11 @@ class _MembersContentState extends State<MembersContent> {
 
       _selectedPanchayat = null;
 
-      _villages = [];
-
       _selectedVillage = null;
 
     });
+
+    _fetchVillagesForTaluk(taluk);
 
     try {
 
@@ -3894,7 +4114,7 @@ class _MembersContentState extends State<MembersContent> {
 
         setState(() {
 
-          _villages = List<String>.from(data['data']);
+          _villages = _cleanVillagesList(data['data']);
 
           _isLoadingVillages = false;
 
@@ -4574,53 +4794,69 @@ class _MembersContentState extends State<MembersContent> {
                         children: [
 
                           SizedBox(width: itemWidth, child: _buildFilterDropdown(AppLocalizations.of(context)?.districtsLabel ?? 'Districts:', _districts, _selectedDistrict, (v) {
-
-                            if (v != null) {
-
+                            if (v != null && v.isNotEmpty) {
                               setState(() => _selectedDistrict = v);
-
                               _fetchTaluks(v);
-
                               _fetchMembers();
-
+                            } else {
+                              setState(() {
+                                _selectedDistrict = null;
+                                _selectedTaluk = null;
+                                _selectedPanchayat = null;
+                                _selectedVillage = null;
+                                _taluks = [];
+                                _panchayats = [];
+                                _villages = List.from(_allVillages);
+                              });
+                              _fetchMembers();
                             }
-
                           }, isLoading: _isLoadingDistricts)),
 
                           SizedBox(width: itemWidth, child: _buildFilterDropdown(AppLocalizations.of(context)?.taluksLabel ?? 'Taluks:', _taluks, _selectedTaluk, (v) {
-
-                            if (v != null) {
-
+                            if (v != null && v.isNotEmpty) {
                               setState(() => _selectedTaluk = v);
-
                               _fetchPanchayats(v);
-
                               _fetchMembers();
-
+                            } else {
+                              setState(() {
+                                _selectedTaluk = null;
+                                _selectedPanchayat = null;
+                                _selectedVillage = null;
+                                _panchayats = [];
+                              });
+                              if (_selectedDistrict != null) {
+                                _fetchVillagesForDistrict(_selectedDistrict!);
+                              } else {
+                                setState(() => _villages = List.from(_allVillages));
+                              }
+                              _fetchMembers();
                             }
-
                           }, isLoading: _isLoadingTaluks)),
 
                           SizedBox(width: itemWidth, child: _buildFilterDropdown(AppLocalizations.of(context)?.panchayatsLabel ?? 'Panchayats:', _panchayats, _selectedPanchayat, (v) {
-
-                            if (v != null) {
-
+                            if (v != null && v.isNotEmpty) {
                               setState(() => _selectedPanchayat = v);
-
                               _fetchVillages(v);
-
                               _fetchMembers();
-
+                            } else {
+                              setState(() {
+                                _selectedPanchayat = null;
+                                _selectedVillage = null;
+                              });
+                              if (_selectedTaluk != null) {
+                                _fetchVillagesForTaluk(_selectedTaluk!);
+                              } else if (_selectedDistrict != null) {
+                                _fetchVillagesForDistrict(_selectedDistrict!);
+                              } else {
+                                setState(() => _villages = List.from(_allVillages));
+                              }
+                              _fetchMembers();
                             }
-
                           }, isLoading: _isLoadingPanchayats)),
 
                           SizedBox(width: itemWidth, child: _buildFilterDropdown(AppLocalizations.of(context)?.villagesLabel ?? 'Villages:', _villages, _selectedVillage, (v) {
-
-                            setState(() => _selectedVillage = v);
-
+                            setState(() => _selectedVillage = (v != null && v.isNotEmpty) ? v : null);
                             _fetchMembers();
-
                           }, isLoading: _isLoadingVillages)),
 
                         ],
@@ -4742,17 +4978,22 @@ class _MembersContentState extends State<MembersContent> {
                           width: itemWidth,
                           child: _buildFilterDropdown(
                             isTa ? 'உறுப்பினர் வகை:' : 'Member Type:',
-                            isTa ? ['அனைத்தும்', 'சிறப்பு உறுப்பினர் (Privilege)', 'வழக்கமான உறுப்பினர் (Standard)'] : _privilegeTypes,
+                            isTa ? ['அனைத்தும்', 'சிறப்பு உறுப்பினர் (Privilege)', 'வழக்கமான உறுப்பினர் (Standard)', 'நிராகரிக்கப்பட்டவை (Rejected)'] : _privilegeTypes,
                             isTa
                                 ? (_selectedPrivilegeType == 'Privilege Member'
                                     ? 'சிறப்பு உறுப்பினர் (Privilege)'
-                                    : (_selectedPrivilegeType == 'Standard Member' ? 'வழக்கமான உறுப்பினர் (Standard)' : 'அனைத்தும்'))
+                                    : (_selectedPrivilegeType == 'Standard Member'
+                                        ? 'வழக்கமான உறுப்பினர் (Standard)'
+                                        : (_selectedPrivilegeType == 'Rejected Member'
+                                            ? 'நிராகரிக்கப்பட்டவை (Rejected)'
+                                            : 'அனைத்தும்')))
                                 : _selectedPrivilegeType,
                             (v) {
                               if (v != null) {
                                 if (isTa) {
                                   if (v == 'சிறப்பு உறுப்பினர் (Privilege)') _selectedPrivilegeType = 'Privilege Member';
                                   else if (v == 'வழக்கமான உறுப்பினர் (Standard)') _selectedPrivilegeType = 'Standard Member';
+                                  else if (v == 'நிராகரிக்கப்பட்டவை (Rejected)') _selectedPrivilegeType = 'Rejected Member';
                                   else _selectedPrivilegeType = 'All';
                                 } else {
                                   _selectedPrivilegeType = v;
@@ -5229,6 +5470,12 @@ class _MembersContentState extends State<MembersContent> {
 
       _selectedVillage = null;
 
+      _taluks = [];
+
+      _panchayats = [];
+
+      _villages = List.from(_allVillages);
+
       _selectedBloodGroup = null;
 
       _selectedGender = 'All';
@@ -5305,7 +5552,7 @@ class _MembersContentState extends State<MembersContent> {
               ),
               const SizedBox(width: 14),
               Expanded(
-                flex: 5,
+                flex: 6,
                 child: _buildMemberTypeQuickFilter(isTa),
               ),
             ],
@@ -5416,6 +5663,29 @@ class _MembersContentState extends State<MembersContent> {
                     ),
                   ],
                 ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildQuickFilterPill(
+                        label: isTa ? 'நிராகரிக்கப்பட்டவை' : 'Rejected Members',
+                        icon: Icons.cancel_outlined,
+                        iconColor: Colors.red.shade700,
+                        isSelected: _selectedPrivilegeType == 'Rejected Member',
+                        selectedBgColor: const Color(0xFFFFEBEE),
+                        selectedBorderColor: Colors.red.shade700,
+                        selectedTextColor: Colors.red.shade800,
+                        isFullWidth: true,
+                        onTap: () {
+                          if (_selectedPrivilegeType != 'Rejected Member') {
+                            setState(() => _selectedPrivilegeType = 'Rejected Member');
+                            _fetchMembers();
+                          }
+                        },
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
           );
@@ -5456,6 +5726,22 @@ class _MembersContentState extends State<MembersContent> {
             onTap: () {
               if (_selectedPrivilegeType != 'Standard Member') {
                 setState(() => _selectedPrivilegeType = 'Standard Member');
+                _fetchMembers();
+              }
+            },
+          ),
+          const SizedBox(width: 8),
+          _buildQuickFilterPill(
+            label: isTa ? 'நிராகரிக்கப்பட்டவை' : 'Rejected Members',
+            icon: Icons.cancel_outlined,
+            iconColor: Colors.red.shade700,
+            isSelected: _selectedPrivilegeType == 'Rejected Member',
+            selectedBgColor: const Color(0xFFFFEBEE),
+            selectedBorderColor: Colors.red.shade700,
+            selectedTextColor: Colors.red.shade800,
+            onTap: () {
+              if (_selectedPrivilegeType != 'Rejected Member') {
+                setState(() => _selectedPrivilegeType = 'Rejected Member');
                 _fetchMembers();
               }
             },
