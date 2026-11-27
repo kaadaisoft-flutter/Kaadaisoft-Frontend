@@ -204,10 +204,10 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
 
 
   // Documents
-
   dynamic _memberImage;
-
   dynamic _communityCert;
+  bool _removeMemberImage = false;
+  bool _removeCommunityCert = false;
 
   
 
@@ -613,30 +613,20 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
 
 
     final rawImg = d['Memberimage'] ?? d['member_image'] ?? d['memberimage'] ?? d['passport_photo'] ?? d['ProfilePhoto'];
-
     if (rawImg != null && rawImg.toString().isNotEmpty && rawImg.toString() != 'null' && rawImg.toString() != 'None') {
-
       _memberImage = rawImg.toString();
-
     } else {
-
       _memberImage = null;
-
     }
-
-
+    _removeMemberImage = false;
 
     final rawCert = d['Communitycertificate'] ?? d['Communitycertificateimage'] ?? d['community_cert'] ?? d['community_certificate'] ?? d['communitycertificate'];
-
     if (rawCert != null && rawCert.toString().isNotEmpty && rawCert.toString() != 'null' && rawCert.toString() != 'None') {
-
       _communityCert = rawCert.toString();
-
     } else {
-
       _communityCert = null;
-
     }
+    _removeCommunityCert = false;
 
 
 
@@ -1294,10 +1284,14 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
 
 
 
-      await addFile('member_image', _memberImage);
+      if (_removeMemberImage) {
+        request.fields['remove_member_image'] = 'true';
+      }
+      if (_removeCommunityCert) {
+        request.fields['remove_community_cert'] = 'true';
+      }
 
       await addFile('member_image', _memberImage);
-
       await addFile('community_cert', _communityCert);
 
 
@@ -2660,173 +2654,164 @@ class _UpdateDetailsContentState extends State<UpdateDetailsContent> {
 
 
   Widget _buildDocumentsSection(bool isMobile) {
-
     return Container(
-
       padding: const EdgeInsets.all(24),
-
       decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.grey.shade200)),
-
       child: Column(children: [
-
         _row(isMobile, [
-
-          _fileUploadField(AppLocalizations.of(context)?.passportPhotoLabel ?? 'Passport Photo', _memberImage, (file) => setState(() => _memberImage = file), isImageOnly: true),
-
-          _fileUploadField(AppLocalizations.of(context)?.communityCertificateLabel ?? 'Community Certificate', _communityCert, (file) => setState(() => _communityCert = file), isImageOnly: false),
-
+          _fileUploadField(
+            AppLocalizations.of(context)?.passportPhotoLabel ?? 'Passport Photo',
+            _memberImage,
+            (file) => setState(() {
+              _memberImage = file;
+              _removeMemberImage = false;
+            }),
+            isImageOnly: true,
+            onRemoved: () {
+              setState(() {
+                _memberImage = null;
+                _removeMemberImage = true;
+              });
+            },
+          ),
+          _fileUploadField(
+            AppLocalizations.of(context)?.communityCertificateLabel ?? 'Community Certificate',
+            _communityCert,
+            (file) => setState(() {
+              _communityCert = file;
+              _removeCommunityCert = false;
+            }),
+            isImageOnly: false,
+            onRemoved: () {
+              setState(() {
+                _communityCert = null;
+                _removeCommunityCert = true;
+              });
+            },
+          ),
         ]),
-
       ]),
-
     );
-
   }
 
-
-
-  Widget _fileUploadField(String label, dynamic file, ValueChanged<dynamic> onPicked, {bool isImageOnly = false}) {
-
+  Widget _fileUploadField(
+    String label,
+    dynamic file,
+    ValueChanged<dynamic> onPicked, {
+    bool isImageOnly = false,
+    VoidCallback? onRemoved,
+  }) {
     String fileName = AppLocalizations.of(context)?.chooseFile ?? 'Choose file...';
-
     Widget? previewWidget;
-
-
+    bool hasFile = false;
 
     if (file != null) {
-
-       if (file is String && file.isNotEmpty && file != 'null' && file != 'None') {
-
-         final cleanName = file.split('?').first.split('/').last.split('\\').last;
-
-         final existingPrefix = AppLocalizations.of(context)?.existingFile ?? "Existing file: ";
-
-         fileName = '$existingPrefix$cleanName';
-
-         bool isPdf = cleanName.toLowerCase().endsWith('.pdf');
-
-         if (isPdf) {
-
-           previewWidget = const Icon(Icons.picture_as_pdf, color: Colors.red, size: 30);
-
-         } else {
-
-           final imageUrl = file.startsWith('http') ? file : '${ApiConfig.baseUrl}/assets/uploads/$cleanName';
-
-           previewWidget = ClipRRect(
-
-             borderRadius: BorderRadius.circular(4), 
-
-             child: Image.network(
-
-               imageUrl, 
-
-               width: 40, 
-
-               height: 40, 
-
-               fit: BoxFit.cover, 
-
-               errorBuilder: (c,e,s) => const Icon(Icons.insert_drive_file, size: 28, color: _gold)
-
-             )
-
-           );
-
-         }
-
-       } else if (file is XFile) {
-
-         fileName = file.name;
-
-         bool isPdf = fileName.toLowerCase().endsWith('.pdf');
-
-         if (isPdf) {
-
-           previewWidget = const Icon(Icons.picture_as_pdf, color: Colors.red, size: 30);
-
-         } else {
-
-           if (kIsWeb) {
-
-             previewWidget = ClipRRect(borderRadius: BorderRadius.circular(4), child: Image.network(file.path, width: 40, height: 40, fit: BoxFit.cover, errorBuilder: (c,e,s) => const Icon(Icons.image, size: 30, color: _gold)));
-
-           } else {
-
-             previewWidget = ClipRRect(borderRadius: BorderRadius.circular(4), child: Image.file(File(file.path), width: 40, height: 40, fit: BoxFit.cover, errorBuilder: (c,e,s) => const Icon(Icons.image, size: 30, color: _gold)));
-
-           }
-
-         }
-
-       }
-
+      if (file is String && file.isNotEmpty && file != 'null' && file != 'None') {
+        hasFile = true;
+        final cleanName = file.split('?').first.split('/').last.split('\\').last;
+        final existingPrefix = AppLocalizations.of(context)?.existingFile ?? "Existing file: ";
+        fileName = '$existingPrefix$cleanName';
+        bool isPdf = cleanName.toLowerCase().endsWith('.pdf');
+        if (isPdf) {
+          previewWidget = const Icon(Icons.picture_as_pdf, color: Colors.red, size: 28);
+        } else {
+          final imageUrl = file.startsWith('http') ? file : '${ApiConfig.baseUrl}/assets/uploads/$cleanName';
+          previewWidget = ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: Image.network(
+              imageUrl,
+              width: 36,
+              height: 36,
+              fit: BoxFit.cover,
+              errorBuilder: (c, e, s) => const Icon(Icons.insert_drive_file, size: 28, color: _gold),
+            ),
+          );
+        }
+      } else if (file is XFile) {
+        hasFile = true;
+        fileName = file.name;
+        bool isPdf = fileName.toLowerCase().endsWith('.pdf');
+        if (isPdf) {
+          previewWidget = const Icon(Icons.picture_as_pdf, color: Colors.red, size: 28);
+        } else {
+          if (kIsWeb) {
+            previewWidget = ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: Image.network(file.path, width: 36, height: 36, fit: BoxFit.cover, errorBuilder: (c, e, s) => const Icon(Icons.image, size: 28, color: _gold)),
+            );
+          } else {
+            previewWidget = ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: Image.file(File(file.path), width: 36, height: 36, fit: BoxFit.cover, errorBuilder: (c, e, s) => const Icon(Icons.image, size: 28, color: _gold)),
+            );
+          }
+        }
+      }
     }
 
-
-
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-
       _buildLabelText(label),
-
       const SizedBox(height: 8),
-
-      Material(
-
-        color: Colors.transparent,
-
-        child: InkWell(
-
-          onTap: () => _pickFile(onPicked, isImageOnly: isImageOnly),
-
+      Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade50,
           borderRadius: BorderRadius.circular(8),
-
-          child: Container(
-
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-
-            decoration: BoxDecoration(
-
-              color: Colors.grey.shade50,
-
-              borderRadius: BorderRadius.circular(8),
-
-              border: Border.all(color: Colors.grey.shade300),
-
-            ),
-
-            child: Row(
-
-              children: [
-
-                if (previewWidget != null) ...[
-
-                  previewWidget!,
-
-                  const SizedBox(width: 12),
-
-                ] else ...[
-
-                  const Icon(Icons.upload_file, size: 18, color: _gold),
-
-                  const SizedBox(width: 8),
-
-                ],
-
-                Expanded(child: Text(fileName, style: const TextStyle(fontSize: 13, color: Colors.black87), overflow: TextOverflow.ellipsis)),
-
-              ],
-
-            ),
-
-          ),
-
+          border: Border.all(color: Colors.grey.shade300),
         ),
-
+        child: Row(
+          children: [
+            Expanded(
+              child: InkWell(
+                onTap: () => _pickFile(onPicked, isImageOnly: isImageOnly),
+                borderRadius: BorderRadius.circular(6),
+                child: Row(
+                  children: [
+                    if (previewWidget != null) ...[
+                      previewWidget,
+                      const SizedBox(width: 12),
+                    ] else ...[
+                      const Icon(Icons.upload_file, size: 18, color: _gold),
+                      const SizedBox(width: 8),
+                    ],
+                    Expanded(
+                      child: Text(
+                        fileName,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: hasFile ? Colors.black87 : Colors.grey.shade600,
+                          fontWeight: hasFile ? FontWeight.w500 : FontWeight.normal,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            if (hasFile && onRemoved != null) ...[
+              const SizedBox(width: 8),
+              Tooltip(
+                message: 'Remove',
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(16),
+                  onTap: onRemoved,
+                  child: Container(
+                    padding: const EdgeInsets.all(5),
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade50,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.red.shade200),
+                    ),
+                    child: const Icon(Icons.close, color: Colors.red, size: 16),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
-
     ]);
-
   }
 
 

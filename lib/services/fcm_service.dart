@@ -45,6 +45,7 @@ class FcmService {
         if (message.notification != null) {
           debugPrint('Message also contained a notification: ${message.notification}');
         }
+        _onForegroundMessageHandler?.call(message);
       });
     } else {
       debugPrint('User declined or has not accepted permission');
@@ -52,6 +53,11 @@ class FcmService {
   }
 
   static Function(Map<String, dynamic> data)? _onNotificationClickedHandler;
+  static Function(RemoteMessage message)? _onForegroundMessageHandler;
+
+  static void listenForegroundMessages(Function(RemoteMessage message) handler) {
+    _onForegroundMessageHandler = handler;
+  }
 
   static void listenNotificationClicks(Function(Map<String, dynamic> data) handler) {
     _onNotificationClickedHandler = handler;

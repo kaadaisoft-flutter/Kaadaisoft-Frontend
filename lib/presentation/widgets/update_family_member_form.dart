@@ -107,6 +107,8 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
 
   XFile? _memberImage;
   XFile? _communityCert;
+  bool _removeMemberImage = false;
+  bool _removeCommunityCert = false;
 
   bool _isAgreed = false;
   bool _whatsappSameAsPhone = false;
@@ -1294,36 +1296,44 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
     String? existingUrl;
     if (type == 'member_image') {
       file = _memberImage;
-      existingUrl = widget.memberData['Memberimage'] ?? widget.memberData['member_image'] ?? widget.memberData['memberimage'] ?? widget.memberData['passport_photo'];
+      if (!_removeMemberImage) {
+        existingUrl = widget.memberData['Memberimage'] ?? widget.memberData['member_image'] ?? widget.memberData['memberimage'] ?? widget.memberData['passport_photo'];
+      }
     }
     if (type == 'community_cert') {
       file = _communityCert;
-      existingUrl = widget.memberData['Communitycertificate'] ?? widget.memberData['Communitycertificateimage'] ?? widget.memberData['community_cert'] ?? widget.memberData['community_certificate'] ?? widget.memberData['communitycertificate'];
+      if (!_removeCommunityCert) {
+        existingUrl = widget.memberData['Communitycertificate'] ?? widget.memberData['Communitycertificateimage'] ?? widget.memberData['community_cert'] ?? widget.memberData['community_certificate'] ?? widget.memberData['communitycertificate'];
+      }
     }
 
     Widget? previewWidget;
     String displayFileName = AppLocalizations.of(context)?.chooseFile ?? 'Choose file...';
+    bool hasFile = false;
 
     if (file != null) {
+      hasFile = true;
       displayFileName = file.name;
       bool isPdf = displayFileName.toLowerCase().endsWith('.pdf');
       if (isPdf) {
-        previewWidget = const Icon(Icons.picture_as_pdf, color: Colors.red, size: 30);
+        previewWidget = const Icon(Icons.picture_as_pdf, color: Colors.red, size: 28);
       } else {
         if (kIsWeb) {
-          previewWidget = ClipRRect(borderRadius: BorderRadius.circular(4), child: Image.network(file.path, width: 40, height: 40, fit: BoxFit.cover, errorBuilder: (c,e,s) => Icon(Icons.image, size: 30, color: mediumBrown)));
+          previewWidget = ClipRRect(borderRadius: BorderRadius.circular(4), child: Image.network(file.path, width: 36, height: 36, fit: BoxFit.cover, errorBuilder: (c,e,s) => Icon(Icons.image, size: 28, color: mediumBrown)));
         } else {
-          previewWidget = ClipRRect(borderRadius: BorderRadius.circular(4), child: Image.file(File(file.path), width: 40, height: 40, fit: BoxFit.cover, errorBuilder: (c,e,s) => Icon(Icons.image, size: 30, color: mediumBrown)));
+          previewWidget = ClipRRect(borderRadius: BorderRadius.circular(4), child: Image.file(File(file.path), width: 36, height: 36, fit: BoxFit.cover, errorBuilder: (c,e,s) => Icon(Icons.image, size: 28, color: mediumBrown)));
         }
       }
-    } else if (existingUrl != null && existingUrl.isNotEmpty && existingUrl != 'No image') {
-      displayFileName = existingUrl.split('/').last;
-      bool isPdf = displayFileName.toLowerCase().endsWith('.pdf');
+    } else if (existingUrl != null && existingUrl.isNotEmpty && existingUrl != 'No image' && existingUrl != 'null') {
+      hasFile = true;
+      final cleanName = existingUrl.split('?').first.split('/').last.split('\\').last;
+      displayFileName = '${AppLocalizations.of(context)?.existingFile ?? "Existing file: "}$cleanName';
+      bool isPdf = cleanName.toLowerCase().endsWith('.pdf');
       if (isPdf) {
-        previewWidget = const Icon(Icons.picture_as_pdf, color: Colors.red, size: 30);
+        previewWidget = const Icon(Icons.picture_as_pdf, color: Colors.red, size: 28);
       } else {
-        String url = existingUrl.startsWith('http') ? existingUrl : '${ApiConfig.baseUrl}/assets/uploads/$existingUrl';
-        previewWidget = ClipRRect(borderRadius: BorderRadius.circular(4), child: Image.network(url, width: 40, height: 40, fit: BoxFit.cover, errorBuilder: (c,e,s) => Icon(Icons.image, size: 30, color: mediumBrown)));
+        String url = existingUrl.startsWith('http') ? existingUrl : '${ApiConfig.baseUrl}/assets/uploads/$cleanName';
+        previewWidget = ClipRRect(borderRadius: BorderRadius.circular(4), child: Image.network(url, width: 36, height: 36, fit: BoxFit.cover, errorBuilder: (c,e,s) => Icon(Icons.image, size: 28, color: mediumBrown)));
       }
     }
 
@@ -1332,66 +1342,111 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
       children: [
         _buildLabelText(label, fontSize: 12),
         const SizedBox(height: 8),
-        InkWell(
-          onTap: () async {
-            final bool isPassport = type == 'member_image';
-            final allowedExtensions = isPassport ? ['jpg', 'jpeg', 'png', 'webp'] : ['jpg', 'jpeg', 'png', 'pdf'];
-            final result = await fp_pkg.FilePicker.pickFiles(
-              type: fp_pkg.FileType.custom,
-              allowedExtensions: allowedExtensions,
-              withData: kIsWeb,
-            );
-            if (result != null && result.files.isNotEmpty) {
-              final file = result.files.single;
-              final ext = (file.extension ?? file.name.split('.').last).toLowerCase();
-              if (!allowedExtensions.contains(ext)) {
-                if (mounted) {
-                  showStatusDialog(
-                    context,
-                    title: 'Validation Error',
-                    message: isPassport
-                        ? 'Only image files (JPG, JPEG, PNG, WEBP) are allowed for Passport Photo.'
-                        : 'Only JPG, JPEG, PNG, and PDF document formats are supported.',
-                    type: DialogType.error,
-                  );
-                }
-                return;
-              }
-              if (file.size > 5 * 1024 * 1024) {
-                if (mounted) {
-                  showStatusDialog(
-                    context,
-                    title: 'Validation Error',
-                    message: 'File size exceeds the allowed limit of 5 MB.',
-                    type: DialogType.error,
-                  );
-                }
-                return;
-              }
-              setState(() {
-                _markChanged();
-                final xfile = kIsWeb 
-                    ? (file.path != null ? XFile(file.path!, name: file.name) : XFile.fromData(file.bytes!, name: file.name)) 
-                    : XFile(file.path!, name: file.name);
-                if (type == 'member_image') _memberImage = xfile;
-                if (type == 'community_cert') _communityCert = xfile;
-              });
-            }
-          },
-          child: Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(border: Border.all(color: borderColor), borderRadius: BorderRadius.circular(10), color: Colors.white),
-            child: Row(children: [
-              previewWidget ?? Icon(Icons.upload_file, size: 18, color: mediumBrown),
-              const SizedBox(width: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(border: Border.all(color: borderColor), borderRadius: BorderRadius.circular(10), color: Colors.white),
+          child: Row(
+            children: [
               Expanded(
-                child: Text(
-                  file?.name ?? (existingUrl != null && existingUrl.isNotEmpty ? '${AppLocalizations.of(context)?.existingFile ?? "Existing file: "}${existingUrl.split('/').last}' : (AppLocalizations.of(context)?.chooseFile ?? 'Choose file...')),
-                  style: const TextStyle(fontSize: 12, color: Colors.grey),
-                  overflow: TextOverflow.ellipsis
-                )
+                child: InkWell(
+                  onTap: () async {
+                    final bool isPassport = type == 'member_image';
+                    final allowedExtensions = isPassport ? ['jpg', 'jpeg', 'png', 'webp'] : ['jpg', 'jpeg', 'png', 'pdf'];
+                    final result = await fp_pkg.FilePicker.pickFiles(
+                      type: fp_pkg.FileType.custom,
+                      allowedExtensions: allowedExtensions,
+                      withData: kIsWeb,
+                    );
+                    if (result != null && result.files.isNotEmpty) {
+                      final pickedFile = result.files.single;
+                      final ext = (pickedFile.extension ?? pickedFile.name.split('.').last).toLowerCase();
+                      if (!allowedExtensions.contains(ext)) {
+                        if (mounted) {
+                          showStatusDialog(
+                            context,
+                            title: 'Validation Error',
+                            message: isPassport
+                                ? 'Only image files (JPG, JPEG, PNG, WEBP) are allowed for Passport Photo.'
+                                : 'Only JPG, JPEG, PNG, and PDF document formats are supported.',
+                            type: DialogType.error,
+                          );
+                        }
+                        return;
+                      }
+                      if (pickedFile.size > 5 * 1024 * 1024) {
+                        if (mounted) {
+                          showStatusDialog(
+                            context,
+                            title: 'Validation Error',
+                            message: 'File size exceeds the allowed limit of 5 MB.',
+                            type: DialogType.error,
+                          );
+                        }
+                        return;
+                      }
+                      setState(() {
+                        _markChanged();
+                        final xfile = kIsWeb 
+                            ? (pickedFile.path != null ? XFile(pickedFile.path!, name: pickedFile.name) : XFile.fromData(pickedFile.bytes!, name: pickedFile.name)) 
+                            : XFile(pickedFile.path!, name: pickedFile.name);
+                        if (type == 'member_image') {
+                          _memberImage = xfile;
+                          _removeMemberImage = false;
+                        }
+                        if (type == 'community_cert') {
+                          _communityCert = xfile;
+                          _removeCommunityCert = false;
+                        }
+                      });
+                    }
+                  },
+                  borderRadius: BorderRadius.circular(6),
+                  child: Row(
+                    children: [
+                      previewWidget ?? Icon(Icons.upload_file, size: 18, color: mediumBrown),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          displayFileName,
+                          style: TextStyle(fontSize: 12, color: hasFile ? Colors.black87 : Colors.grey, fontWeight: hasFile ? FontWeight.w500 : FontWeight.normal),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
-            ]),
+              if (hasFile) ...[
+                const SizedBox(width: 8),
+                Tooltip(
+                  message: 'Remove',
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(16),
+                    onTap: () {
+                      setState(() {
+                        _markChanged();
+                        if (type == 'member_image') {
+                          _memberImage = null;
+                          _removeMemberImage = true;
+                        } else {
+                          _communityCert = null;
+                          _removeCommunityCert = true;
+                        }
+                      });
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(5),
+                      decoration: BoxDecoration(
+                        color: Colors.red.shade50,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.red.shade200),
+                      ),
+                      child: const Icon(Icons.close, color: Colors.red, size: 16),
+                    ),
+                  ),
+                ),
+              ],
+            ],
           ),
         ),
       ],
@@ -1570,6 +1625,13 @@ class _UpdateFamilyMemberFormState extends State<UpdateFamilyMemberForm> {
         } else {
           request.files.add(await http.MultipartFile.fromPath(field, file.path));
         }
+      }
+
+      if (_removeMemberImage) {
+        request.fields['remove_member_image'] = 'true';
+      }
+      if (_removeCommunityCert) {
+        request.fields['remove_community_cert'] = 'true';
       }
 
       await addFile('member_image', _memberImage);

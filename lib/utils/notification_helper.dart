@@ -27,4 +27,30 @@ class NotificationHelper {
       margin: const EdgeInsets.only(top: 20, right: 20),
     );
   }
+
+  static void showPushNotificationBanner(
+    BuildContext context, {
+    required String title,
+    required String body,
+    VoidCallback? onTap,
+  }) {
+    toastification.show(
+      context: context,
+      type: ToastificationType.info,
+      style: ToastificationStyle.flatColored,
+      primaryColor: const Color(0xFF5D1712),
+      title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+      description: Text(body, style: const TextStyle(fontSize: 13)),
+      alignment: Alignment.topRight,
+      autoCloseDuration: const Duration(seconds: 6),
+      showProgressBar: true,
+      callbacks: ToastificationCallbacks(
+        onTap: (toastItem) {
+          toastification.dismiss(toastItem);
+          onTap?.call();
+        },
+      ),
+      margin: const EdgeInsets.only(top: 20, right: 20),
+    );
+  }
 }

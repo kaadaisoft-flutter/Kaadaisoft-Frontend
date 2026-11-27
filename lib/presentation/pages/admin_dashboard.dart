@@ -454,6 +454,40 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
           }
         }
       });
+
+      FcmService.listenForegroundMessages((message) {
+        if (!mounted) return;
+        _fetchStats();
+        if (widget.userRole == 3) {
+          _fetchMemberNotifications();
+        }
+        final title = message.notification?.title ?? message.data['title'] ?? 'New Notification';
+        final body = message.notification?.body ?? message.data['body'] ?? '';
+        final target = message.data['target'] ?? message.data['page'] ?? '';
+
+        NotificationHelper.showPushNotificationBanner(
+          context,
+          title: title,
+          body: body,
+          onTap: () {
+            if (widget.userRole == 3) {
+              _showMemberNotificationsDialog();
+            } else {
+              if (target == 'Update Requests' || target == 'update_request') {
+                _navigateTo('Update Requests');
+              } else if (target == 'Received Applications' || target == 'application') {
+                _navigateTo('Received Applications');
+              } else if (target == 'Payments' || target == 'payment') {
+                _navigateTo('Payments');
+              } else if (target == 'Events' || target == 'event') {
+                _navigateTo('Events');
+              } else {
+                _navigateTo('Update Requests');
+              }
+            }
+          },
+        );
+      });
     });
   }
 

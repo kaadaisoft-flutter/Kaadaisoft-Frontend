@@ -1389,6 +1389,122 @@ class _MembersContentState extends State<MembersContent> {
 
 
 
+  Future<void> _approveMember(String memberId, String name) async {
+    final bool isTa = Localizations.localeOf(context).languageCode == 'ta';
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        title: Row(
+          children: [
+            Icon(Icons.check_circle_outline, color: Colors.green.shade700, size: 24),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                isTa ? 'உறுப்பினரை அங்கீகரி: $name' : 'Approve Member: $name',
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          isTa
+              ? 'இந்த உறுப்பினரை நீங்கள் நிச்சயமாக அங்கீகரிக்க விரும்புகிறீர்களா? அவரது விண்ணப்ப நிலை "சரிபார்க்கப்பட்டது" என மீட்டமைக்கப்படும்.'
+              : 'Are you sure you want to approve this member? Their application status will be restored to "Verified".',
+          style: const TextStyle(fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(
+              isTa ? 'ரத்து செய்' : 'Cancel',
+              style: const TextStyle(color: Colors.black54),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF2E7D32),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+            ),
+            child: Text(isTa ? 'அங்கீகரி' : 'Approve'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    setState(() => _isLoading = true);
+    try {
+      final response = await http.post(
+        Uri.parse(ApiConfig.updateApplicationStatus),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'member_id': memberId,
+          'status': 'Verified',
+        }),
+      );
+
+      final resData = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        final int idx = _members.indexWhere((m) => m['Id'].toString() == memberId.toString());
+        if (idx != -1) {
+          setState(() {
+            _members[idx]['Approvedstatus'] = 'Verified';
+            _members[idx]['approvedstatus'] = 'Verified';
+            _members[idx]['RejectReason'] = '';
+            _members[idx]['rejectreason'] = '';
+            _members[idx]['reject_reason'] = '';
+            if (resData['new_fmid'] != null) {
+              _members[idx]['Familymembershipid'] = resData['new_fmid'];
+            }
+          });
+        }
+        if (mounted) {
+          final String fmid = resData['new_fmid'] ?? '';
+          final String successMsg = isTa
+              ? 'உறுப்பினர் வெற்றிகரமாக அங்கீகரிக்கப்பட்டார்!${fmid.isNotEmpty ? '\nகுடும்ப அடையாள எண்: $fmid' : ''}'
+              : 'Member approved successfully!${fmid.isNotEmpty ? '\nFamily ID: $fmid' : ''}';
+          showStatusDialog(
+            context,
+            title: isTa ? 'வெற்றி' : 'Success',
+            message: successMsg,
+            type: DialogType.success,
+          );
+          _fetchMembers();
+        }
+      } else {
+        if (mounted) {
+          final String errorMsg = resData['detail'] ?? (isTa ? 'அங்கீகரிப்பதில் பிழை ஏற்பட்டது' : 'Failed to approve member');
+          showStatusDialog(
+            context,
+            title: isTa ? 'பிழை' : 'Error',
+            message: errorMsg,
+            type: DialogType.error,
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        showStatusDialog(
+          context,
+          title: isTa ? 'பிழை' : 'Error',
+          message: e.toString(),
+          type: DialogType.error,
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
   Future<void> _rejectMember(String memberId, String name) async {
 
     String? selectedReason;
@@ -2831,6 +2947,9 @@ class _MembersContentState extends State<MembersContent> {
                       ),
                       onSelected: (value) {
                         switch (value) {
+                          case 'approve':
+                            _approveMember(memberId, name);
+                            break;
                           case 'id_card':
                             _downloadSingleIdCard(memberId, id);
                             break;
@@ -2889,6 +3008,19 @@ class _MembersContentState extends State<MembersContent> {
                                     onPressed: () => Navigator.pop(ctx),
                                     child: Text(isTa ? 'மூடு' : 'Close'),
                                   ),
+                                  ElevatedButton.icon(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFF2E7D32),
+                                      foregroundColor: Colors.white,
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                                    ),
+                                    onPressed: () {
+                                      Navigator.pop(ctx);
+                                      _approveMember(memberId, name);
+                                    },
+                                    icon: const Icon(Icons.check_circle_outline, size: 16),
+                                    label: Text(isTa ? 'அங்கீகரி' : 'Approve Member'),
+                                  ),
                                 ],
                               ),
                             );
@@ -2899,6 +3031,45 @@ class _MembersContentState extends State<MembersContent> {
                         }
                       },
                       itemBuilder: (BuildContext context) => [
+                        if (isRejected) ...[
+                          PopupMenuItem<String>(
+                            value: 'approve',
+                            height: 38,
+                            child: Row(
+                              children: [
+                                Icon(Icons.check_circle_outline, size: 16, color: Colors.green.shade700),
+                                const SizedBox(width: 10),
+                                Text(
+                                  isTa ? 'உறுப்பினரை அங்கீகரி' : 'Approve Member',
+                                  style: TextStyle(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.green.shade800,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          PopupMenuItem<String>(
+                            value: 'rejection_reason',
+                            height: 38,
+                            child: Row(
+                              children: [
+                                Icon(Icons.info_outline, size: 16, color: Colors.red.shade700),
+                                const SizedBox(width: 10),
+                                Text(
+                                  isTa ? 'நிராகரிப்பு காரணம்' : 'View Rejection Reason',
+                                  style: TextStyle(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w500,
+                                    color: Colors.red.shade800,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const PopupMenuDivider(height: 8),
+                        ],
                         PopupMenuItem<String>(
                           value: 'id_card',
                           height: 38,
@@ -2956,26 +3127,7 @@ class _MembersContentState extends State<MembersContent> {
                             ],
                           ),
                         ),
-                        if (isRejected)
-                          PopupMenuItem<String>(
-                            value: 'rejection_reason',
-                            height: 38,
-                            child: Row(
-                              children: [
-                                Icon(Icons.info_outline, size: 16, color: Colors.red.shade700),
-                                const SizedBox(width: 10),
-                                Text(
-                                  isTa ? 'நிராகரிப்பு காரணம்' : 'View Rejection Reason',
-                                  style: TextStyle(
-                                    fontSize: 12.5,
-                                    fontWeight: FontWeight.w500,
-                                    color: Colors.red.shade800,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          )
-                        else
+                        if (!isRejected)
                           PopupMenuItem<String>(
                             value: 'reject',
                             height: 38,
@@ -3911,17 +4063,19 @@ class _MembersContentState extends State<MembersContent> {
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final list = _cleanVillagesList(data['data']);
-        setState(() {
-          _allVillages = list;
-          if (_selectedDistrict == null && _selectedTaluk == null && _selectedPanchayat == null) {
-            _villages = List.from(list);
-          }
-          _isLoadingVillages = false;
-        });
+        if (mounted) {
+          setState(() {
+            _allVillages = list;
+            if (_selectedDistrict == null && _selectedTaluk == null && _selectedPanchayat == null) {
+              _villages = List.from(list);
+            }
+          });
+        }
       }
     } catch (e) {
       debugPrint('Error fetching all villages: $e');
-      setState(() => _isLoadingVillages = false);
+    } finally {
+      if (mounted) setState(() => _isLoadingVillages = false);
     }
   }
 
@@ -3931,14 +4085,16 @@ class _MembersContentState extends State<MembersContent> {
       final response = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/villages?district=${Uri.encodeComponent(district)}'));
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        setState(() {
-          _villages = _cleanVillagesList(data['data']);
-          _isLoadingVillages = false;
-        });
+        if (mounted) {
+          setState(() {
+            _villages = _cleanVillagesList(data['data']);
+          });
+        }
       }
     } catch (e) {
       debugPrint('Error fetching villages for district: $e');
-      setState(() => _isLoadingVillages = false);
+    } finally {
+      if (mounted) setState(() => _isLoadingVillages = false);
     }
   }
 
@@ -3951,14 +4107,16 @@ class _MembersContentState extends State<MembersContent> {
       final response = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/villages?$query'));
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        setState(() {
-          _villages = _cleanVillagesList(data['data']);
-          _isLoadingVillages = false;
-        });
+        if (mounted) {
+          setState(() {
+            _villages = _cleanVillagesList(data['data']);
+          });
+        }
       }
     } catch (e) {
       debugPrint('Error fetching villages for taluk: $e');
-      setState(() => _isLoadingVillages = false);
+    } finally {
+      if (mounted) setState(() => _isLoadingVillages = false);
     }
   }
 
@@ -4093,43 +4251,26 @@ class _MembersContentState extends State<MembersContent> {
 
 
   Future<void> _fetchVillages(String panchayat) async {
-
     setState(() {
-
       _isLoadingVillages = true;
-
       _villages = [];
-
       _selectedVillage = null;
-
     });
-
     try {
-
       final response = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/villages/$panchayat'));
-
       if (response.statusCode == 200) {
-
         final data = json.decode(response.body);
-
-        setState(() {
-
-          _villages = _cleanVillagesList(data['data']);
-
-          _isLoadingVillages = false;
-
-        });
-
+        if (mounted) {
+          setState(() {
+            _villages = _cleanVillagesList(data['data']);
+          });
+        }
       }
-
     } catch (e) {
-
       debugPrint('Error: $e');
-
-      setState(() => _isLoadingVillages = false);
-
+    } finally {
+      if (mounted) setState(() => _isLoadingVillages = false);
     }
-
   }
 
 
